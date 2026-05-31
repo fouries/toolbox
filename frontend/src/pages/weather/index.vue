@@ -137,7 +137,7 @@ const fetchWeather = async () => {
   forecastList.value = []
 
   try {
-    const res: any = await api.get('/weather', { city: city.value })
+    const res: any = await api.getWeather(city.value)
     console.log('天气响应:', res)
     
     if (res.code === 200 && res.newslist && res.newslist.length > 0) {
