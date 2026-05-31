@@ -37,6 +37,7 @@
     <view class="tool-grid">
       <view 
         class="tool-item" 
+        :class="{ 'tool-not-implemented': !tool.implemented }"
         @click="goToTool(tool)"
         v-for="tool in filteredTools"
         :key="tool.id"
@@ -46,6 +47,7 @@
         </view>
         <text class="tool-name">{{ tool.name }}</text>
         <text class="tool-desc">{{ tool.desc }}</text>
+        <text class="coming-soon-badge" v-if="!tool.implemented">开发中</text>
       </view>
     </view>
 
@@ -81,18 +83,18 @@ const categories = ref([
 ])
 
 const tools = ref([
-  { id: 'oil-price', name: '油价查询', desc: '今日油价', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index' },
-  { id: 'weather', name: '天气预报', desc: '实时天气', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index' },
-  { id: 'express', name: '快递查询', desc: '物流跟踪', icon: '📦', color: '#45b7d1', category: 'query', path: '/pages/express/index' },
-  { id: 'phone', name: '手机号查询', desc: '归属地查询', icon: '📱', color: '#96ceb4', category: 'query', path: '/pages/phone/index' },
-  { id: 'idcard', name: '身份证查询', desc: '信息验证', icon: '🪪', color: '#ffeaa7', category: 'query', path: '/pages/idcard/index' },
-  { id: 'calendar', name: '黄历日历', desc: '今日宜忌', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index' },
-  { id: 'qrcode', name: '二维码生成', desc: '一键生成', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index' },
-  { id: 'ip', name: 'IP查询', desc: '地址查询', icon: '🌐', color: '#81ecec', category: 'query', path: '/pages/ip/index' },
-  { id: 'password', name: '密码生成', desc: '随机密码', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index' },
-  { id: 'base64', name: 'Base64', desc: '编解码', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index' },
-  { id: 'url', name: 'URL编码', desc: '编解码', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index' },
-  { id: 'json', name: 'JSON格式化', desc: '格式化', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index' }
+  { id: 'oil-price', name: '油价查询', desc: '今日油价', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
+  { id: 'weather', name: '天气预报', desc: '实时天气', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
+  { id: 'express', name: '快递查询', desc: '敬请期待', icon: '📦', color: '#45b7d1', category: 'query', path: '/pages/express/index', implemented: false },
+  { id: 'phone', name: '手机号查询', desc: '敬请期待', icon: '📱', color: '#96ceb4', category: 'query', path: '/pages/phone/index', implemented: false },
+  { id: 'idcard', name: '身份证查询', desc: '敬请期待', icon: '🪪', color: '#ffeaa7', category: 'query', path: '/pages/idcard/index', implemented: false },
+  { id: 'calendar', name: '黄历日历', desc: '敬请期待', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index', implemented: false },
+  { id: 'qrcode', name: '二维码生成', desc: '一键生成', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
+  { id: 'ip', name: 'IP查询', desc: '敬请期待', icon: '🌐', color: '#81ecec', category: 'query', path: '/pages/ip/index', implemented: false },
+  { id: 'password', name: '密码生成', desc: '随机密码', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true },
+  { id: 'base64', name: 'Base64', desc: '敬请期待', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false },
+  { id: 'url', name: 'URL编码', desc: '敬请期待', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false },
+  { id: 'json', name: 'JSON格式化', desc: '敬请期待', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false }
 ])
 
 const filteredTools = computed(() => {
@@ -120,6 +122,10 @@ const onSearch = () => {
 }
 
 const goToTool = (tool: any) => {
+  if (!tool.implemented) {
+    uni.showToast({ title: '功能开发中，敬请期待', icon: 'none' })
+    return
+  }
   uni.navigateTo({
     url: tool.path
   })
@@ -219,6 +225,22 @@ const navigateToBeian = () => {
 .tool-desc {
   font-size: 22rpx;
   color: #999;
+}
+
+.tool-not-implemented {
+  opacity: 0.6;
+  position: relative;
+}
+
+.coming-soon-badge {
+  position: absolute;
+  top: 15rpx;
+  right: 15rpx;
+  font-size: 18rpx;
+  padding: 4rpx 12rpx;
+  background: #ff9800;
+  color: #fff;
+  border-radius: 20rpx;
 }
 
 .footer {
