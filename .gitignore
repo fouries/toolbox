@@ -1,23 +1,45 @@
-# 依赖目录
-node_modules/
-frontend/node_modules/
+# ==============
+# 后端 Python
+# ==============
 backend/venv/
 backend/__pycache__/
-
-# 构建产物
-frontend/dist/
+**/__pycache__/
+*.pyc
+*.pyo
 
 # 环境变量
 backend/.env
 .env
 
-# IDE
+# ==============
+# 前端 Node
+# ==============
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+
+# ==============
+# IDE & Editor
+# ==============
 .vscode/
 .idea/
+*.swp
+*.swo
 
+# ==============
 # 系统文件
+# ==============
 .DS_Store
 Thumbs.db
 
+# ==============
 # 日志
+# ==============
 *.log
+logs/
+
+# ==============
+# 打包文件
+# ==============
+*.zip
+*.tar.gz
