@@ -52,6 +52,17 @@
     <!-- 底部信息 -->
     <view class="footer">
       <text class="footer-text">万能工具箱 v1.0</text>
+      <!-- #ifdef H5 -->
+      <view 
+        class="icp-beian" 
+        @click="navigateToBeian"
+      >
+        <text>粤ICP备2026056747号</text>
+      </view>
+      <!-- #endif -->
+      <!-- #ifdef MP-WEIXIN -->
+      <text class="icp-beian">粤ICP备2026056747号</text>
+      <!-- #endif -->
     </view>
   </view>
 </template>
@@ -112,6 +123,12 @@ const goToTool = (tool: any) => {
   uni.navigateTo({
     url: tool.path
   })
+}
+
+const navigateToBeian = () => {
+  // #ifdef H5
+  window.open('https://beian.miit.gov.cn/', '_blank')
+  // #endif
 }
 </script>
 
@@ -213,5 +230,16 @@ const goToTool = (tool: any) => {
 .footer-text {
   font-size: 24rpx;
   color: #ccc;
+}
+
+.icp-beian {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #999;
+  cursor: pointer;
+}
+
+.icp-beian:active {
+  opacity: 0.7;
 }
 </style>
