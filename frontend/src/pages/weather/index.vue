@@ -34,10 +34,10 @@
       <view class="weather-main">
         <view class="city-info">
           <text class="city-name">{{ weatherData.area || city }}</text>
-          <text class="update-time">更新: {{ weatherData.times }}</text>
+          <text class="update-time">{{ weatherData.date }} {{ weatherData.week }}</text>
         </view>
         <view class="weather-icon">
-          <text class="temp">{{ weatherData.real }}°</text>
+          <text class="temp">{{ formatTemp(weatherData.real) }}</text>
           <text class="weather">{{ weatherData.weather }}</text>
         </view>
       </view>
@@ -46,7 +46,7 @@
       <view class="weather-details">
         <view class="detail-item">
           <text class="detail-label">🌡️ 温度范围</text>
-          <text class="detail-value">{{ weatherData.lowest }} ~ {{ weatherData.highest }}°C</text>
+          <text class="detail-value">{{ formatTemp(weatherData.lowest) }} ~ {{ formatTemp(weatherData.highest) }}</text>
         </view>
         <view class="detail-item">
           <text class="detail-label">💨 风向风力</text>
@@ -65,9 +65,29 @@
           <text class="detail-value">{{ weatherData.sunset }}</text>
         </view>
         <view class="detail-item">
-          <text class="detail-label">📅 空气质量</text>
-          <text class="detail-value" :class="getAqiClass(weatherData.aqi)">{{ weatherData.quality }}</text>
+          <text class="detail-label">☀️ 紫外线</text>
+          <text class="detail-value">{{ getUvLevel(weatherData.uv_index) }}</text>
         </view>
+      </view>
+
+      <!-- 未来天气预报 -->
+      <view v-if="forecastList.length > 1" class="forecast-section">
+        <text class="forecast-title">📆 未来7天预报</text>
+        <scroll-view class="forecast-scroll" scroll-x="true" show-scrollbar="false">
+          <view class="forecast-list">
+            <view 
+              v-for="(item, index) in forecastList.slice(1)" 
+              :key="index"
+              class="forecast-item"
+            >
+              <text class="forecast-date">{{ item.date.slice(5) }}</text>
+              <text class="forecast-week">{{ item.week }}</text>
+              <text class="forecast-icon">{{ getWeatherIcon(item.weather) }}</text>
+              <text class="forecast-weather">{{ item.weather }}</text>
+              <text class="forecast-temp">{{ formatTemp(item.lowest) }} ~ {{ formatTemp(item.highest) }}</text>
+            </view>
+          </view>
+        </scroll-view>
       </view>
 
       <!-- 生活指数提示 -->
@@ -79,8 +99,6 @@
 
     <view v-else-if="errorMsg" class="error">
       <text>{{ errorMsg }}</text>
-      <text class="error-hint">请在天行数据后台开通天气预报API</text>
-      <text class="error-link">https://www.tianapi.com/apiview/3</text>
     </view>
 
     <view v-else class="placeholder">
@@ -91,11 +109,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import api from '@/api'
 
 const city = ref('北京')
 const weatherData = ref<any>(null)
+const forecastList = ref<any[]>([])
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -115,16 +134,16 @@ const fetchWeather = async () => {
   loading.value = true
   errorMsg.value = ''
   weatherData.value = null
+  forecastList.value = []
 
   try {
     const res: any = await api.get('/weather', { city: city.value })
     console.log('天气响应:', res)
     
     if (res.code === 200 && res.newslist && res.newslist.length > 0) {
+      forecastList.value = res.newslist
       weatherData.value = res.newslist[0]
       errorMsg.value = ''
-    } else if (res.code === 160) {
-      errorMsg.value = '尚未申请该API'
     } else {
       errorMsg.value = res.msg || '查询失败，请检查城市名称是否正确'
     }
@@ -136,13 +155,31 @@ const fetchWeather = async () => {
   }
 }
 
-const getAqiClass = (aqi: string | number) => {
-  const val = Number(aqi) || 0
-  if (val <= 50) return 'aqi-good'
-  if (val <= 100) return 'aqi-moderate'
-  if (val <= 150) return 'aqi-sensitive'
-  if (val <= 200) return 'aqi-unhealthy'
-  return 'aqi-hazardous'
+const formatTemp = (temp: string) => {
+  if (!temp) return '--'
+  // 去掉℃符号，只保留数字
+  return temp.replace('℃', '') + '°'
+}
+
+const getUvLevel = (index: string) => {
+  const val = Number(index) || 0
+  if (val <= 2) return '弱'
+  if (val <= 5) return '中等'
+  if (val <= 7) return '强'
+  if (val <= 10) return '很强'
+  return '极强'
+}
+
+const getWeatherIcon = (weather: string) => {
+  if (!weather) return '☁️'
+  if (weather.includes('晴')) return '☀️'
+  if (weather.includes('云') || weather.includes('阴')) return '☁️'
+  if (weather.includes('雨') && weather.includes('雷')) return '⛈️'
+  if (weather.includes('雨')) return '🌧️'
+  if (weather.includes('雪')) return '❄️'
+  if (weather.includes('雾') || weather.includes('霾')) return '🌫️'
+  if (weather.includes('风')) return '💨'
+  return '🌤️'
 }
 
 // 页面加载时自动查询
@@ -311,12 +348,66 @@ fetchWeather()
   font-weight: 500;
 }
 
-.aqi-good { color: #00e400 !important; }
-.aqi-moderate { color: #ffff00 !important; }
-.aqi-sensitive { color: #ff7e00 !important; }
-.aqi-unhealthy { color: #ff0000 !important; }
-.aqi-hazardous { color: #7e0023 !important; }
+/* 未来预报 */
+.forecast-section {
+  padding: 0 40rpx 40rpx;
+  border-top: 1px solid #eee;
+}
 
+.forecast-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin: 30rpx 0 20rpx;
+}
+
+.forecast-scroll {
+  white-space: nowrap;
+}
+
+.forecast-list {
+  display: flex;
+  gap: 20rpx;
+}
+
+.forecast-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 15rpx;
+  min-width: 140rpx;
+}
+
+.forecast-date {
+  font-size: 22rpx;
+  color: #666;
+}
+
+.forecast-week {
+  font-size: 20rpx;
+  color: #999;
+}
+
+.forecast-icon {
+  font-size: 40rpx;
+  margin: 5rpx 0;
+}
+
+.forecast-weather {
+  font-size: 22rpx;
+  color: #333;
+}
+
+.forecast-temp {
+  font-size: 20rpx;
+  color: #666;
+}
+
+/* 生活提示 */
 .tips-card {
   padding: 40rpx;
   border-top: 1px solid #eee;
@@ -347,17 +438,5 @@ fetchWeather()
   display: block;
   color: #ff4757;
   font-size: 28rpx;
-  margin-bottom: 20rpx;
-}
-
-.error-hint {
-  color: #666 !important;
-  font-size: 26rpx !important;
-}
-
-.error-link {
-  color: #667eea !important;
-  font-size: 24rpx !important;
-  word-break: break-all;
 }
 </style>

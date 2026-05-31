@@ -39,13 +39,27 @@ class TianApiService:
             url = f"{TIANAPI_BASE}{path}"
             result = await client.get(url, params=params)
             
-            # 适配新的返回格式 (result -> newslist)
+            # 适配不同的返回格式
             if result.get("code") == 200 and "result" in result:
-                # 新格式: result是一个对象或数组
                 result_data = result["result"]
-                # 统一转成数组格式
-                if isinstance(result_data, list):
+                
+                # 天气API特殊格式: result.list 是数组
+                if isinstance(result_data, dict) and "list" in result_data and isinstance(result_data["list"], list):
+                    # 天气API: 把城市信息加到每条数据里
+                    for item in result_data["list"]:
+                        item["area"] = result_data.get("area", kwargs.get("city", ""))
+                        item["province"] = result_data.get("province", "")
+                        item["areaid"] = result_data.get("areaid", "")
+                        # 空气质量字段（天气API没有单独返回）
+                        item["aqi"] = ""
+                        item["quality"] = "未知"
+                    result["newslist"] = result_data["list"]
+                
+                # 普通格式: result是数组
+                elif isinstance(result_data, list):
                     result["newslist"] = result_data
+                
+                # 普通格式: result是单个对象
                 else:
                     result["newslist"] = [result_data]
             
