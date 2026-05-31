@@ -51,7 +51,7 @@
 
     <!-- 底部信息 -->
     <view class="footer">
-      <text class="footer-text">万能工具箱 v1.0</text>
+      <text class="footer-text">小巧的工具箱 v1.0</text>
       <!-- #ifdef H5 -->
       <view 
         class="icp-beian" 

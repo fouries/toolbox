@@ -1,5 +1,5 @@
 {
-    "name": "万能工具箱",
+    "name": "小巧的工具箱",
     "appid": "__UNI__TOOLBOX",
     "description": "一站式实用工具集合",
     "versionName": "1.0.0",
@@ -84,7 +84,7 @@
     },
     "vueVersion": "3",
     "h5": {
-        "title": "万能工具箱",
+        "title": "小巧的工具箱",
         "router": {
             "mode": "hash"
         }
