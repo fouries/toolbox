@@ -1,0 +1,92 @@
+{
+    "name": "万能工具箱",
+    "appid": "__UNI__TOOLBOX",
+    "description": "一站式实用工具集合",
+    "versionName": "1.0.0",
+    "versionCode": "100",
+    "transformPx": false,
+    "app-plus": {
+        "usingComponents": true,
+        "nvueStyleCompiler": "uni-app",
+        "compilerVersion": 3,
+        "splashscreen": {
+            "alwaysShowBeforeRender": true,
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        "modules": {},
+        "distribute": {
+            "android": {
+                "permissions": []
+            },
+            "ios": {}
+        }
+    },
+    "quickapp": {},
+    "mp-weixin": {
+        "appid": "wxfabe9f47c396afec",
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "enhance": false,
+            "postcss": true,
+            "preloadBackgroundData": false,
+            "minified": true,
+            "newFeature": false,
+            "coverView": true,
+            "nodeModules": false,
+            "autoAudits": false,
+            "showShadowRootInWxmlPanel": true,
+            "scopeDataCheck": false,
+            "uglifyFileName": false,
+            "checkInvalidKey": true,
+            "checkSiteMap": true,
+            "uploadWithSourceMap": true,
+            "compileHotReLoad": false,
+            "lazyloadPlaceholderEnable": false,
+            "useMultiFrameRuntime": false,
+            "useApiHook": false,
+            "useApiHostProcess": false,
+            "babelSetting": {
+                "ignore": [],
+                "disablePlugins": [],
+                "outputPath": ""
+            },
+            "enableEngineNative": false,
+            "useIsolateContext": true,
+            "userConfirmedBundleSwitch": false,
+            "packNpmManually": false,
+            "packNpmRelationList": [],
+            "minifyWXSS": true,
+            "disableUseStrict": false,
+            "minifyWXML": true,
+            "showES6CompileOption": false,
+            "useCompilerPlugins": false
+        },
+        "usingComponents": true,
+        "optimization": {
+            "subPackages": false
+        },
+        "lazyCodeLoading": "requiredComponents"
+    },
+    "mp-alipay": {
+        "usingComponents": true
+    },
+    "mp-baidu": {
+        "usingComponents": true
+    },
+    "mp-toutiao": {
+        "usingComponents": true
+    },
+    "uniStatistics": {
+        "enable": false
+    },
+    "vueVersion": "3",
+    "h5": {
+        "title": "万能工具箱",
+        "router": {
+            "mode": "hash"
+        }
+    }
+}

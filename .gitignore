@@ -1,0 +1,23 @@
+# 依赖目录
+node_modules/
+frontend/node_modules/
+backend/venv/
+backend/__pycache__/
+
+# 构建产物
+frontend/dist/
+
+# 环境变量
+backend/.env
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log

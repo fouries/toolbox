@@ -1,0 +1,43 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "万能工具箱",
+        "navigationBarBackgroundColor": "#007aff",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/oil-price/index",
+      "style": {
+        "navigationBarTitleText": "油价查询",
+        "navigationBarBackgroundColor": "#007aff",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/qrcode/index",
+      "style": {
+        "navigationBarTitleText": "二维码生成",
+        "navigationBarBackgroundColor": "#007aff",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/password/index",
+      "style": {
+        "navigationBarTitleText": "密码生成器",
+        "navigationBarBackgroundColor": "#007aff",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "万能工具箱",
+    "navigationBarBackgroundColor": "#007aff",
+    "backgroundColor": "#f5f5f5"
+  },
+  "uniIdRouter": {}
+}
