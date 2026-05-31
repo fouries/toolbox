@@ -31,6 +31,14 @@
         "navigationBarBackgroundColor": "#007aff",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/weather/index",
+      "style": {
+        "navigationBarTitleText": "天气预报",
+        "navigationBarBackgroundColor": "#007aff",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {

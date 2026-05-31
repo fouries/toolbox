@@ -8,17 +8,19 @@ class Settings(BaseSettings):
     
     # Redis 配置（用于缓存，降低API调用成本）
     REDIS_URL: str = "redis://localhost:6379/0"
+    USE_REDIS: bool = True  # 生产环境建议使用，开发环境可以设为 False 使用内存缓存
     
-    # 缓存时间（秒）
-    CACHE_TTL_OIL: int = 3600 * 12  # 油价缓存12小时
-    CACHE_TTL_WEATHER: int = 3600 * 3  # 天气缓存3小时
-    CACHE_TTL_DEFAULT: int = 300  # 默认缓存5分钟
+    # 默认缓存TTL（秒）
+    CACHE_TTL_DEFAULT: int = 300  # 5分钟
+    CACHE_TTL_OIL: int = 3600  # 油价1小时
+    CACHE_TTL_WEATHER: int = 1800  # 天气30分钟
     
-    # 服务器配置
+    # API配置
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    DEBUG: bool = False
     
-    # CORS 配置
+    # CORS配置
     CORS_ORIGINS: list = ["*"]
     
     class Config:
