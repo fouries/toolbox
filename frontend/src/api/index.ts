@@ -66,21 +66,6 @@ export const getWeather = (city: string = '北京') => {
   return request(`/api/weather?city=${encodeURIComponent(city)}`)
 }
 
-// 快递查询
-export const getExpress = (no: string) => {
-  return request(`/api/express?no=${encodeURIComponent(no)}`)
-}
-
-// 手机号归属地
-export const getPhoneLocation = (phone: string) => {
-  return request(`/api/phone?phone=${encodeURIComponent(phone)}`)
-}
-
-// 身份证查询
-export const getIdcardInfo = (idcard: string) => {
-  return request(`/api/idcard?idcard=${encodeURIComponent(idcard)}`)
-}
-
 // 黄历查询
 export const getCalendar = (date?: string) => {
   const url = date ? `/api/calendar?date=${date}` : '/api/calendar'
@@ -90,12 +75,6 @@ export const getCalendar = (date?: string) => {
 // 二维码生成
 export const generateQrcode = (text: string, size: number = 256) => {
   return request(`/api/qrcode?text=${encodeURIComponent(text)}&size=${size}`)
-}
-
-// IP查询
-export const getIpInfo = (ip?: string) => {
-  const url = ip ? `/api/ip?ip=${encodeURIComponent(ip)}` : '/api/ip'
-  return request(url)
 }
 
 // 生成密码
@@ -127,12 +106,8 @@ export const urlDecode = (encoded: string) => {
 export default {
   getOilPrice,
   getWeather,
-  getExpress,
-  getPhoneLocation,
-  getIdcardInfo,
   getCalendar,
   generateQrcode,
-  getIpInfo,
   generatePassword,
   base64Encode,
   base64Decode,

@@ -2,8 +2,6 @@ import io
 import base64
 import qrcode
 from typing import Dict, Any
-import socket
-import re
 
 class ToolsService:
     """本地工具服务（无需调用第三方API）"""
@@ -43,26 +41,7 @@ class ToolsService:
         except Exception as e:
             return {"code": 500, "msg": f"生成失败: {str(e)}"}
     
-    @staticmethod
-    def get_ip_info(ip: str = None) -> Dict[str, Any]:
-        """IP查询（简单本地版）"""
-        try:
-            if not ip or ip == "auto":
-                # 获取本机IP（简单版）
-                hostname = socket.gethostname()
-                ip = socket.gethostbyname(hostname)
-            
-            return {
-                "code": 200,
-                "msg": "success",
-                "data": {
-                    "ip": ip,
-                    "note": "完整IP查询功能需要调用天行数据API，本功能为本地简化版"
-                }
-            }
-        except Exception as e:
-            return {"code": 500, "msg": str(e)}
-    
+
     @staticmethod
     def generate_password(length: int = 16, 
                          include_upper: bool = True,

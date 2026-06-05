@@ -95,47 +95,7 @@ class TianApiService:
             city=city
         )
     
-    @staticmethod
-    async def get_express(no: str, type: str = "auto") -> Dict[str, Any]:
-        """快递查询
-        no: 快递单号
-        type: 快递公司代码（auto=自动识别）
-        """
-        cache_key = make_cache_key("express", no=no)
-        return await TianApiService._request(
-            "/kd/index",
-            cache_key=cache_key,
-            cache_ttl=settings.CACHE_TTL_DEFAULT,
-            number=no,
-            type=type
-        )
-    
-    @staticmethod
-    async def get_phone_location(phone: str) -> Dict[str, Any]:
-        """手机号归属地
-        phone: 手机号（前7位或完整号码）
-        """
-        cache_key = make_cache_key("phone", phone=phone[:7])  # 只缓存前7位
-        return await TianApiService._request(
-            "/shouji/index",
-            cache_key=cache_key,
-            cache_ttl=86400 * 30,  # 手机号归属地缓存30天
-            phone=phone[:7]
-        )
-    
-    @staticmethod
-    async def get_idcard_info(idcard: str) -> Dict[str, Any]:
-        """身份证信息查询
-        idcard: 身份证号
-        """
-        cache_key = make_cache_key("idcard", idcard=idcard[:6])  # 只缓存前6位地区码
-        return await TianApiService._request(
-            "/idcard/index",
-            cache_key=cache_key,
-            cache_ttl=86400 * 30,
-            idcard=idcard
-        )
-    
+
     @staticmethod
     async def get_exchange_rate(from_currency: str = "USD", to_currency: str = "CNY") -> Dict[str, Any]:
         """汇率查询"""

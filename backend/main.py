@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="万能工具箱 API",
-    description="多合一工具聚合服务，支持油价、天气、快递等查询",
+    description="多合一工具聚合服务，支持油价、天气等查询",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -58,24 +58,6 @@ async def weather(city: str = "北京"):
     result = await TianApiService.get_weather(city)
     return result
 
-@app.get("/api/express", summary="快递查询", tags=["天行数据"])
-async def express(no: str, type: str = "auto"):
-    """快递单号查询"""
-    result = await TianApiService.get_express(no, type)
-    return result
-
-@app.get("/api/phone", summary="手机号归属地", tags=["天行数据"])
-async def phone_location(phone: str):
-    """手机号归属地查询"""
-    result = await TianApiService.get_phone_location(phone)
-    return result
-
-@app.get("/api/idcard", summary="身份证信息", tags=["天行数据"])
-async def idcard_info(idcard: str):
-    """身份证信息查询"""
-    result = await TianApiService.get_idcard_info(idcard)
-    return result
-
 @app.get("/api/calendar", summary="黄历日历", tags=["天行数据"])
 async def calendar(date: str = None):
     """黄历/日历查询"""
@@ -88,12 +70,6 @@ async def calendar(date: str = None):
 async def generate_qrcode(text: str, size: int = 256):
     """生成二维码图片（base64格式）"""
     result = ToolsService.generate_qrcode(text, size)
-    return result
-
-@app.get("/api/ip", summary="IP查询", tags=["本地工具"])
-async def ip_query(ip: str = None):
-    """IP地址查询"""
-    result = ToolsService.get_ip_info(ip)
     return result
 
 @app.get("/api/password", summary="随机密码", tags=["本地工具"])
@@ -146,8 +122,8 @@ async def root():
         "docs": "/docs",
         "status": "running",
         "apis": {
-            "天行数据": ["/api/oil-price", "/api/weather", "/api/express", "/api/phone", "/api/idcard", "/api/calendar"],
-            "本地工具": ["/api/qrcode", "/api/ip", "/api/password"],
+            "天行数据": ["/api/oil-price", "/api/weather", "/api/calendar"],
+            "本地工具": ["/api/qrcode", "/api/password"],
             "编码工具": ["/api/base64/encode", "/api/base64/decode", "/api/url/encode", "/api/url/decode", "/api/json/format"]
         }
     }

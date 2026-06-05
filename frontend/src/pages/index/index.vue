@@ -77,7 +77,6 @@ const activeCategory = ref('all')
 
 const categories = ref([
   { id: 'life', name: '生活服务' },
-  { id: 'query', name: '查询工具' },
   { id: 'code', name: '编码转换' },
   { id: 'other', name: '其他工具' }
 ])
@@ -85,12 +84,8 @@ const categories = ref([
 const tools = ref([
   { id: 'oil-price', name: '油价查询', desc: '今日油价', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
   { id: 'weather', name: '天气预报', desc: '实时天气', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
-  { id: 'express', name: '快递查询', desc: '敬请期待', icon: '📦', color: '#45b7d1', category: 'query', path: '/pages/express/index', implemented: false },
-  { id: 'phone', name: '手机号查询', desc: '敬请期待', icon: '📱', color: '#96ceb4', category: 'query', path: '/pages/phone/index', implemented: false },
-  { id: 'idcard', name: '身份证查询', desc: '敬请期待', icon: '🪪', color: '#ffeaa7', category: 'query', path: '/pages/idcard/index', implemented: false },
   { id: 'calendar', name: '黄历日历', desc: '敬请期待', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index', implemented: false },
   { id: 'qrcode', name: '二维码生成', desc: '一键生成', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
-  { id: 'ip', name: 'IP查询', desc: '敬请期待', icon: '🌐', color: '#81ecec', category: 'query', path: '/pages/ip/index', implemented: false },
   { id: 'password', name: '密码生成', desc: '随机密码', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true },
   { id: 'base64', name: 'Base64', desc: '敬请期待', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false },
   { id: 'url', name: 'URL编码', desc: '敬请期待', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false },
