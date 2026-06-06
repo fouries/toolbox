@@ -6,9 +6,6 @@
         <view class="hero-content">
           <text class="hero-title">小巧的工具箱</text>
           <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用。</text>
-          <view class="hero-actions">
-            <view class="hero-action primary" @click="focusSearch">搜索工具</view>
-          </view>
         </view>
         <view class="hero-card">
           <text class="hero-card-title">已上线工具</text>
@@ -162,10 +159,6 @@ const onSearch = () => {
   // 搜索逻辑已在 computed 中处理
 }
 
-const focusSearch = () => {
-  searchText.value = ''
-}
-
 const goToTool = (tool: any) => {
   if (!tool.implemented) {
     uni.showToast({ title: '功能开发中，敬请期待', icon: 'none' })
@@ -232,28 +225,6 @@ const navigateToBeian = () => {
   font-size: 28rpx;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.7;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18rpx;
-  margin-top: 30rpx;
-}
-
-.hero-action {
-  padding: 16rpx 28rpx;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  color: #fff;
-  border: 2rpx solid rgba(255, 255, 255, 0.5);
-}
-
-.hero-action.primary {
-  color: #1677ff;
-  background: #fff;
-  border-color: #fff;
-  font-weight: 700;
 }
 
 .hero-card {
@@ -460,7 +431,6 @@ const navigateToBeian = () => {
 
 .icp-beian:active,
 .tool-item:active,
-.hero-action:active,
 .landing-link:active {
   opacity: 0.72;
 }

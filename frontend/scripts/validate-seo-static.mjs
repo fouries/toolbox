@@ -40,6 +40,8 @@ const forbidden = {
     'PC/移动双端适配',
     '查看 SEO 首页',
     '查看SEO首页',
+    '>搜索工具<',
+    '@click="focusSearch"',
   ],
 }
 
