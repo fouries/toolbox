@@ -4,14 +4,10 @@
       <!-- 顶部介绍：同一网址兼容 PC 和移动端 -->
       <view class="hero-section">
         <view class="hero-content">
-          <text class="hero-badge">免费在线工具 · PC/移动双端适配</text>
           <text class="hero-title">小巧的工具箱</text>
           <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用。</text>
           <view class="hero-actions">
             <view class="hero-action primary" @click="focusSearch">搜索工具</view>
-            <!-- #ifdef H5 -->
-            <view class="hero-action" @click="openLandingPage('/')">查看 SEO 首页</view>
-            <!-- #endif -->
           </view>
         </view>
         <view class="hero-card">
@@ -221,15 +217,6 @@ const navigateToBeian = () => {
 .hero-content {
   display: flex;
   flex-direction: column;
-}
-
-.hero-badge {
-  align-self: flex-start;
-  padding: 8rpx 18rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
-  color: #eaf5ff;
-  background: rgba(255, 255, 255, 0.18);
 }
 
 .hero-title {

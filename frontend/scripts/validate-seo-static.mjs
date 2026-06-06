@@ -35,6 +35,14 @@ const expected = {
   'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
 }
 
+const forbidden = {
+  'src/pages/index/index.vue': [
+    'PC/移动双端适配',
+    '查看 SEO 首页',
+    '查看SEO首页',
+  ],
+}
+
 const errors = []
 for (const file of requiredFiles) {
   const path = join(root, file)
@@ -46,6 +54,11 @@ for (const file of requiredFiles) {
   for (const snippet of expected[file]) {
     if (!content.includes(snippet)) {
       errors.push(`${file} missing snippet: ${snippet}`)
+    }
+  }
+  for (const snippet of forbidden[file] || []) {
+    if (content.includes(snippet)) {
+      errors.push(`${file} contains forbidden snippet: ${snippet}`)
     }
   }
 }
