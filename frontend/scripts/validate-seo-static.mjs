@@ -1,0 +1,49 @@
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+
+const root = process.cwd()
+const requiredFiles = [
+  'public/robots.txt',
+  'public/sitemap.xml',
+  'public/weather.html',
+  'public/oil-price.html',
+  'public/qrcode.html',
+  'public/password.html',
+]
+
+const expected = {
+  'public/robots.txt': ['User-agent: *', 'Allow: /', 'Sitemap: https://quan1234.com/sitemap.xml'],
+  'public/sitemap.xml': [
+    '<loc>https://quan1234.com/</loc>',
+    '<loc>https://quan1234.com/weather.html</loc>',
+    '<loc>https://quan1234.com/oil-price.html</loc>',
+    '<loc>https://quan1234.com/qrcode.html</loc>',
+    '<loc>https://quan1234.com/password.html</loc>',
+  ],
+  'public/weather.html': ['天气查询', '立即使用天气查询', 'https://quan1234.com/#/pages/weather/index'],
+  'public/oil-price.html': ['油价查询', '立即使用油价查询', 'https://quan1234.com/#/pages/oil-price/index'],
+  'public/qrcode.html': ['二维码生成器', '立即使用二维码生成器', 'https://quan1234.com/#/pages/qrcode/index'],
+  'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index'],
+}
+
+const errors = []
+for (const file of requiredFiles) {
+  const path = join(root, file)
+  if (!existsSync(path)) {
+    errors.push(`Missing ${file}`)
+    continue
+  }
+  const content = readFileSync(path, 'utf8')
+  for (const snippet of expected[file]) {
+    if (!content.includes(snippet)) {
+      errors.push(`${file} missing snippet: ${snippet}`)
+    }
+  }
+}
+
+if (errors.length) {
+  console.error(errors.join('\n'))
+  process.exit(1)
+}
+
+console.log('SEO static files are valid')
