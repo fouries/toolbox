@@ -67,22 +67,6 @@
         </view>
       </view>
 
-      <!-- H5 SEO 与 PC 信息区 -->
-      <view class="seo-panel">
-        <view class="seo-card">
-          <text class="seo-title">适合电脑和手机访问</text>
-          <text class="seo-desc">本站采用响应式布局，同一个网址会自动适配 PC 宽屏、平板和手机，不需要单独访问 m 站。</text>
-        </view>
-        <view class="seo-card">
-          <text class="seo-title">常用在线工具入口</text>
-          <text class="seo-desc">支持天气查询、今日油价查询、二维码生成和随机密码生成，后续还会增加 Base64、URL 编码、JSON 格式化等工具。</text>
-        </view>
-        <view class="seo-card">
-          <text class="seo-title">搜索引擎友好</text>
-          <text class="seo-desc">已配置 robots.txt、sitemap.xml 和静态落地页，方便百度等搜索引擎发现并收录。</text>
-        </view>
-      </view>
-
       <!-- #ifdef H5 -->
       <view class="landing-links">
         <text class="landing-title">静态落地页</text>
@@ -249,7 +233,6 @@ const navigateToBeian = () => {
 }
 
 .main-panel,
-.seo-panel,
 .landing-links {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 30rpx;
@@ -361,34 +344,6 @@ const navigateToBeian = () => {
   border-radius: 20rpx;
 }
 
-.seo-panel {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18rpx;
-}
-
-.seo-card {
-  padding: 24rpx;
-  border-radius: 22rpx;
-  background: #f7fbff;
-  border: 2rpx solid #e7f0ff;
-}
-
-.seo-title {
-  display: block;
-  font-size: 29rpx;
-  font-weight: 700;
-  color: #17233d;
-  margin-bottom: 10rpx;
-}
-
-.seo-desc {
-  display: block;
-  font-size: 25rpx;
-  color: #5f6f89;
-  line-height: 1.7;
-}
-
 .landing-title {
   display: block;
   font-size: 28rpx;
@@ -468,7 +423,6 @@ const navigateToBeian = () => {
   }
 
   .main-panel,
-  .seo-panel,
   .landing-links {
     padding: 28px;
     border-radius: 24px;
@@ -489,8 +443,5 @@ const navigateToBeian = () => {
     box-shadow: 0 14px 32px rgba(20, 35, 90, 0.12);
   }
 
-  .seo-panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 </style>

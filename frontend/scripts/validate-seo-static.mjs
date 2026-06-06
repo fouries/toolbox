@@ -16,7 +16,6 @@ const expected = {
   'src/pages/index/index.vue': [
     'hero-section',
     'main-panel',
-    'seo-panel',
     '@media (min-width: 768px)',
     'max-width: 1120px',
     'grid-template-columns: repeat(4, minmax(0, 1fr))',
@@ -42,6 +41,10 @@ const forbidden = {
     '查看SEO首页',
     '>搜索工具<',
     '@click="focusSearch"',
+    '适合电脑和手机访问',
+    '常用在线工具入口',
+    '搜索引擎友好',
+    'seo-panel',
   ],
 }
 
