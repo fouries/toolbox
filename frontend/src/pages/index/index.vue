@@ -5,7 +5,7 @@
       <view class="hero-section">
         <view class="hero-content">
           <text class="hero-badge">免费在线工具 · PC/移动双端适配</text>
-          <text class="hero-title">万能工具箱</text>
+          <text class="hero-title">小巧的工具箱</text>
           <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用。</text>
           <view class="hero-actions">
             <view class="hero-action primary" @click="focusSearch">搜索工具</view>

@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(
-    title="万能工具箱 API",
+    title="小巧的工具箱 API",
     description="多合一工具聚合服务，支持油价、天气等查询",
     version="1.0.0",
     lifespan=lifespan
@@ -117,7 +117,7 @@ async def json_format(json_str: str, indent: int = 2):
 @app.get("/", summary="API首页")
 async def root():
     return {
-        "name": "万能工具箱 API",
+        "name": "小巧的工具箱 API",
         "version": "1.0.0",
         "docs": "/docs",
         "status": "running",
