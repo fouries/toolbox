@@ -1,70 +1,122 @@
 <template>
   <view class="container">
-    <!-- 顶部搜索 -->
-    <view class="search-box">
-      <uni-icons type="search" size="18" color="#999"></uni-icons>
-      <input 
-        class="search-input" 
-        placeholder="搜索工具..." 
-        v-model="searchText"
-        @input="onSearch"
-      />
-    </view>
-
-    <!-- 分类标签 -->
-    <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
-      <view class="category-list">
-        <view 
-          class="category-item" 
-          :class="{ active: activeCategory === 'all' }"
-          @click="activeCategory = 'all'"
-        >
-          全部
+    <view class="page-shell">
+      <!-- 顶部介绍：同一网址兼容 PC 和移动端 -->
+      <view class="hero-section">
+        <view class="hero-content">
+          <text class="hero-badge">免费在线工具 · PC/移动双端适配</text>
+          <text class="hero-title">万能工具箱</text>
+          <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用。</text>
+          <view class="hero-actions">
+            <view class="hero-action primary" @click="focusSearch">搜索工具</view>
+            <!-- #ifdef H5 -->
+            <view class="hero-action" @click="openLandingPage('/')">查看 SEO 首页</view>
+            <!-- #endif -->
+          </view>
         </view>
-        <view 
-          class="category-item" 
-          :class="{ active: activeCategory === cat.id }"
-          @click="activeCategory = cat.id"
-          v-for="cat in categories"
-          :key="cat.id"
-        >
-          {{ cat.name }}
+        <view class="hero-card">
+          <text class="hero-card-title">已上线工具</text>
+          <text class="hero-card-number">4+</text>
+          <text class="hero-card-desc">持续扩展生活服务、编码转换和效率工具</text>
         </view>
       </view>
-    </scroll-view>
 
-    <!-- 工具列表 -->
-    <view class="tool-grid">
-      <view 
-        class="tool-item" 
-        :class="{ 'tool-not-implemented': !tool.implemented }"
-        @click="goToTool(tool)"
-        v-for="tool in filteredTools"
-        :key="tool.id"
-      >
-        <view class="tool-icon" :style="{ background: tool.color }">
-          <text class="icon-text">{{ tool.icon }}</text>
+      <view class="main-panel">
+        <!-- 顶部搜索 -->
+        <view class="search-box">
+          <uni-icons type="search" size="18" color="#999"></uni-icons>
+          <input
+            class="search-input"
+            placeholder="搜索天气、油价、二维码、密码..."
+            v-model="searchText"
+            @input="onSearch"
+          />
         </view>
-        <text class="tool-name">{{ tool.name }}</text>
-        <text class="tool-desc">{{ tool.desc }}</text>
-        <text class="coming-soon-badge" v-if="!tool.implemented">开发中</text>
-      </view>
-    </view>
 
-    <!-- 底部信息 -->
-    <view class="footer">
-      <text class="footer-text">小巧的工具箱 v1.0</text>
+        <!-- 分类标签 -->
+        <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
+          <view class="category-list">
+            <view
+              class="category-item"
+              :class="{ active: activeCategory === 'all' }"
+              @click="activeCategory = 'all'"
+            >
+              全部
+            </view>
+            <view
+              class="category-item"
+              :class="{ active: activeCategory === cat.id }"
+              @click="activeCategory = cat.id"
+              v-for="cat in categories"
+              :key="cat.id"
+            >
+              {{ cat.name }}
+            </view>
+          </view>
+        </scroll-view>
+
+        <!-- 工具列表 -->
+        <view class="tool-grid">
+          <view
+            class="tool-item"
+            :class="{ 'tool-not-implemented': !tool.implemented }"
+            @click="goToTool(tool)"
+            v-for="tool in filteredTools"
+            :key="tool.id"
+          >
+            <view class="tool-icon" :style="{ background: tool.color }">
+              <text class="icon-text">{{ tool.icon }}</text>
+            </view>
+            <text class="tool-name">{{ tool.name }}</text>
+            <text class="tool-desc">{{ tool.desc }}</text>
+            <text class="coming-soon-badge" v-if="!tool.implemented">开发中</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- H5 SEO 与 PC 信息区 -->
+      <view class="seo-panel">
+        <view class="seo-card">
+          <text class="seo-title">适合电脑和手机访问</text>
+          <text class="seo-desc">本站采用响应式布局，同一个网址会自动适配 PC 宽屏、平板和手机，不需要单独访问 m 站。</text>
+        </view>
+        <view class="seo-card">
+          <text class="seo-title">常用在线工具入口</text>
+          <text class="seo-desc">支持天气查询、今日油价查询、二维码生成和随机密码生成，后续还会增加 Base64、URL 编码、JSON 格式化等工具。</text>
+        </view>
+        <view class="seo-card">
+          <text class="seo-title">搜索引擎友好</text>
+          <text class="seo-desc">已配置 robots.txt、sitemap.xml 和静态落地页，方便百度等搜索引擎发现并收录。</text>
+        </view>
+      </view>
+
       <!-- #ifdef H5 -->
-      <view 
-        class="icp-beian" 
-        @click="navigateToBeian"
-      >
-        <text>粤ICP备2026056747号</text>
+      <view class="landing-links">
+        <text class="landing-title">静态落地页</text>
+        <view class="landing-link-list">
+          <text class="landing-link" @click="openLandingPage('/weather.html')">天气查询</text>
+          <text class="landing-link" @click="openLandingPage('/oil-price.html')">油价查询</text>
+          <text class="landing-link" @click="openLandingPage('/qrcode.html')">二维码生成器</text>
+          <text class="landing-link" @click="openLandingPage('/password.html')">随机密码生成器</text>
+        </view>
       </view>
       <!-- #endif -->
-      <!-- #ifdef MP-WEIXIN -->
-      <text class="icp-beian">粤ICP备2026056747号</text>
-      <!-- #endif -->
+
+      <!-- 底部信息 -->
+      <view class="footer">
+        <text class="footer-text">小巧的工具箱 v1.0 · quan1234.com</text>
+        <!-- #ifdef H5 -->
+        <view
+          class="icp-beian"
+          @click="navigateToBeian"
+        >
+          <text>粤ICP备2026056747号</text>
+        </view>
+        <!-- #endif -->
+        <!-- #ifdef MP-WEIXIN -->
+        <text class="icp-beian">粤ICP备2026056747号</text>
+        <!-- #endif -->
+      </view>
     </view>
   </view>
 </template>
@@ -94,26 +146,28 @@ const tools = ref([
 
 const filteredTools = computed(() => {
   let list = tools.value
-  
-  // 分类过滤
+
   if (activeCategory.value !== 'all') {
     list = list.filter(t => t.category === activeCategory.value)
   }
-  
-  // 搜索过滤
+
   if (searchText.value) {
     const keyword = searchText.value.toLowerCase()
-    list = list.filter(t => 
-      t.name.toLowerCase().includes(keyword) || 
+    list = list.filter(t =>
+      t.name.toLowerCase().includes(keyword) ||
       t.desc.toLowerCase().includes(keyword)
     )
   }
-  
+
   return list
 })
 
 const onSearch = () => {
-  // 搜索逻辑已在computed中处理
+  // 搜索逻辑已在 computed 中处理
+}
+
+const focusSearch = () => {
+  searchText.value = ''
 }
 
 const goToTool = (tool: any) => {
@@ -126,6 +180,12 @@ const goToTool = (tool: any) => {
   })
 }
 
+const openLandingPage = (path: string) => {
+  // #ifdef H5
+  window.location.href = path
+  // #endif
+}
+
 const navigateToBeian = () => {
   // #ifdef H5
   window.open('https://beian.miit.gov.cn/', '_blank')
@@ -136,17 +196,118 @@ const navigateToBeian = () => {
 <style scoped>
 .container {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding: 20rpx;
+  background: linear-gradient(180deg, #eef5ff 0%, #f7f9fc 42%, #ffffff 100%);
+  padding: 24rpx;
+}
+
+.page-shell {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  padding: 42rpx 32rpx;
+  margin-bottom: 24rpx;
+  border-radius: 32rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #1677ff 0%, #31c48d 100%);
+  box-shadow: 0 24rpx 60rpx rgba(22, 119, 255, 0.2);
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-badge {
+  align-self: flex-start;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #eaf5ff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.hero-title {
+  margin-top: 18rpx;
+  font-size: 52rpx;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.hero-subtitle {
+  margin-top: 16rpx;
+  max-width: 760px;
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  margin-top: 30rpx;
+}
+
+.hero-action {
+  padding: 16rpx 28rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  color: #fff;
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+}
+
+.hero-action.primary {
+  color: #1677ff;
+  background: #fff;
+  border-color: #fff;
+  font-weight: 700;
+}
+
+.hero-card {
+  padding: 28rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2rpx solid rgba(255, 255, 255, 0.22);
+}
+
+.hero-card-title,
+.hero-card-desc {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.hero-card-number {
+  display: block;
+  margin: 8rpx 0;
+  font-size: 64rpx;
+  font-weight: 800;
+}
+
+.main-panel,
+.seo-panel,
+.landing-links {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 30rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 16rpx 44rpx rgba(20, 35, 90, 0.08);
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  background: #fff;
-  border-radius: 50rpx;
+  background: #f6f8fb;
+  border-radius: 999rpx;
   padding: 20rpx 30rpx;
   margin-bottom: 20rpx;
+  border: 2rpx solid #edf1f7;
 }
 
 .search-input {
@@ -168,10 +329,10 @@ const navigateToBeian = () => {
 .category-item {
   padding: 15rpx 30rpx;
   margin-right: 20rpx;
-  background: #fff;
-  border-radius: 30rpx;
+  background: #f6f8fb;
+  border-radius: 999rpx;
   font-size: 26rpx;
-  color: #666;
+  color: #556;
   white-space: nowrap;
 }
 
@@ -182,18 +343,23 @@ const navigateToBeian = () => {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
 }
 
 .tool-item {
+  position: relative;
+  min-height: 220rpx;
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: 24rpx;
   padding: 30rpx 20rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
+  border: 2rpx solid #eef2f7;
+  box-shadow: 0 10rpx 26rpx rgba(20, 35, 90, 0.06);
 }
 
 .tool-icon {
@@ -211,20 +377,19 @@ const navigateToBeian = () => {
 }
 
 .tool-name {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #333;
+  font-size: 29rpx;
+  font-weight: 700;
+  color: #243044;
   margin-bottom: 8rpx;
 }
 
 .tool-desc {
-  font-size: 22rpx;
-  color: #999;
+  font-size: 23rpx;
+  color: #7a869a;
 }
 
 .tool-not-implemented {
-  opacity: 0.6;
-  position: relative;
+  opacity: 0.58;
 }
 
 .coming-soon-badge {
@@ -238,25 +403,137 @@ const navigateToBeian = () => {
   border-radius: 20rpx;
 }
 
+.seo-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18rpx;
+}
+
+.seo-card {
+  padding: 24rpx;
+  border-radius: 22rpx;
+  background: #f7fbff;
+  border: 2rpx solid #e7f0ff;
+}
+
+.seo-title {
+  display: block;
+  font-size: 29rpx;
+  font-weight: 700;
+  color: #17233d;
+  margin-bottom: 10rpx;
+}
+
+.seo-desc {
+  display: block;
+  font-size: 25rpx;
+  color: #5f6f89;
+  line-height: 1.7;
+}
+
+.landing-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #17233d;
+  margin-bottom: 16rpx;
+}
+
+.landing-link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.landing-link {
+  padding: 12rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #1677ff;
+  background: #edf5ff;
+}
+
 .footer {
-  margin-top: 60rpx;
+  margin-top: 40rpx;
   text-align: center;
   padding-bottom: 40rpx;
 }
 
 .footer-text {
   font-size: 24rpx;
-  color: #ccc;
+  color: #9aa6b8;
 }
 
 .icp-beian {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #999;
+  color: #8b97a8;
   cursor: pointer;
 }
 
-.icp-beian:active {
-  opacity: 0.7;
+.icp-beian:active,
+.tool-item:active,
+.hero-action:active,
+.landing-link:active {
+  opacity: 0.72;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 32px 24px;
+  }
+
+  .hero-section {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 48px;
+    border-radius: 28px;
+  }
+
+  .hero-content {
+    flex: 1;
+  }
+
+  .hero-title {
+    font-size: 48px;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+  }
+
+  .hero-card {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .main-panel,
+  .seo-panel,
+  .landing-links {
+    padding: 28px;
+    border-radius: 24px;
+  }
+
+  .tool-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .tool-item {
+    min-height: 168px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .tool-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(20, 35, 90, 0.12);
+  }
+
+  .seo-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 </style>

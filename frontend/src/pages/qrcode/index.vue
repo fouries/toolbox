@@ -74,6 +74,8 @@
 import { ref } from 'vue'
 import { generateQrcode as apiGenerateQrcode } from '@/api'
 
+declare const wx: any
+
 const inputText = ref('')
 const qrSize = ref(256)
 const loading = ref(false)

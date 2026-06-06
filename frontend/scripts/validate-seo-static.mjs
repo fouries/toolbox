@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 const root = process.cwd()
 const requiredFiles = [
+  'src/pages/index/index.vue',
   'public/robots.txt',
   'public/sitemap.xml',
   'public/weather.html',
@@ -12,6 +13,14 @@ const requiredFiles = [
 ]
 
 const expected = {
+  'src/pages/index/index.vue': [
+    'hero-section',
+    'main-panel',
+    'seo-panel',
+    '@media (min-width: 768px)',
+    'max-width: 1120px',
+    'grid-template-columns: repeat(4, minmax(0, 1fr))',
+  ],
   'public/robots.txt': ['User-agent: *', 'Allow: /', 'Sitemap: https://quan1234.com/sitemap.xml'],
   'public/sitemap.xml': [
     '<loc>https://quan1234.com/</loc>',
@@ -20,10 +29,10 @@ const expected = {
     '<loc>https://quan1234.com/qrcode.html</loc>',
     '<loc>https://quan1234.com/password.html</loc>',
   ],
-  'public/weather.html': ['天气查询', '立即使用天气查询', 'https://quan1234.com/#/pages/weather/index'],
-  'public/oil-price.html': ['油价查询', '立即使用油价查询', 'https://quan1234.com/#/pages/oil-price/index'],
-  'public/qrcode.html': ['二维码生成器', '立即使用二维码生成器', 'https://quan1234.com/#/pages/qrcode/index'],
-  'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index'],
+  'public/weather.html': ['天气查询', '立即使用天气查询', 'https://quan1234.com/#/pages/weather/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
+  'public/oil-price.html': ['油价查询', '立即使用油价查询', 'https://quan1234.com/#/pages/oil-price/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
+  'public/qrcode.html': ['二维码生成器', '立即使用二维码生成器', 'https://quan1234.com/#/pages/qrcode/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
+  'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
 }
 
 const errors = []
