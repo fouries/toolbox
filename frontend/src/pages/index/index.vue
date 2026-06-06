@@ -67,17 +67,6 @@
         </view>
       </view>
 
-      <!-- #ifdef H5 -->
-      <view class="landing-links">
-        <text class="landing-title">静态落地页</text>
-        <view class="landing-link-list">
-          <text class="landing-link" @click="openLandingPage('/weather.html')">天气查询</text>
-          <text class="landing-link" @click="openLandingPage('/oil-price.html')">油价查询</text>
-          <text class="landing-link" @click="openLandingPage('/qrcode.html')">二维码生成器</text>
-          <text class="landing-link" @click="openLandingPage('/password.html')">随机密码生成器</text>
-        </view>
-      </view>
-      <!-- #endif -->
 
       <!-- 底部信息 -->
       <view class="footer">
@@ -153,12 +142,6 @@ const goToTool = (tool: any) => {
   })
 }
 
-const openLandingPage = (path: string) => {
-  // #ifdef H5
-  window.location.href = path
-  // #endif
-}
-
 const navigateToBeian = () => {
   // #ifdef H5
   window.open('https://beian.miit.gov.cn/', '_blank')
@@ -232,8 +215,7 @@ const navigateToBeian = () => {
   font-weight: 800;
 }
 
-.main-panel,
-.landing-links {
+.main-panel {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 30rpx;
   padding: 24rpx;
@@ -344,28 +326,6 @@ const navigateToBeian = () => {
   border-radius: 20rpx;
 }
 
-.landing-title {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #17233d;
-  margin-bottom: 16rpx;
-}
-
-.landing-link-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.landing-link {
-  padding: 12rpx 20rpx;
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  color: #1677ff;
-  background: #edf5ff;
-}
-
 .footer {
   margin-top: 40rpx;
   text-align: center;
@@ -385,8 +345,7 @@ const navigateToBeian = () => {
 }
 
 .icp-beian:active,
-.tool-item:active,
-.landing-link:active {
+.tool-item:active {
   opacity: 0.72;
 }
 
@@ -422,8 +381,7 @@ const navigateToBeian = () => {
     justify-content: center;
   }
 
-  .main-panel,
-  .landing-links {
+  .main-panel {
     padding: 28px;
     border-radius: 24px;
   }
