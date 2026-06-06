@@ -70,7 +70,7 @@
 
       <!-- 底部信息 -->
       <view class="footer">
-        <text class="footer-text">小巧的工具箱 v1.0 · quan1234.com</text>
+        <text class="footer-text">小巧的工具箱 v1.0</text>
         <!-- #ifdef H5 -->
         <view
           class="icp-beian"
@@ -78,9 +78,6 @@
         >
           <text>粤ICP备2026056747号</text>
         </view>
-        <!-- #endif -->
-        <!-- #ifdef MP-WEIXIN -->
-        <text class="icp-beian">粤ICP备2026056747号</text>
         <!-- #endif -->
       </view>
     </view>
