@@ -9,7 +9,6 @@
         <view class="hero-content">
           <view class="hero-copy">
             <text class="hero-kicker">在线实用工具集合</text>
-            <text class="hero-title">小巧的工具箱</text>
             <text class="hero-subtitle">精选日常高频工具，轻量、快速、即开即用。天气、油价、二维码、密码等常用能力，一个入口快速找到。</text>
           </view>
 
@@ -313,16 +312,8 @@ const navigateToBeian = () => {
   font-weight: 700;
 }
 
-.hero-title {
-  margin-top: 18rpx;
-  font-size: 52rpx;
-  font-weight: 800;
-  line-height: 1.12;
-  color: var(--theme-text, #243044);
-}
-
 .hero-subtitle {
-  margin-top: 16rpx;
+  margin-top: 18rpx;
   max-width: 720px;
   font-size: 28rpx;
   color: var(--theme-text-secondary, #667085);
@@ -749,7 +740,6 @@ const navigateToBeian = () => {
     border-radius: 28px;
   }
 
-  .hero-title { font-size: 48px; }
   .hero-subtitle { font-size: 18px; }
   .search-box { padding: 14px 20px; }
   .tool-search-wrap { margin: 0 0 24px; }
