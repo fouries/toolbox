@@ -16,7 +16,7 @@
             @confirm="fetchWeather"
           />
           <button class="search-btn" @click="fetchWeather" :disabled="loading || locating">查询</button>
-          <button class="location-btn" @click="useCurrentLocation" :disabled="loading || locating">
+          <button class="location-btn" @click="() => useCurrentLocation()" :disabled="loading || locating">
             {{ locating ? '定位中...' : '📍 定位' }}
           </button>
         </view>
@@ -139,7 +139,7 @@ const selectCity = (c: string) => {
   fetchWeather()
 }
 
-const useCurrentLocation = async () => {
+const useCurrentLocation = async (options: { initial?: boolean } = {}) => {
   locating.value = true
   errorMsg.value = ''
   try {
@@ -152,8 +152,14 @@ const useCurrentLocation = async () => {
     locationLabel.value = address.label || locatedCity
     await fetchWeather()
   } catch (err: any) {
-    errorMsg.value = err.message || '定位失败，请手动输入城市'
-    uni.showToast({ title: errorMsg.value, icon: 'none' })
+    const message = err.message || '定位失败，请手动输入城市'
+    if (options.initial) {
+      uni.showToast({ title: '定位失败，已展示默认城市', icon: 'none' })
+      await fetchWeather()
+    } else {
+      errorMsg.value = message
+      uni.showToast({ title: errorMsg.value, icon: 'none' })
+    }
   } finally {
     locating.value = false
   }
@@ -212,8 +218,12 @@ const getWeatherIcon = (weather: string | undefined) => {
   return '🌤️'
 }
 
+const initWeatherPage = async () => {
+  await useCurrentLocation({ initial: true })
+}
+
 onMounted(() => {
-  fetchWeather()
+  initWeatherPage()
 })
 </script>
 
