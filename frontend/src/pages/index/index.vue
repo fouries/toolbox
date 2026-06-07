@@ -9,7 +9,7 @@
         <view class="hero-content">
           <view class="hero-copy">
             <view class="hero-heading">
-              <text class="hero-kicker">在线实用工具集合</text>
+              <text class="hero-kicker">在线实用工具</text>
               <view class="hero-meta-row">
                 <view class="hero-meta-card">
                   <view class="meta-icon meta-icon-free">
@@ -390,10 +390,16 @@ const navigateToBeian = () => {
   box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.58), 0 4rpx 10rpx rgba(20, 35, 90, 0.06);
 }
 
-.meta-icon-free,
-.meta-icon-tools,
+.meta-icon-free {
+  background: linear-gradient(135deg, #ff9f43 0%, #ff6b6b 100%);
+}
+
+.meta-icon-tools {
+  background: linear-gradient(135deg, #4ecdc4 0%, #00b894 100%);
+}
+
 .meta-icon-cross {
-  background: var(--theme-hero, linear-gradient(135deg, #1677ff 0%, #31c48d 100%));
+  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
 }
 
 .meta-icon-text {
