@@ -3,28 +3,79 @@
     <ThemeSwitcher />
     <view class="page-shell home-shell">
       <view class="hero-section">
+        <view class="hero-bg-dot dot-one"></view>
+        <view class="hero-bg-dot dot-two"></view>
+
         <view class="hero-content">
-          <text class="hero-kicker">在线实用工具集合</text>
-          <text class="hero-title">小巧的工具箱</text>
-          <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用，电脑和手机都能舒适访问。</text>
+          <view class="hero-copy">
+            <text class="hero-kicker">在线实用工具集合</text>
+            <text class="hero-title">小巧的工具箱</text>
+            <text class="hero-subtitle">精选日常高频工具，轻量、快速、即开即用。天气、油价、二维码、密码等常用能力，一个入口快速找到。</text>
+          </view>
+
+          <view class="search-box hero-search">
+            <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
+            <input
+              class="search-input"
+              placeholder="搜索天气、油价、二维码、密码..."
+              confirm-type="search"
+              v-model="searchText"
+            />
+            <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
+          </view>
+
+          <view class="hero-meta-row">
+            <view class="hero-meta-card">
+              <text class="meta-number">{{ implementedCount }}</text>
+              <text class="meta-label">已上线</text>
+            </view>
+            <view class="hero-meta-card">
+              <text class="meta-number">{{ tools.length }}</text>
+              <text class="meta-label">工具总数</text>
+            </view>
+            <view class="hero-meta-card">
+              <text class="meta-number">跨端</text>
+              <text class="meta-label">手机电脑都可用</text>
+            </view>
+          </view>
         </view>
-        <view class="hero-card">
-          <text class="hero-card-title">已上线工具</text>
-          <text class="hero-card-number">4+</text>
-          <text class="hero-card-desc">持续扩展生活服务、编码转换和效率工具</text>
+
+        <view class="quick-panel">
+          <view class="quick-panel-header">
+            <view>
+              <text class="section-kicker">快捷入口</text>
+              <text class="section-title">热门工具</text>
+            </view>
+            <text class="section-count">{{ popularTools.length }} 个常用</text>
+          </view>
+
+          <view class="quick-tool-list">
+            <view
+              class="quick-tool-card"
+              @click="goToTool(tool)"
+              v-for="tool in popularTools"
+              :key="tool.id"
+            >
+              <view class="quick-tool-icon" :style="{ background: tool.color }">
+                <text class="quick-icon-text">{{ tool.icon }}</text>
+              </view>
+              <view class="quick-tool-info">
+                <text class="quick-tool-name">{{ tool.name }}</text>
+                <text class="quick-tool-desc">{{ tool.desc }}</text>
+              </view>
+              <text class="quick-arrow">›</text>
+            </view>
+          </view>
         </view>
       </view>
 
       <view class="main-panel">
-        <view class="search-box">
-          <uni-icons type="search" size="18" color="#999"></uni-icons>
-          <input
-            class="search-input"
-            placeholder="搜索天气、油价、二维码、密码..."
-            confirm-type="search"
-            v-model="searchText"
-          />
-          <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
+        <view class="panel-header">
+          <view>
+            <text class="section-kicker">全部工具</text>
+            <text class="section-title">按分类浏览</text>
+          </view>
+          <text class="section-count">{{ filteredTools.length }} 个结果</text>
         </view>
 
         <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
@@ -127,6 +178,9 @@ const tools = ref<ToolItem[]>([
   { id: 'json', name: 'JSON格式化', desc: '格式化与压缩 JSON', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false, status: '规划中' }
 ])
 
+const implementedCount = computed(() => tools.value.filter(t => t.implemented).length)
+const popularTools = computed(() => tools.value.filter(t => t.implemented && t.badge).slice(0, 4))
+
 const filteredTools = computed(() => {
   let list = tools.value
 
@@ -178,18 +232,56 @@ const navigateToBeian = () => {
 }
 
 .hero-section {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 24rpx;
-  padding: 42rpx 32rpx;
+  padding: 30rpx;
   margin-bottom: 24rpx;
-  border-radius: 32rpx;
-  color: #fff;
-  background: linear-gradient(135deg, #1677ff 0%, #31c48d 100%);
-  box-shadow: 0 24rpx 60rpx rgba(22, 119, 255, 0.2);
+  border-radius: 34rpx;
+  background: var(--theme-surface, rgba(255, 255, 255, 0.88)) !important;
+  border: 2rpx solid var(--theme-border, rgba(255, 255, 255, 0.74));
+  box-shadow: 0 18rpx 50rpx rgba(20, 35, 90, 0.08);
+}
+
+.hero-bg-dot {
+  position: absolute;
+  border-radius: 999rpx;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.dot-one {
+  width: 260rpx;
+  height: 260rpx;
+  top: -96rpx;
+  right: -66rpx;
+  background: var(--theme-primary, #1677ff);
+}
+
+.dot-two {
+  width: 180rpx;
+  height: 180rpx;
+  left: -70rpx;
+  bottom: 80rpx;
+  background: var(--theme-accent, #31c48d);
+}
+
+.hero-content,
+.quick-panel,
+.main-panel {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.hero-copy {
   display: flex;
   flex-direction: column;
 }
@@ -199,100 +291,219 @@ const navigateToBeian = () => {
   width: fit-content;
   padding: 8rpx 18rpx;
   border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--theme-primary-soft, #eef5ff);
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--theme-primary, #1677ff);
+  font-weight: 700;
 }
 
 .hero-title {
   margin-top: 18rpx;
   font-size: 52rpx;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.12;
+  color: var(--theme-text, #243044);
 }
 
 .hero-subtitle {
   margin-top: 16rpx;
-  max-width: 760px;
+  max-width: 720px;
   font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--theme-text-secondary, #667085);
   line-height: 1.7;
-}
-
-.hero-card {
-  padding: 28rpx;
-  border-radius: 26rpx;
-  background: rgba(255, 255, 255, 0.16);
-  border: 2rpx solid rgba(255, 255, 255, 0.22);
-}
-
-.hero-card-title,
-.hero-card-desc {
-  display: block;
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.84);
-}
-
-.hero-card-number {
-  display: block;
-  margin: 8rpx 0;
-  font-size: 64rpx;
-  font-weight: 800;
-}
-
-.main-panel {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 30rpx;
-  padding: 24rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 16rpx 44rpx rgba(20, 35, 90, 0.08);
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  background: #f6f8fb;
+  background: rgba(246, 248, 251, 0.92);
   border-radius: 999rpx;
-  padding: 20rpx 30rpx;
-  margin-bottom: 20rpx;
-  border: 2rpx solid #edf1f7;
+  padding: 20rpx 28rpx;
+  border: 2rpx solid rgba(226, 232, 240, 0.9);
+}
+
+.hero-search {
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.55);
 }
 
 .search-input {
   flex: 1;
   margin-left: 15rpx;
   font-size: 28rpx;
+  color: var(--theme-text, #243044);
 }
 
 .clear-search {
   margin-left: 16rpx;
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--theme-primary, #1677ff);
+  font-weight: 700;
+}
+
+.hero-meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14rpx;
+}
+
+.hero-meta-card {
+  padding: 18rpx 16rpx;
+  border-radius: 22rpx;
+  background: rgba(248, 250, 252, 0.78);
+  border: 2rpx solid rgba(226, 232, 240, 0.68);
+}
+
+.meta-number,
+.meta-label {
+  display: block;
+}
+
+.meta-number {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: var(--theme-text, #243044);
+}
+
+.meta-label {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: var(--theme-text-muted, #9aa6b8);
+}
+
+.quick-panel,
+.main-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 30rpx;
+  padding: 24rpx;
+  border: 2rpx solid rgba(238, 242, 247, 0.9);
+  box-shadow: 0 12rpx 34rpx rgba(20, 35, 90, 0.06);
+}
+
+.quick-panel-header,
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-bottom: 22rpx;
+}
+
+.section-kicker,
+.section-title,
+.section-count {
+  display: block;
+}
+
+.section-kicker {
+  margin-bottom: 6rpx;
+  font-size: 22rpx;
+  color: var(--theme-primary, #1677ff);
+  font-weight: 700;
+}
+
+.section-title {
+  font-size: 34rpx;
+  color: var(--theme-text, #243044);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.section-count {
+  flex-shrink: 0;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--theme-primary-soft, #eef5ff);
+  color: var(--theme-primary, #1677ff);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.quick-tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.quick-tool-card {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx;
+  border-radius: 22rpx;
+  background: rgba(248, 250, 252, 0.78);
+  border: 2rpx solid rgba(238, 242, 247, 0.9);
+}
+
+.quick-tool-icon {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-icon-text {
+  font-size: 36rpx;
+}
+
+.quick-tool-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.quick-tool-name {
+  font-size: 28rpx;
+  color: var(--theme-text, #243044);
+  font-weight: 800;
+}
+
+.quick-tool-desc {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--theme-text-secondary, #667085);
+  line-height: 1.35;
+}
+
+.quick-arrow {
+  color: var(--theme-text-muted, #9aa6b8);
+  font-size: 42rpx;
+  line-height: 1;
+}
+
+.main-panel {
+  margin-bottom: 24rpx;
 }
 
 .category-scroll {
   white-space: nowrap;
-  margin-bottom: 30rpx;
+  margin-bottom: 24rpx;
 }
 
 .category-list {
   display: flex;
-  padding: 10rpx 0;
+  padding: 6rpx 0 10rpx;
 }
 
 .category-item {
   padding: 15rpx 30rpx;
-  margin-right: 20rpx;
-  background: #f6f8fb;
+  margin-right: 18rpx;
+  background: rgba(246, 248, 251, 0.88);
+  border: 2rpx solid rgba(238, 242, 247, 0.95);
   border-radius: 999rpx;
   font-size: 26rpx;
-  color: #556;
+  color: var(--theme-text-secondary, #667085);
   white-space: nowrap;
 }
 
 .category-item.active {
-  background: #007aff;
+  background: var(--theme-primary, #1677ff);
+  border-color: var(--theme-primary, #1677ff);
   color: #fff;
+  box-shadow: 0 10rpx 24rpx rgba(22, 119, 255, 0.18);
 }
 
 .tool-grid {
@@ -304,7 +515,7 @@ const navigateToBeian = () => {
 .tool-item {
   position: relative;
   min-height: 220rpx;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border-radius: 24rpx;
   padding: 30rpx 20rpx;
   display: flex;
@@ -312,14 +523,14 @@ const navigateToBeian = () => {
   align-items: center;
   justify-content: center;
   text-align: center;
-  border: 2rpx solid #eef2f7;
-  box-shadow: 0 10rpx 26rpx rgba(20, 35, 90, 0.06);
+  border: 2rpx solid rgba(238, 242, 247, 0.95);
+  box-shadow: 0 10rpx 26rpx rgba(20, 35, 90, 0.05);
 }
 
 .tool-icon {
   width: 100rpx;
   height: 100rpx;
-  border-radius: 50%;
+  border-radius: 30rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,14 +541,14 @@ const navigateToBeian = () => {
 
 .tool-name {
   font-size: 29rpx;
-  font-weight: 700;
-  color: #243044;
+  font-weight: 800;
+  color: var(--theme-text, #243044);
   margin-bottom: 8rpx;
 }
 
 .tool-desc {
   font-size: 23rpx;
-  color: #7a869a;
+  color: var(--theme-text-secondary, #7a869a);
   line-height: 1.45;
 }
 
@@ -349,9 +560,10 @@ const navigateToBeian = () => {
   left: 15rpx;
   font-size: 18rpx;
   padding: 4rpx 12rpx;
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--theme-primary-soft, #e8f3ff);
+  color: var(--theme-primary, #1677ff);
   border-radius: 20rpx;
+  font-weight: 700;
 }
 
 .coming-soon-badge {
@@ -368,7 +580,7 @@ const navigateToBeian = () => {
 .empty-state {
   padding: 70rpx 20rpx;
   text-align: center;
-  background: #f8fbff;
+  background: rgba(248, 251, 255, 0.86);
   border-radius: 24rpx;
   border: 2rpx dashed #dce8f8;
 }
@@ -380,8 +592,8 @@ const navigateToBeian = () => {
 }
 
 .empty-icon { font-size: 76rpx; margin-bottom: 16rpx; }
-.empty-title { font-size: 30rpx; color: #243044; font-weight: 700; }
-.empty-desc { margin: 12rpx 0 24rpx; font-size: 24rpx; color: #7a869a; }
+.empty-title { font-size: 30rpx; color: var(--theme-text, #243044); font-weight: 800; }
+.empty-desc { margin: 12rpx 0 24rpx; font-size: 24rpx; color: var(--theme-text-secondary, #7a869a); }
 
 .empty-btn {
   display: inline-flex;
@@ -391,7 +603,7 @@ const navigateToBeian = () => {
   height: 70rpx;
   line-height: 70rpx;
   border-radius: 999rpx;
-  background: #1677ff;
+  background: var(--theme-primary, #1677ff);
   color: #fff;
   font-size: 26rpx;
 }
@@ -404,44 +616,56 @@ const navigateToBeian = () => {
 
 .footer-text {
   font-size: 24rpx;
-  color: #9aa6b8;
+  color: var(--theme-text-muted, #9aa6b8);
 }
 
 .icp-beian {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #8b97a8;
+  color: var(--theme-text-muted, #8b97a8);
   cursor: pointer;
 }
 
 .icp-beian:active,
+.quick-tool-card:active,
 .tool-item:active { opacity: 0.72; }
 
 @media (min-width: 768px) {
   .container { padding: 32px 24px; }
 
   .hero-section {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
     align-items: stretch;
-    justify-content: space-between;
-    padding: 48px;
+    gap: 24px;
+    padding: 36px;
     border-radius: 28px;
   }
 
-  .hero-content { flex: 1; }
   .hero-title { font-size: 48px; }
   .hero-subtitle { font-size: 18px; }
+  .search-box { padding: 14px 20px; }
+  .search-input { font-size: 16px; }
+  .hero-meta-row { gap: 12px; }
+  .hero-meta-card { padding: 16px; border-radius: 18px; }
+  .meta-number { font-size: 22px; }
+  .meta-label { font-size: 13px; }
 
-  .hero-card {
-    width: 260px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
+  .quick-panel,
   .main-panel {
     padding: 28px;
     border-radius: 24px;
+  }
+
+  .quick-tool-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    cursor: pointer;
+  }
+
+  .quick-tool-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(22, 119, 255, 0.24);
+    box-shadow: 0 12px 28px rgba(20, 35, 90, 0.08);
   }
 
   .tool-grid {
@@ -451,13 +675,14 @@ const navigateToBeian = () => {
 
   .tool-item {
     min-height: 168px;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
 
   .tool-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 32px rgba(20, 35, 90, 0.12);
+    transform: translateY(-2px);
+    border-color: rgba(22, 119, 255, 0.24);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   }
 }
 </style>
