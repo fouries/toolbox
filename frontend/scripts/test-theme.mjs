@@ -53,14 +53,21 @@ const nightReadableTextClasses = [
   'note-title',
   'oil-icon',
   'forecast-title',
-  'forecast-weather'
+  'forecast-weather',
+  'quick-panel',
+  'quick-tool-card',
+  'quick-tool-name',
+  'quick-tool-desc',
+  'category-item',
+  'tool-item',
+  'empty-state'
 ]
 
 for (const className of nightReadableTextClasses) {
   assert.match(
     globalStyleSource,
-    new RegExp(`\\.container\\.theme-night \\.${className}`),
-    `night theme should override .${className} to keep card text readable`
+    new RegExp(`\\.container\\.theme-night \\.${className}(?:\\s*[,\\{])`),
+    `night theme should override .${className} directly to keep card text readable`
   )
 }
 

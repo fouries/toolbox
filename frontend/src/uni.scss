@@ -202,7 +202,8 @@
 .container.theme-night .picker,
 .container.theme-night .forecast-title,
 .container.theme-night .forecast-weather,
-.container.theme-night .tips-title {
+.container.theme-night .tips-title,
+.container.theme-night .quick-tool-name {
   color: var(--theme-text) !important;
 }
 
@@ -219,7 +220,8 @@
 .container.theme-night .update-time,
 .container.theme-night .loading-text,
 .container.theme-night .oil-label,
-.container.theme-night .oil-province-label {
+.container.theme-night .oil-province-label,
+.container.theme-night .quick-tool-desc {
   color: var(--theme-text-muted) !important;
 }
 
@@ -242,6 +244,21 @@
 .container.theme-fresh .main-panel,
 .container.theme-minimal .main-panel,
 .container.theme-night .main-panel,
+.container.theme-light .quick-panel,
+.container.theme-warm .quick-panel,
+.container.theme-fresh .quick-panel,
+.container.theme-minimal .quick-panel,
+.container.theme-night .quick-panel,
+.container.theme-light .quick-tool-card,
+.container.theme-warm .quick-tool-card,
+.container.theme-fresh .quick-tool-card,
+.container.theme-minimal .quick-tool-card,
+.container.theme-night .quick-tool-card,
+.container.theme-light .empty-state,
+.container.theme-warm .empty-state,
+.container.theme-fresh .empty-state,
+.container.theme-minimal .empty-state,
+.container.theme-night .empty-state,
 .container.theme-light .search-section,
 .container.theme-warm .search-section,
 .container.theme-fresh .search-section,
@@ -351,6 +368,11 @@
 .container.theme-fresh .tool-item,
 .container.theme-minimal .tool-item,
 .container.theme-night .tool-item,
+.container.theme-light .category-item,
+.container.theme-warm .category-item,
+.container.theme-fresh .category-item,
+.container.theme-minimal .category-item,
+.container.theme-night .category-item,
 .container.theme-light .oil-item,
 .container.theme-warm .oil-item,
 .container.theme-fresh .oil-item,
