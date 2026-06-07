@@ -13,17 +13,6 @@
             <text class="hero-subtitle">精选日常高频工具，轻量、快速、即开即用。天气、油价、二维码、密码等常用能力，一个入口快速找到。</text>
           </view>
 
-          <view class="search-box hero-search">
-            <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
-            <input
-              class="search-input"
-              placeholder="搜索天气、油价、二维码、密码..."
-              confirm-type="search"
-              v-model="searchText"
-            />
-            <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
-          </view>
-
           <view class="hero-meta-row">
             <view class="hero-meta-card">
               <view class="meta-icon meta-icon-free">
@@ -91,6 +80,19 @@
             <text class="section-title">按分类浏览</text>
           </view>
           <text class="section-count">{{ filteredTools.length }} 个结果</text>
+        </view>
+
+        <view class="tool-search-wrap">
+          <view class="search-box tool-search">
+            <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
+            <input
+              class="search-input"
+              placeholder="搜索天气、油价、二维码、密码..."
+              confirm-type="search"
+              v-model="searchText"
+            />
+            <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
+          </view>
         </view>
 
         <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
@@ -336,8 +338,19 @@ const navigateToBeian = () => {
   border: 2rpx solid rgba(226, 232, 240, 0.9);
 }
 
-.hero-search {
-  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.55);
+.tool-search-wrap {
+  margin: -2rpx 0 22rpx;
+}
+
+.tool-search {
+  background: rgba(248, 250, 252, 0.96);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 24rpx rgba(20, 35, 90, 0.05);
+}
+
+.theme-night .tool-search {
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(148, 163, 184, 0.26);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.04), 0 10rpx 24rpx rgba(0, 0, 0, 0.16);
 }
 
 .search-input {
@@ -712,6 +725,8 @@ const navigateToBeian = () => {
   .hero-title { font-size: 48px; }
   .hero-subtitle { font-size: 18px; }
   .search-box { padding: 14px 20px; }
+  .tool-search-wrap { margin: 0 0 24px; }
+  .tool-search { max-width: 640px; }
   .search-input { font-size: 16px; }
   .hero-meta-row { gap: 12px; }
   .hero-meta-card {
