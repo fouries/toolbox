@@ -8,6 +8,7 @@ from config import get_settings
 from utils.cache import cache
 from api.tianapi import TianApiService
 from api.tools import ToolsService
+from api.location import LocationService
 
 settings = get_settings()
 
@@ -62,6 +63,12 @@ async def weather(city: str = "北京"):
 async def calendar(date: str = None):
     """黄历/日历查询"""
     result = await TianApiService.get_calendar(date)
+    return result
+
+@app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
+async def reverse_location(latitude: float, longitude: float):
+    """根据经纬度解析省、市、区，用于天气和油价定位。"""
+    result = await LocationService.reverse_geocode(latitude, longitude)
     return result
 
 # ==================== 本地工具 API ====================
@@ -123,6 +130,7 @@ async def root():
         "status": "running",
         "apis": {
             "天行数据": ["/api/oil-price", "/api/weather", "/api/calendar"],
+            "定位服务": ["/api/location/reverse"],
             "本地工具": ["/api/qrcode", "/api/password"],
             "编码工具": ["/api/base64/encode", "/api/base64/decode", "/api/url/encode", "/api/url/decode", "/api/json/format"]
         }

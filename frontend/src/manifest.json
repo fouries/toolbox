@@ -65,6 +65,14 @@
             "useCompilerPlugins": false
         },
         "usingComponents": true,
+        "permission": {
+            "scope.userLocation": {
+                "desc": "用于根据当前位置查询当地天气和油价"
+            }
+        },
+        "requiredPrivateInfos": [
+            "getLocation"
+        ],
         "optimization": {
             "subPackages": false
         },

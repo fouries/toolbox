@@ -6,6 +6,17 @@
         <text class="subtitle">数据来源：发改委，每日更新</text>
       </view>
 
+      <view class="location-card">
+        <view>
+          <text class="location-title">📍 当前地区油价</text>
+          <text class="location-desc">授权定位后自动选择所在省份</text>
+        </view>
+        <button class="location-btn" @click="useCurrentLocation" :disabled="loading || locating">
+          {{ locating ? '定位中...' : '使用当前位置' }}
+        </button>
+      </view>
+      <text v-if="locationLabel" class="location-hint">当前定位：{{ locationLabel }}</text>
+
       <!-- 快捷省份标签 -->
       <view class="quick-provinces">
         <text
@@ -84,27 +95,53 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getOilPrice, type OilPriceItem } from '@/api'
+import { getCurrentAddress } from '@/utils/location'
+import { resolveProvince } from '@/utils/location-format'
 
 const loading = ref(false)
+const locating = ref(false)
 const error = ref('')
+const locationLabel = ref('')
 const oilData = ref<OilPriceItem[]>([])
 const selectedProvince = ref('北京')
 
-const quickProvinces = ['北京', '上海', '广东', '江苏', '浙江', '山东', '四川']
+const quickProvinces = ['北京', '上海', '天津', '广东', '江苏', '浙江', '山东', '四川']
 
 const provinces = ref([
-  '北京', '上海', '广东', '江苏', '浙江', '山东', '四川', '河南', '湖北', '湖南',
+  '北京', '上海', '天津', '广东', '江苏', '浙江', '山东', '四川', '河南', '湖北', '湖南',
   '河北', '福建', '安徽', '辽宁', '江西', '重庆', '陕西', '云南', '广西', '山西',
   '贵州', '黑龙江', '吉林', '甘肃', '内蒙古', '新疆', '海南', '宁夏', '青海', '西藏'
 ])
 
 const selectProvince = (prov: string) => {
   selectedProvince.value = prov
+  locationLabel.value = ''
   fetchOilPrice()
+}
+
+const useCurrentLocation = async () => {
+  locating.value = true
+  error.value = ''
+  try {
+    const address = await getCurrentAddress()
+    const province = resolveProvince(address.province, provinces.value)
+    if (!province) {
+      throw new Error('未能识别当前位置所在省份')
+    }
+    selectedProvince.value = province
+    locationLabel.value = address.label || province
+    await fetchOilPrice()
+  } catch (err: any) {
+    error.value = err.message || '定位失败，请手动选择省份'
+    uni.showToast({ title: error.value, icon: 'none' })
+  } finally {
+    locating.value = false
+  }
 }
 
 const onProvinceChange = (e: any) => {
   selectedProvince.value = provinces.value[e.detail.value]
+  locationLabel.value = ''
   fetchOilPrice()
 }
 
@@ -138,6 +175,52 @@ onMounted(() => {
   min-height: 100vh;
   background: linear-gradient(180deg, #e3f2fd 0%, #f5f5f5 100%);
   padding: 30rpx;
+}
+
+.location-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-md);
+  padding: 24rpx 28rpx;
+  margin-bottom: 18rpx;
+}
+
+.location-title,
+.location-desc,
+.location-hint {
+  display: block;
+}
+
+.location-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #243044;
+}
+
+.location-desc,
+.location-hint {
+  font-size: 24rpx;
+  color: #667085;
+  margin-top: 8rpx;
+}
+
+.location-hint {
+  margin: 0 0 20rpx 4rpx;
+}
+
+.location-btn {
+  width: 190rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 999rpx;
+  background: #007aff;
+  color: #fff;
+  font-size: 24rpx;
+  border: none;
+  padding: 0;
 }
 
 .quick-provinces {

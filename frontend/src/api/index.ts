@@ -62,6 +62,13 @@ export interface QrcodeResult {
   base64: string
 }
 
+export interface ReverseLocationResult {
+  province?: string
+  city?: string
+  district?: string
+  country?: string
+}
+
 function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
 
@@ -110,6 +117,10 @@ export const getWeather = (city: string = '北京') => {
   return request<WeatherItem[]>(`/api/weather?city=${encodeURIComponent(city)}`)
 }
 
+export const reverseLocation = (latitude: number, longitude: number) => {
+  return request<ReverseLocationResult>(`/api/location/reverse?latitude=${latitude}&longitude=${longitude}`)
+}
+
 export const getCalendar = (date?: string) => {
   const url = date ? `/api/calendar?date=${encodeURIComponent(date)}` : '/api/calendar'
   return request(url)
@@ -143,6 +154,7 @@ export const urlDecode = (encoded: string) => {
 export default {
   getOilPrice,
   getWeather,
+  reverseLocation,
   getCalendar,
   generateQrcode,
   generatePassword,

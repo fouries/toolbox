@@ -15,8 +15,12 @@
             confirm-type="search"
             @confirm="fetchWeather"
           />
-          <button class="search-btn" @click="fetchWeather" :disabled="loading">查询</button>
+          <button class="search-btn" @click="fetchWeather" :disabled="loading || locating">查询</button>
+          <button class="location-btn" @click="useCurrentLocation" :disabled="loading || locating">
+            {{ locating ? '定位中...' : '📍 定位' }}
+          </button>
         </view>
+        <text v-if="locationLabel" class="location-hint">当前定位：{{ locationLabel }}</text>
 
         <view class="hot-cities">
           <text class="hot-label">热门城市:</text>
@@ -116,18 +120,43 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getWeather, type ApiResponse, type WeatherItem } from '@/api'
+import { getCurrentAddress } from '@/utils/location'
+import { normalizeCity } from '@/utils/location-format'
 
 const city = ref('北京')
 const weatherData = ref<WeatherItem | null>(null)
 const forecastList = ref<WeatherItem[]>([])
 const loading = ref(false)
+const locating = ref(false)
 const errorMsg = ref('')
+const locationLabel = ref('')
 
 const hotCities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安', '南京', '苏州', '重庆', '天津', '长沙', '厦门']
 
 const selectCity = (c: string) => {
   city.value = c
+  locationLabel.value = ''
   fetchWeather()
+}
+
+const useCurrentLocation = async () => {
+  locating.value = true
+  errorMsg.value = ''
+  try {
+    const address = await getCurrentAddress()
+    const locatedCity = normalizeCity(address.city || address.province)
+    if (!locatedCity) {
+      throw new Error('未能识别当前位置所在城市')
+    }
+    city.value = locatedCity
+    locationLabel.value = address.label || locatedCity
+    await fetchWeather()
+  } catch (err: any) {
+    errorMsg.value = err.message || '定位失败，请手动输入城市'
+    uni.showToast({ title: errorMsg.value, icon: 'none' })
+  } finally {
+    locating.value = false
+  }
 }
 
 const fetchWeather = async () => {
@@ -227,6 +256,25 @@ onMounted(() => {
   font-size: 28rpx;
   border: none;
   padding: 0;
+}
+
+.location-btn {
+  width: 160rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #eef5ff;
+  color: #1677ff;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  border: 2rpx solid #d6e8ff;
+  padding: 0;
+}
+
+.location-hint {
+  display: block;
+  margin: -10rpx 0 24rpx;
+  font-size: 24rpx;
+  color: #667085;
 }
 
 .hot-cities {
