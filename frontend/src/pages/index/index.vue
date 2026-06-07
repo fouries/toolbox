@@ -8,38 +8,30 @@
 
         <view class="hero-content">
           <view class="hero-copy">
-            <text class="hero-kicker">在线实用工具集合</text>
+            <view class="hero-heading">
+              <text class="hero-kicker">在线实用工具集合</text>
+              <view class="hero-meta-row">
+                <view class="hero-meta-card">
+                  <view class="meta-icon meta-icon-free">
+                    <text class="meta-icon-text">🎁</text>
+                  </view>
+                  <text class="meta-label">无需安装 · 即开即用</text>
+                </view>
+                <view class="hero-meta-card">
+                  <view class="meta-icon meta-icon-tools">
+                    <text class="meta-icon-text">🧰</text>
+                  </view>
+                  <text class="meta-label">简洁无广告</text>
+                </view>
+                <view class="hero-meta-card">
+                  <view class="meta-icon meta-icon-cross">
+                    <text class="meta-icon-text">📱</text>
+                  </view>
+                  <text class="meta-label">手机电脑都可用</text>
+                </view>
+              </view>
+            </view>
             <text class="hero-subtitle">精选日常高频工具，轻量、快速、即开即用。天气、油价、二维码、密码等常用能力，一个入口快速找到。</text>
-          </view>
-
-          <view class="hero-meta-row">
-            <view class="hero-meta-card">
-              <view class="meta-icon meta-icon-free">
-                <text class="meta-icon-text">🎁</text>
-              </view>
-              <view class="meta-copy">
-                <text class="meta-number">免费使用</text>
-                <text class="meta-label">无需安装 · 即开即用</text>
-              </view>
-            </view>
-            <view class="hero-meta-card">
-              <view class="meta-icon meta-icon-tools">
-                <text class="meta-icon-text">🧰</text>
-              </view>
-              <view class="meta-copy">
-                <text class="meta-number">常用工具</text>
-                <text class="meta-label">简洁无广告</text>
-              </view>
-            </view>
-            <view class="hero-meta-card">
-              <view class="meta-icon meta-icon-cross">
-                <text class="meta-icon-text">📱</text>
-              </view>
-              <view class="meta-copy">
-                <text class="meta-number">跨端</text>
-                <text class="meta-label">手机电脑都可用</text>
-              </view>
-            </view>
           </view>
         </view>
 
@@ -301,8 +293,17 @@ const navigateToBeian = () => {
   flex-direction: column;
 }
 
+.hero-heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
 .hero-kicker {
   display: inline-flex;
+  flex-shrink: 0;
   width: fit-content;
   padding: 8rpx 18rpx;
   border-radius: 999rpx;
@@ -360,34 +361,33 @@ const navigateToBeian = () => {
 }
 
 .hero-meta-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10rpx;
 }
 
 .hero-meta-card {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 8rpx;
   min-width: 0;
-  padding: 18rpx 16rpx;
-  text-align: center;
-  border-radius: 22rpx;
-  background: linear-gradient(135deg, var(--theme-primary-soft, rgba(248, 250, 252, 0.78)) 0%, var(--theme-surface, rgba(255, 255, 255, 0.82)) 100%);
-  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.68));
-  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04);
+  padding: 8rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.58);
+  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.6));
+  box-shadow: 0 6rpx 16rpx rgba(20, 35, 90, 0.04);
 }
 
 .meta-icon {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 20rpx;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 999rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 22rpx rgba(20, 35, 90, 0.08);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.58), 0 4rpx 10rpx rgba(20, 35, 90, 0.06);
 }
 
 .meta-icon-free,
@@ -397,13 +397,16 @@ const navigateToBeian = () => {
 }
 
 .meta-icon-text {
-  font-size: 32rpx;
+  font-size: 20rpx;
   line-height: 1;
 }
 
-.meta-copy {
-  flex: 1;
-  min-width: 0;
+.meta-label {
+  display: block;
+  font-size: 21rpx;
+  color: var(--theme-text-secondary, #667085);
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .theme-light .hero-meta-card,
@@ -440,29 +443,13 @@ const navigateToBeian = () => {
   box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.2);
 }
 
-.theme-night .meta-number {
-  color: #f8fbff;
+.theme-night .hero-meta-card {
+  background: rgba(15, 23, 42, 0.62);
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.16);
 }
 
 .theme-night .meta-label {
   color: #d5deec;
-}
-
-.meta-number,
-.meta-label {
-  display: block;
-}
-
-.meta-number {
-  font-size: 30rpx;
-  font-weight: 800;
-  color: var(--theme-text, #243044);
-}
-
-.meta-label {
-  margin-top: 4rpx;
-  font-size: 21rpx;
-  color: var(--theme-text-muted, #9aa6b8);
 }
 
 .quick-panel,
@@ -741,24 +728,25 @@ const navigateToBeian = () => {
   }
 
   .hero-subtitle { font-size: 18px; }
+  .hero-heading {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hero-meta-row { gap: 8px; }
+  .hero-meta-card {
+    gap: 6px;
+    padding: 5px 9px;
+    border-radius: 999px;
+  }
+  .meta-icon { width: 20px; height: 20px; }
+  .meta-icon-text { font-size: 13px; }
+  .meta-label { font-size: 13px; }
   .search-box { padding: 14px 20px; }
   .tool-search-wrap { margin: 0 0 24px; }
   .tool-search { max-width: 640px; }
   .search-input { font-size: 16px; }
-  .hero-meta-row { gap: 12px; }
-  .hero-meta-card {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    text-align: left;
-    border-radius: 18px;
-  }
-  .meta-icon { width: 46px; height: 46px; border-radius: 15px; }
-  .meta-icon-text { font-size: 24px; }
-  .meta-number { font-size: 22px; }
-  .meta-label { font-size: 13px; }
-
   .quick-panel,
   .main-panel {
     padding: 28px;
