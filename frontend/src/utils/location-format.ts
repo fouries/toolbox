@@ -40,13 +40,9 @@ export function resolveProvince(rawProvince: string | undefined, provinces: stri
 export function formatLocationLabel(address: LocationAddress): string {
   const province = normalizeProvince(address.province)
   const city = normalizeCity(address.city)
-  const district = address.district?.trim().replace(/区$/, '') || ''
   const parts = [province]
   if (city && !DIRECT_CITIES.includes(province) && city !== province) {
     parts.push(city)
-  }
-  if (district && district !== city && district !== province) {
-    parts.push(district)
   }
   return parts.filter(Boolean).join(' ')
 }
