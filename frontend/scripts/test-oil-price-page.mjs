@@ -41,4 +41,33 @@ assert.match(
   'province picker should be labelled as a manual province selector'
 )
 
-console.log('oil price page location initialization is valid')
+assert.doesNotMatch(
+  source,
+  /class="location-card"/,
+  'current-region oil price card should be removed for a cleaner layout'
+)
+
+assert.match(
+  source,
+  /class="location-row"/,
+  'current location and refresh-location button should share a compact row'
+)
+
+assert.match(
+  source,
+  /📍\s*当前定位：/,
+  'current location text should show a location icon before the address'
+)
+
+assert.match(
+  source,
+  /<button[^>]*class="location-btn"[^>]*>/s,
+  'refresh-location button should be displayed next to the current address'
+)
+assert.match(
+  source,
+  /locating \? '定位中\.\.\.' : '重新定位'/,
+  'refresh-location button should keep locating and refresh labels'
+)
+
+console.log('oil price page location initialization and compact layout are valid')

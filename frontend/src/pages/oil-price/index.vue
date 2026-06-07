@@ -6,16 +6,12 @@
         <text class="subtitle">数据来源：发改委，每日更新</text>
       </view>
 
-      <view class="location-card">
-        <view>
-          <text class="location-title">📍 当前地区油价</text>
-          <text class="location-desc">打开页面自动定位并查询所在省份油价</text>
-        </view>
+      <view class="location-row">
+        <text class="location-hint">📍 当前定位：{{ locationLabel || selectedProvince }}</text>
         <button class="location-btn" @click="() => useCurrentLocation()" :disabled="loading || locating">
           {{ locating ? '定位中...' : '重新定位' }}
         </button>
       </view>
-      <text v-if="locationLabel" class="location-hint">当前定位：{{ locationLabel }}</text>
       <text v-if="locationNotice" class="location-notice">{{ locationNotice }}</text>
 
       <!-- 快捷省份标签 -->
@@ -198,19 +194,14 @@ onMounted(() => {
   padding: 30rpx;
 }
 
-.location-card {
+.location-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: var(--radius-md);
-  padding: 24rpx 28rpx;
-  margin-bottom: 18rpx;
+  margin: 0 4rpx 22rpx;
 }
 
-.location-title,
-.location-desc,
 .location-hint,
 .location-notice,
 .section-label,
@@ -219,21 +210,12 @@ onMounted(() => {
   display: block;
 }
 
-.location-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #243044;
-}
-
-.location-desc,
 .location-hint {
   font-size: 24rpx;
   color: #667085;
-  margin-top: 8rpx;
-}
-
-.location-hint {
-  margin: 0 0 20rpx 4rpx;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
 }
 
 .location-notice {
@@ -244,9 +226,9 @@ onMounted(() => {
 }
 
 .location-btn {
-  min-width: 190rpx;
-  height: 72rpx;
-  line-height: 72rpx;
+  min-width: 148rpx;
+  height: 58rpx;
+  line-height: 58rpx;
   border-radius: 999rpx;
   background: #007aff;
   color: #fff;
