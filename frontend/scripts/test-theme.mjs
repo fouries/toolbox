@@ -43,6 +43,27 @@ assert.match(
   'themed search/input text should keep normal themed text color'
 )
 
+const nightReadableTextClasses = [
+  'setting-title',
+  'setting-label',
+  'option-label',
+  'strength-title',
+  'size-label',
+  'tags-title',
+  'note-title',
+  'oil-icon',
+  'forecast-title',
+  'forecast-weather'
+]
+
+for (const className of nightReadableTextClasses) {
+  assert.match(
+    globalStyleSource,
+    new RegExp(`\\.container\\.theme-night \\.${className}`),
+    `night theme should override .${className} to keep card text readable`
+  )
+}
+
 const pageFiles = [
   'src/pages/index/index.vue',
   'src/pages/oil-price/index.vue',

@@ -191,6 +191,47 @@
   color: var(--theme-text-secondary) !important;
 }
 
+.container.theme-night .setting-title,
+.container.theme-night .setting-label,
+.container.theme-night .option-label,
+.container.theme-night .strength-title,
+.container.theme-night .size-label,
+.container.theme-night .tags-title,
+.container.theme-night .note-title,
+.container.theme-night .oil-icon,
+.container.theme-night .picker,
+.container.theme-night .forecast-title,
+.container.theme-night .forecast-weather,
+.container.theme-night .tips-title {
+  color: var(--theme-text) !important;
+}
+
+.container.theme-night .copy-hint,
+.container.theme-night .option-desc,
+.container.theme-night .strength-text,
+.container.theme-night .char-count,
+.container.theme-night .clear-btn,
+.container.theme-night .hot-label,
+.container.theme-night .forecast-week,
+.container.theme-night .forecast-temp,
+.container.theme-night .tips-content,
+.container.theme-night .note-text,
+.container.theme-night .update-time,
+.container.theme-night .loading-text,
+.container.theme-night .oil-label,
+.container.theme-night .oil-province-label {
+  color: var(--theme-text-muted) !important;
+}
+
+.container.theme-night .password-text,
+.container.theme-night .setting-value,
+.container.theme-night .size-value,
+.container.theme-night .oil-price,
+.container.theme-night .tag,
+.container.theme-night .action-btn.secondary {
+  color: var(--theme-primary) !important;
+}
+
 .container.theme-light .card,
 .container.theme-warm .card,
 .container.theme-fresh .card,
