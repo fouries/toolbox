@@ -5,6 +5,7 @@ import path from 'node:path'
 const themePath = path.resolve('src/utils/theme.ts')
 const switcherPath = path.resolve('src/components/ThemeSwitcher.vue')
 const appPath = path.resolve('src/App.vue')
+const globalStylePath = path.resolve('src/uni.scss')
 
 assert.ok(fs.existsSync(themePath), 'theme utility should exist')
 assert.ok(fs.existsSync(switcherPath), 'theme switcher component should exist')
@@ -12,6 +13,7 @@ assert.ok(fs.existsSync(switcherPath), 'theme switcher component should exist')
 const themeSource = fs.readFileSync(themePath, 'utf8')
 const switcherSource = fs.readFileSync(switcherPath, 'utf8')
 const appSource = fs.readFileSync(appPath, 'utf8')
+const globalStyleSource = fs.readFileSync(globalStylePath, 'utf8')
 
 for (const id of ['light', 'warm', 'fresh', 'minimal', 'night']) {
   assert.match(themeSource, new RegExp(`id:\\s*['"]${id}['"]`), `theme ${id} should be defined`)
@@ -30,6 +32,16 @@ assert.match(
   'switcher should sit below the UniApp navigation bar instead of being hidden behind it'
 )
 assert.match(switcherSource, /z-index:\s*9999/, 'switcher should stay above page content')
+assert.match(
+  globalStyleSource,
+  /\.container\.theme-light \.search-input,[\s\S]*\.container\.theme-night \.input[\s\S]*background:\s*transparent\s*!important;/,
+  'themed search/input placeholders should not sit on a colored filled input background'
+)
+assert.match(
+  globalStyleSource,
+  /\.container\.theme-light \.search-input,[\s\S]*\.container\.theme-night \.input[\s\S]*color:\s*var\(--theme-text\)\s*!important;/,
+  'themed search/input text should keep normal themed text color'
+)
 
 const pageFiles = [
   'src/pages/index/index.vue',

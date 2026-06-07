@@ -299,7 +299,12 @@
 .container.theme-warm .input,
 .container.theme-fresh .input,
 .container.theme-minimal .input,
-.container.theme-night .input,
+.container.theme-night .input {
+  background: transparent !important;
+  color: var(--theme-text) !important;
+  border-color: var(--theme-border) !important;
+}
+
 .container.theme-light .tool-item,
 .container.theme-warm .tool-item,
 .container.theme-fresh .tool-item,
