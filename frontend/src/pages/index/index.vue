@@ -406,6 +406,20 @@ const navigateToBeian = () => {
   min-width: 0;
 }
 
+.theme-night .hero-meta-card {
+  background: rgba(30, 41, 59, 0.86);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.2);
+}
+
+.theme-night .meta-number {
+  color: #f8fbff;
+}
+
+.theme-night .meta-label {
+  color: #d5deec;
+}
+
 .meta-number,
 .meta-label {
   display: block;
