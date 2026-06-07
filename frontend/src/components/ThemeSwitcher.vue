@@ -14,9 +14,9 @@ const { currentTheme, showThemePicker } = useTheme()
 <style scoped>
 .theme-switcher {
   position: fixed;
-  top: 24rpx;
+  top: calc(var(--window-top, 0px) + 24rpx);
   right: 24rpx;
-  z-index: 99;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;

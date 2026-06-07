@@ -24,6 +24,12 @@ assert.match(themeSource, /showActionSheet/, 'theme utility should open a native
 assert.match(themeSource, /setStorageSync\(['"]toolbox-theme['"]/, 'selected theme should be persisted')
 assert.match(appSource, /initTheme\(\)/, 'app should initialize persisted theme on launch')
 assert.match(switcherSource, /theme-switcher/, 'switcher should render a fixed theme button')
+assert.match(
+  switcherSource,
+  /top:\s*calc\(var\(--window-top,\s*0px\)\s*\+\s*24rpx\)/,
+  'switcher should sit below the UniApp navigation bar instead of being hidden behind it'
+)
+assert.match(switcherSource, /z-index:\s*9999/, 'switcher should stay above page content')
 
 const pageFiles = [
   'src/pages/index/index.vue',
