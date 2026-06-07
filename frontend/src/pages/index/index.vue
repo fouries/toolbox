@@ -26,16 +26,31 @@
 
           <view class="hero-meta-row">
             <view class="hero-meta-card">
-              <text class="meta-number">免费使用</text>
-              <text class="meta-label">无需安装 · 即开即用</text>
+              <view class="meta-icon meta-icon-free">
+                <text class="meta-icon-text">🎁</text>
+              </view>
+              <view class="meta-copy">
+                <text class="meta-number">免费使用</text>
+                <text class="meta-label">无需安装 · 即开即用</text>
+              </view>
             </view>
             <view class="hero-meta-card">
-              <text class="meta-number">常用工具</text>
-              <text class="meta-label">简洁无广告</text>
+              <view class="meta-icon meta-icon-tools">
+                <text class="meta-icon-text">🧰</text>
+              </view>
+              <view class="meta-copy">
+                <text class="meta-number">常用工具</text>
+                <text class="meta-label">简洁无广告</text>
+              </view>
             </view>
             <view class="hero-meta-card">
-              <text class="meta-number">跨端</text>
-              <text class="meta-label">手机电脑都可用</text>
+              <view class="meta-icon meta-icon-cross">
+                <text class="meta-icon-text">📱</text>
+              </view>
+              <view class="meta-copy">
+                <text class="meta-number">跨端</text>
+                <text class="meta-label">手机电脑都可用</text>
+              </view>
             </view>
           </view>
         </view>
@@ -346,10 +361,49 @@ const navigateToBeian = () => {
 }
 
 .hero-meta-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
   padding: 18rpx 16rpx;
+  text-align: center;
   border-radius: 22rpx;
   background: rgba(248, 250, 252, 0.78);
   border: 2rpx solid rgba(226, 232, 240, 0.68);
+}
+
+.meta-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 22rpx rgba(20, 35, 90, 0.08);
+}
+
+.meta-icon-free {
+  background: linear-gradient(135deg, #fff1b8 0%, #ffd666 100%);
+}
+
+.meta-icon-tools {
+  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+}
+
+.meta-icon-cross {
+  background: linear-gradient(135deg, #dcfce7 0%, #86efac 100%);
+}
+
+.meta-icon-text {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.meta-copy {
+  flex: 1;
+  min-width: 0;
 }
 
 .meta-number,
@@ -646,7 +700,16 @@ const navigateToBeian = () => {
   .search-box { padding: 14px 20px; }
   .search-input { font-size: 16px; }
   .hero-meta-row { gap: 12px; }
-  .hero-meta-card { padding: 16px; border-radius: 18px; }
+  .hero-meta-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    text-align: left;
+    border-radius: 18px;
+  }
+  .meta-icon { width: 46px; height: 46px; border-radius: 15px; }
+  .meta-icon-text { font-size: 24px; }
   .meta-number { font-size: 22px; }
   .meta-label { font-size: 13px; }
 
