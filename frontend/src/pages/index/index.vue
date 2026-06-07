@@ -26,12 +26,12 @@
 
           <view class="hero-meta-row">
             <view class="hero-meta-card">
-              <text class="meta-number">{{ implementedCount }}</text>
-              <text class="meta-label">已上线</text>
+              <text class="meta-number">免费使用</text>
+              <text class="meta-label">无需安装 · 即开即用</text>
             </view>
             <view class="hero-meta-card">
-              <text class="meta-number">{{ tools.length }}</text>
-              <text class="meta-label">工具总数</text>
+              <text class="meta-number">常用工具</text>
+              <text class="meta-label">简洁无广告</text>
             </view>
             <view class="hero-meta-card">
               <text class="meta-number">跨端</text>
@@ -178,7 +178,6 @@ const tools = ref<ToolItem[]>([
   { id: 'json', name: 'JSON格式化', desc: '格式化与压缩 JSON', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false, status: '规划中' }
 ])
 
-const implementedCount = computed(() => tools.value.filter(t => t.implemented).length)
 const popularTools = computed(() => tools.value.filter(t => t.implemented && t.badge).slice(0, 4))
 
 const filteredTools = computed(() => {
