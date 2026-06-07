@@ -1,0 +1,1 @@
+"use strict";const e=require("../common/vendor.js"),r=require("../utils/theme.js"),n=e.defineComponent({__name:"ThemeSwitcher",setup(n){const{currentTheme:t,showThemePicker:o}=r.useTheme();return(r,n)=>({a:e.t(e.unref(t).icon),b:e.o((...r)=>e.unref(o)&&e.unref(o)(...r))})}}),t=e._export_sfc(n,[["__scopeId","data-v-b2109ef1"]]);wx.createComponent(t);

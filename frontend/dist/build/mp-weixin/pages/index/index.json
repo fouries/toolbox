@@ -2,5 +2,7 @@
   "navigationBarTitleText": "小巧的工具箱",
   "navigationBarBackgroundColor": "#007aff",
   "navigationBarTextStyle": "white",
-  "usingComponents": {}
+  "usingComponents": {
+    "theme-switcher": "../../components/ThemeSwitcher"
+  }
 }

@@ -2,5 +2,7 @@
   "navigationBarTitleText": "油价查询",
   "navigationBarBackgroundColor": "#007aff",
   "navigationBarTextStyle": "white",
-  "usingComponents": {}
+  "usingComponents": {
+    "theme-switcher": "../../components/ThemeSwitcher"
+  }
 }

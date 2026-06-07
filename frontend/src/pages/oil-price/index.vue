@@ -1,5 +1,6 @@
 <template>
-  <view class="container">
+  <view :class="['container', themeClass]">
+    <ThemeSwitcher />
     <view class="page-shell">
       <view class="page-header">
         <text class="title">⛽ 今日油价查询</text>
@@ -95,11 +96,14 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import { useTheme } from '@/utils/theme'
 import { ref, onMounted } from 'vue'
 import { getOilPrice, type OilPriceItem } from '@/api'
 import { getCurrentAddress } from '@/utils/location'
 import { resolveProvince } from '@/utils/location-format'
 
+const { themeClass } = useTheme()
 const loading = ref(false)
 const locating = ref(false)
 const error = ref('')

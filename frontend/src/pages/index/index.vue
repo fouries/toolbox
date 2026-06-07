@@ -1,5 +1,6 @@
 <template>
-  <view class="container">
+  <view :class="['container', themeClass]">
+    <ThemeSwitcher />
     <view class="page-shell home-shell">
       <view class="hero-section">
         <view class="hero-content">
@@ -82,7 +83,11 @@
 </template>
 
 <script setup lang="ts">
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import { useTheme } from '@/utils/theme'
 import { ref, computed } from 'vue'
+
+const { themeClass } = useTheme()
 
 interface CategoryItem {
   id: string
