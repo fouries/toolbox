@@ -60,7 +60,7 @@
               v-for="tool in popularTools"
               :key="tool.id"
             >
-              <view class="quick-tool-icon" :style="{ background: tool.color }">
+              <view class="quick-tool-icon">
                 <text class="quick-icon-text">{{ tool.icon }}</text>
               </view>
               <view class="quick-tool-info">
@@ -332,10 +332,10 @@ const navigateToBeian = () => {
 .search-box {
   display: flex;
   align-items: center;
-  background: rgba(246, 248, 251, 0.92);
+  background: var(--theme-primary-soft, rgba(246, 248, 251, 0.92));
   border-radius: 999rpx;
   padding: 20rpx 28rpx;
-  border: 2rpx solid rgba(226, 232, 240, 0.9);
+  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.9));
 }
 
 .tool-search-wrap {
@@ -343,7 +343,8 @@ const navigateToBeian = () => {
 }
 
 .tool-search {
-  background: rgba(248, 250, 252, 0.96);
+  background: linear-gradient(135deg, var(--theme-primary-soft, #eef5ff) 0%, var(--theme-surface, #ffffff) 100%);
+  border-color: var(--theme-border, rgba(226, 232, 240, 0.9));
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 24rpx rgba(20, 35, 90, 0.05);
 }
 
@@ -382,8 +383,9 @@ const navigateToBeian = () => {
   padding: 18rpx 16rpx;
   text-align: center;
   border-radius: 22rpx;
-  background: rgba(248, 250, 252, 0.78);
-  border: 2rpx solid rgba(226, 232, 240, 0.68);
+  background: linear-gradient(135deg, var(--theme-primary-soft, rgba(248, 250, 252, 0.78)) 0%, var(--theme-surface, rgba(255, 255, 255, 0.82)) 100%);
+  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.68));
+  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04);
 }
 
 .meta-icon {
@@ -397,16 +399,10 @@ const navigateToBeian = () => {
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 22rpx rgba(20, 35, 90, 0.08);
 }
 
-.meta-icon-free {
-  background: linear-gradient(135deg, #fff1b8 0%, #ffd666 100%);
-}
-
-.meta-icon-tools {
-  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
-}
-
+.meta-icon-free,
+.meta-icon-tools,
 .meta-icon-cross {
-  background: linear-gradient(135deg, #dcfce7 0%, #86efac 100%);
+  background: var(--theme-hero, linear-gradient(135deg, #1677ff 0%, #31c48d 100%));
 }
 
 .meta-icon-text {
@@ -419,6 +415,34 @@ const navigateToBeian = () => {
   min-width: 0;
 }
 
+.theme-light .hero-meta-card,
+.theme-warm .hero-meta-card,
+.theme-fresh .hero-meta-card,
+.theme-minimal .hero-meta-card,
+.theme-light .quick-tool-card,
+.theme-warm .quick-tool-card,
+.theme-fresh .quick-tool-card,
+.theme-minimal .quick-tool-card,
+.theme-light .tool-search,
+.theme-warm .tool-search,
+.theme-fresh .tool-search,
+.theme-minimal .tool-search {
+  background: linear-gradient(135deg, var(--theme-primary-soft, #eef5ff) 0%, var(--theme-surface, #ffffff) 100%) !important;
+  border-color: var(--theme-border, rgba(226, 232, 240, 0.9)) !important;
+}
+
+.theme-light .hero-meta-card,
+.theme-warm .hero-meta-card,
+.theme-fresh .hero-meta-card,
+.theme-minimal .hero-meta-card,
+.theme-light .quick-tool-card,
+.theme-warm .quick-tool-card,
+.theme-fresh .quick-tool-card,
+.theme-minimal .quick-tool-card {
+  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04) !important;
+}
+
+.theme-night .quick-tool-card,
 .theme-night .hero-meta-card {
   background: rgba(30, 41, 59, 0.86);
   border-color: rgba(148, 163, 184, 0.3);
@@ -510,8 +534,9 @@ const navigateToBeian = () => {
   gap: 16rpx;
   padding: 18rpx;
   border-radius: 22rpx;
-  background: rgba(248, 250, 252, 0.78);
-  border: 2rpx solid rgba(238, 242, 247, 0.9);
+  background: linear-gradient(135deg, var(--theme-primary-soft, rgba(248, 250, 252, 0.78)) 0%, var(--theme-surface, rgba(255, 255, 255, 0.82)) 100%);
+  border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
+  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04);
 }
 
 .quick-tool-icon {
@@ -522,6 +547,8 @@ const navigateToBeian = () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: var(--theme-hero, linear-gradient(135deg, #1677ff 0%, #31c48d 100%));
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.42), 0 10rpx 22rpx rgba(20, 35, 90, 0.08);
 }
 
 .quick-icon-text {
