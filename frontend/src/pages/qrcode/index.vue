@@ -1,77 +1,75 @@
 <template>
   <view class="container">
-    <view class="header">
-      <text class="title">📱 二维码生成</text>
-      <text class="subtitle">输入文字，一键生成二维码</text>
-    </view>
-
-    <!-- 输入框 -->
-    <view class="input-box">
-      <textarea 
-        class="input" 
-        placeholder="请输入要生成二维码的文字或网址..."
-        v-model="inputText"
-        maxlength="500"
-        auto-height
-      ></textarea>
-      <view class="input-footer">
-        <text class="char-count">{{ inputText.length }}/500</text>
-        <button class="clear-btn" size="mini" @click="inputText = ''" v-if="inputText">清空</button>
+    <view class="page-shell">
+      <view class="page-header">
+        <text class="title">📱 二维码生成</text>
+        <text class="subtitle">输入文字或网址，一键生成二维码</text>
       </view>
-    </view>
 
-    <!-- 尺寸设置 -->
-    <view class="size-box">
-      <text class="size-label">二维码尺寸:</text>
-      <slider 
-        class="size-slider" 
-        :min="128" 
-        :max="512" 
-        :step="64" 
-        :value="qrSize"
-        @change="onSizeChange"
-        activeColor="#007aff"
-      />
-      <text class="size-value">{{ qrSize }}px</text>
-    </view>
-
-    <!-- 生成按钮 -->
-    <button class="generate-btn" @click="generateQrcode" :disabled="!inputText || loading">
-      {{ loading ? '生成中...' : '生成二维码' }}
-    </button>
-
-    <!-- 二维码结果 -->
-    <view class="result-box" v-if="qrCode">
-      <view class="qrcode-wrapper">
-        <image class="qrcode-img" :src="qrCode" mode="widthFix"></image>
+      <view class="input-box card">
+        <textarea
+          class="input"
+          placeholder="请输入要生成二维码的文字或网址..."
+          v-model="inputText"
+          maxlength="500"
+          auto-height
+        ></textarea>
+        <view class="input-footer">
+          <text class="char-count">{{ inputText.length }}/500</text>
+          <button class="clear-btn" size="mini" @click="inputText = ''" v-if="inputText">清空</button>
+        </view>
       </view>
-      <view class="action-buttons">
-        <button class="action-btn" size="mini" @click="saveImage">
-          <uni-icons type="download" size="16" color="#fff"></uni-icons>
-          保存图片
-        </button>
-        <button class="action-btn secondary" size="mini" @click="shareImage">
-          <uni-icons type="redo" size="16" color="#007aff"></uni-icons>
-          分享
-        </button>
-      </view>
-    </view>
 
-    <!-- 常用快捷输入 -->
-    <view class="quick-tags">
-      <text class="tags-title">⚡ 快捷输入</text>
-      <view class="tags-list">
-        <view class="tag" @click="inputText = 'https://'">网址</view>
-        <view class="tag" @click="inputText = '13800138000'">手机号</view>
-        <view class="tag" @click="inputText = '你好世界'">问候语</view>
-        <view class="tag" @click="inputText = 'WiFi:T:WPA;S:MyWiFi;P:password;;'">WiFi模板</view>
+      <view class="size-box card">
+        <text class="size-label">二维码尺寸</text>
+        <slider
+          class="size-slider"
+          :min="128"
+          :max="512"
+          :step="64"
+          :value="qrSize"
+          @change="onSizeChange"
+          activeColor="#007aff"
+        />
+        <text class="size-value">{{ qrSize }}px</text>
+      </view>
+
+      <button class="generate-btn" @click="generateQrcode" :disabled="!inputText.trim() || loading">
+        {{ loading ? '生成中...' : '生成二维码' }}
+      </button>
+
+      <view class="result-box card" v-if="qrCode">
+        <view class="qrcode-wrapper">
+          <image class="qrcode-img" :src="qrCode" mode="widthFix" :style="{ width: previewSize + 'rpx', height: previewSize + 'rpx' }"></image>
+        </view>
+        <view class="action-buttons">
+          <button class="action-btn" size="mini" @click="saveImage">
+            <uni-icons type="download" size="16" color="#fff"></uni-icons>
+            保存图片
+          </button>
+          <button class="action-btn secondary" size="mini" @click="copyText">
+            <uni-icons type="redo" size="16" color="#007aff"></uni-icons>
+            复制内容
+          </button>
+        </view>
+      </view>
+
+      <view class="quick-tags card">
+        <text class="tags-title">⚡ 快捷输入</text>
+        <view class="tags-list">
+          <view class="tag" @click="inputText = 'https://'">网址</view>
+          <view class="tag" @click="inputText = '13800138000'">手机号</view>
+          <view class="tag" @click="inputText = 'example@mail.com'">邮箱</view>
+          <view class="tag" @click="inputText = '你好世界'">问候语</view>
+          <view class="tag" @click="inputText = 'WiFi:T:WPA;S:MyWiFi;P:password;;'">WiFi模板</view>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { generateQrcode as apiGenerateQrcode } from '@/api'
 
 declare const wx: any
@@ -80,6 +78,10 @@ const inputText = ref('')
 const qrSize = ref(256)
 const loading = ref(false)
 const qrCode = ref('')
+
+const previewSize = computed(() => {
+  return Math.min(400, Math.max(250, qrSize.value * 0.8))
+})
 
 const onSizeChange = (e: any) => {
   qrSize.value = e.detail.value
@@ -92,7 +94,7 @@ const generateQrcode = async () => {
   }
 
   loading.value = true
-  
+
   try {
     const res: any = await apiGenerateQrcode(inputText.value, qrSize.value)
     if (res.code === 200) {
@@ -110,13 +112,12 @@ const generateQrcode = async () => {
 
 const saveImage = () => {
   if (!qrCode.value) return
-  
-  // 小程序保存图片到相册
+
   // #ifdef MP-WEIXIN
   const base64Data = qrCode.value.replace(/^data:image\/\w+;base64,/, '')
   const fs = uni.getFileSystemManager()
   const filePath = `${wx.env.USER_DATA_PATH}/qrcode_${Date.now()}.png`
-  
+
   fs.writeFile({
     filePath,
     data: base64Data,
@@ -127,15 +128,17 @@ const saveImage = () => {
         success: () => {
           uni.showToast({ title: '保存成功', icon: 'success' })
         },
-        fail: () => {
-          uni.showToast({ title: '保存失败', icon: 'none' })
+        fail: (err: any) => {
+          uni.showToast({ title: err.errMsg || '保存失败', icon: 'none' })
         }
       })
+    },
+    fail: (err: any) => {
+      uni.showToast({ title: '写入文件失败', icon: 'none' })
     }
   })
   // #endif
-  
-  // H5 下载
+
   // #ifdef H5
   const link = document.createElement('a')
   link.href = qrCode.value
@@ -145,8 +148,13 @@ const saveImage = () => {
   // #endif
 }
 
-const shareImage = () => {
-  uni.showToast({ title: '分享功能开发中...', icon: 'none' })
+const copyText = () => {
+  uni.setClipboardData({
+    data: inputText.value || qrCode.value,
+    success: () => {
+      uni.showToast({ title: '已复制', icon: 'success' })
+    }
+  })
 }
 </script>
 
@@ -155,31 +163,6 @@ const shareImage = () => {
   min-height: 100vh;
   background: linear-gradient(180deg, #e8f5e9 0%, #f5f5f5 100%);
   padding: 30rpx;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 40rpx;
-}
-
-.title {
-  display: block;
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
-}
-
-.subtitle {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.input-box {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
 }
 
 .input {
@@ -211,10 +194,6 @@ const shareImage = () => {
 }
 
 .size-box {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
   display: flex;
   align-items: center;
 }
@@ -222,7 +201,7 @@ const shareImage = () => {
 .size-label {
   font-size: 28rpx;
   color: #333;
-  margin-right: 20rpx;
+  min-width: 140rpx;
 }
 
 .size-slider {
@@ -253,10 +232,6 @@ const shareImage = () => {
 }
 
 .result-box {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 40rpx;
-  margin-bottom: 30rpx;
   text-align: center;
 }
 
@@ -264,11 +239,6 @@ const shareImage = () => {
   display: flex;
   justify-content: center;
   margin-bottom: 30rpx;
-}
-
-.qrcode-img {
-  width: 400rpx;
-  height: 400rpx;
 }
 
 .action-buttons {
@@ -293,12 +263,6 @@ const shareImage = () => {
   background: #fff;
   color: #007aff;
   border: 2rpx solid #007aff;
-}
-
-.quick-tags {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
 }
 
 .tags-title {

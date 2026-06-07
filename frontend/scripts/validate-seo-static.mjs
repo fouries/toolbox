@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 const root = process.cwd()
 const requiredFiles = [
+  'index.html',
   'src/pages/index/index.vue',
   'public/robots.txt',
   'public/sitemap.xml',
@@ -13,12 +14,23 @@ const requiredFiles = [
 ]
 
 const expected = {
+  'index.html': [
+    '<title>小巧的工具箱_在线实用工具集合</title>',
+    '<meta name="description"',
+    '<meta name="keywords"',
+    '<link rel="canonical" href="https://quan1234.com/"',
+    '<meta property="og:title"',
+    '<meta name="theme-color"',
+  ],
   'src/pages/index/index.vue': [
     'hero-section',
     'main-panel',
     '@media (min-width: 768px)',
     'max-width: 1120px',
     'grid-template-columns: repeat(4, minmax(0, 1fr))',
+    'empty-state',
+    '清空搜索',
+    'badge hot',
   ],
   'public/robots.txt': ['User-agent: *', 'Allow: /', 'Sitemap: https://quan1234.com/sitemap.xml'],
   'public/sitemap.xml': [
@@ -28,10 +40,10 @@ const expected = {
     '<loc>https://quan1234.com/qrcode.html</loc>',
     '<loc>https://quan1234.com/password.html</loc>',
   ],
-  'public/weather.html': ['天气查询', '立即使用天气查询', 'https://quan1234.com/#/pages/weather/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
-  'public/oil-price.html': ['油价查询', '立即使用油价查询', 'https://quan1234.com/#/pages/oil-price/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
-  'public/qrcode.html': ['二维码生成器', '立即使用二维码生成器', 'https://quan1234.com/#/pages/qrcode/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
-  'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)'],
+  'public/weather.html': ['天气查询', '立即使用天气查询', 'https://quan1234.com/#/pages/weather/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)', 'application/ld+json', 'FAQPage'],
+  'public/oil-price.html': ['油价查询', '立即使用油价查询', 'https://quan1234.com/#/pages/oil-price/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)', 'application/ld+json', 'FAQPage'],
+  'public/qrcode.html': ['二维码生成器', '立即使用二维码生成器', 'https://quan1234.com/#/pages/qrcode/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)', 'application/ld+json', 'FAQPage'],
+  'public/password.html': ['随机密码生成器', '立即使用密码生成器', 'https://quan1234.com/#/pages/password/index', 'layout-grid', 'tool-preview', '@media (max-width: 720px)', 'application/ld+json', 'FAQPage'],
 }
 
 const forbidden = {

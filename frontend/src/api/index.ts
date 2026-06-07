@@ -1,104 +1,141 @@
 // API 基础配置
-// 自动适配环境：H5用相对路径，小程序用完整域名
+// 自动适配环境：H5 用相对路径，小程序用完整域名
 const BASE_URL = (() => {
   // #ifdef H5
-  return ''  // H5环境用相对路径
+  return ''
   // #endif
-  
+
   // #ifdef MP-WEIXIN
-  return 'https://quan1234.com'  // 小程序环境用完整域名
+  return 'https://quan1234.com'
   // #endif
-  
+
   return ''
 })()
 
-// 手动构建查询字符串（兼容小程序环境）
-function buildQueryString(params: any): string {
+export interface ApiResponse<T = unknown> {
+  code: number
+  msg?: string
+  data?: T
+  newslist?: T
+}
+
+export interface OilPriceItem {
+  province: string
+  p0: string
+  p92: string
+  p95: string
+  p98: string
+  time?: string
+}
+
+export interface WeatherItem {
+  area?: string
+  date?: string
+  week?: string
+  real?: string
+  weather?: string
+  lowest?: string
+  highest?: string
+  wind?: string
+  windsc?: string
+  humidity?: string
+  sunrise?: string
+  sunset?: string
+  uv_index?: string
+  tips?: string
+}
+
+export interface PasswordParams {
+  length?: number
+  upper?: boolean
+  lower?: boolean
+  number?: boolean
+  symbol?: boolean
+  excludeAmbiguous?: boolean
+}
+
+export interface PasswordResult {
+  password: string
+}
+
+export interface QrcodeResult {
+  base64: string
+}
+
+function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
-  
+
   const pairs: string[] = []
   for (const key in params) {
-    if (params.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(params, key)) {
       const value = params[key]
-      pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      if (value !== undefined && value !== null && value !== '') {
+        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      }
     }
   }
   return pairs.join('&')
 }
 
-// 请求封装
-const request = async (url: string, options: any = {}) => {
+const request = async <T = unknown>(url: string, options: any = {}): Promise<ApiResponse<T>> => {
   return new Promise((resolve, reject) => {
     uni.request({
       url: BASE_URL + url,
       method: options.method || 'GET',
       data: options.data || {},
+      timeout: options.timeout || 15000,
       header: {
         'Content-Type': 'application/json',
-        ...options.header
+        ...(options.header || {})
       },
-      success: (res: any) => {
-        if (res.statusCode === 200) {
-          resolve(res.data)
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data as ApiResponse<T>)
         } else {
           reject(new Error(`请求失败: ${res.statusCode}`))
         }
       },
-      fail: (err: any) => {
-        console.error('API请求失败:', err)
-        uni.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        })
-        reject(err)
+      fail: (err) => {
+        reject(new Error(err.errMsg || '网络请求失败'))
       }
     })
   })
 }
 
-// 油价查询
 export const getOilPrice = (province: string = '北京') => {
-  return request(`/api/oil-price?province=${encodeURIComponent(province)}`)
+  return request<OilPriceItem[]>(`/api/oil-price?province=${encodeURIComponent(province)}`)
 }
 
-// 天气预报
 export const getWeather = (city: string = '北京') => {
-  return request(`/api/weather?city=${encodeURIComponent(city)}`)
+  return request<WeatherItem[]>(`/api/weather?city=${encodeURIComponent(city)}`)
 }
 
-// 黄历查询
 export const getCalendar = (date?: string) => {
-  const url = date ? `/api/calendar?date=${date}` : '/api/calendar'
+  const url = date ? `/api/calendar?date=${encodeURIComponent(date)}` : '/api/calendar'
   return request(url)
 }
 
-// 二维码生成
 export const generateQrcode = (text: string, size: number = 256) => {
-  return request(`/api/qrcode?text=${encodeURIComponent(text)}&size=${size}`)
+  return request<QrcodeResult>(`/api/qrcode?text=${encodeURIComponent(text)}&size=${size}`)
 }
 
-// 生成密码
-export const generatePassword = (params: any = {}) => {
-  const query = buildQueryString(params)
-  return request(`/api/password?${query}`)
+export const generatePassword = (params: PasswordParams = {}) => {
+  const query = buildQueryString(params as Record<string, unknown>)
+  return request<PasswordResult>(query ? `/api/password?${query}` : '/api/password')
 }
 
-// Base64编码
 export const base64Encode = (text: string) => {
   return request(`/api/base64/encode?text=${encodeURIComponent(text)}`)
 }
 
-// Base64解码
 export const base64Decode = (encoded: string) => {
   return request(`/api/base64/decode?encoded=${encodeURIComponent(encoded)}`)
 }
 
-// URL编码
 export const urlEncode = (text: string) => {
   return request(`/api/url/encode?text=${encodeURIComponent(text)}`)
 }
 
-// URL解码
 export const urlDecode = (encoded: string) => {
   return request(`/api/url/decode?encoded=${encodeURIComponent(encoded)}`)
 }

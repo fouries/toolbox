@@ -1,87 +1,107 @@
 <template>
   <view class="container">
-    <view class="header">
-      <text class="title">⛽ 今日油价查询</text>
-      <text class="subtitle">数据来源：发改委，每日更新</text>
-    </view>
-
-    <!-- 省份选择 -->
-    <view class="select-box">
-      <picker mode="selector" :range="provinces" @change="onProvinceChange">
-        <view class="picker">
-          <text>{{ selectedProvince }}</text>
-          <uni-icons type="right" size="16" color="#999"></uni-icons>
-        </view>
-      </picker>
-    </view>
-
-    <!-- 加载中 -->
-    <view class="loading" v-if="loading">
-      <uni-icons type="spinner-cycle" size="40" color="#007aff"></uni-icons>
-      <text class="loading-text">加载中...</text>
-    </view>
-
-    <!-- 油价数据 -->
-    <view class="oil-data" v-if="oilData && !loading">
-      <view class="update-time">
-        <text>更新时间: {{ oilData[0]?.time || '今日' }}</text>
+    <view class="page-shell">
+      <view class="page-header">
+        <text class="title">⛽ 今日油价查询</text>
+        <text class="subtitle">数据来源：发改委，每日更新</text>
       </view>
 
-      <view class="oil-grid">
-        <view class="oil-item" v-for="(item, index) in oilData" :key="index">
-          <view class="oil-type">{{ item.province }}</view>
-          <view class="oil-price-row">
-            <view class="price-item">
-              <text class="price-label">92#</text>
-              <text class="price-value">¥{{ item.p92 }}</text>
-            </view>
-            <view class="price-item">
-              <text class="price-label">95#</text>
-              <text class="price-value">¥{{ item.p95 }}</text>
-            </view>
-            <view class="price-item">
-              <text class="price-label">98#</text>
-              <text class="price-value">¥{{ item.p98 }}</text>
-            </view>
-            <view class="price-item">
-              <text class="price-label">0#柴油</text>
-              <text class="price-value">¥{{ item.p0 }}</text>
-            </view>
+      <!-- 快捷省份标签 -->
+      <view class="quick-provinces">
+        <text
+          v-for="prov in quickProvinces"
+          :key="prov"
+          class="province-tag"
+          :class="{ active: selectedProvince === prov }"
+          @click="selectProvince(prov)"
+        >{{ prov }}</text>
+      </view>
+
+      <!-- 省份选择器 -->
+      <view class="select-box">
+        <picker mode="selector" :range="provinces" @change="onProvinceChange">
+          <view class="picker">
+            <text>{{ selectedProvince }}</text>
+            <uni-icons type="right" size="16" color="#999"></uni-icons>
+          </view>
+        </picker>
+      </view>
+
+      <view class="loading" v-if="loading">
+        <uni-icons type="spinner-cycle" size="40" color="#007aff"></uni-icons>
+        <text class="loading-text">加载中...</text>
+      </view>
+
+      <view class="oil-data" v-if="oilData && !loading">
+        <view class="update-time" v-if="oilData[0]?.time">
+          <text>更新时间: {{ oilData[0].time }}</text>
+        </view>
+
+        <view class="oil-card-header">
+          <text class="oil-province-name">{{ selectedProvince }}</text>
+          <text class="oil-province-label">单位：元/升</text>
+        </view>
+
+        <view class="oil-grid">
+          <view class="oil-item">
+            <view class="oil-icon" style="background: #ffe8e8;">92</view>
+            <text class="oil-label">92# 汽油</text>
+            <text class="oil-price">¥{{ oilData[0]?.p92 || '--' }}</text>
+          </view>
+          <view class="oil-item">
+            <view class="oil-icon" style="background: #fff3e0;">95</view>
+            <text class="oil-label">95# 汽油</text>
+            <text class="oil-price">¥{{ oilData[0]?.p95 || '--' }}</text>
+          </view>
+          <view class="oil-item">
+            <view class="oil-icon" style="background: #e8f5e9;">98</view>
+            <text class="oil-label">98# 汽油</text>
+            <text class="oil-price">¥{{ oilData[0]?.p98 || '--' }}</text>
+          </view>
+          <view class="oil-item">
+            <view class="oil-icon" style="background: #e3f2fd;">0#</view>
+            <text class="oil-label">0# 柴油</text>
+            <text class="oil-price">¥{{ oilData[0]?.p0 || '--' }}</text>
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- 错误提示 -->
-    <view class="error-box" v-if="error">
-      <text class="error-text">{{ error }}</text>
-      <button class="retry-btn" @click="fetchOilPrice">重新加载</button>
-    </view>
+      <view class="error-box" v-if="error">
+        <text class="error-text">{{ error }}</text>
+        <button class="retry-btn" @click="fetchOilPrice">重新加载</button>
+      </view>
 
-    <!-- 说明 -->
-    <view class="note">
-      <text class="note-title">💡 说明</text>
-      <text class="note-text">• 油价单位：元/升</text>
-      <text class="note-text">• 数据每日凌晨更新</text>
-      <text class="note-text">• 实际价格以加油站为准</text>
+      <view class="note card">
+        <text class="note-title">💡 说明</text>
+        <text class="note-text">• 油价单位：元/升</text>
+        <text class="note-text">• 数据每日凌晨更新</text>
+        <text class="note-text">• 实际价格以加油站为准</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getOilPrice } from '@/api'
+import { getOilPrice, type OilPriceItem } from '@/api'
 
 const loading = ref(false)
 const error = ref('')
-const oilData = ref<any[]>([])
+const oilData = ref<OilPriceItem[]>([])
 const selectedProvince = ref('北京')
+
+const quickProvinces = ['北京', '上海', '广东', '江苏', '浙江', '山东', '四川']
 
 const provinces = ref([
   '北京', '上海', '广东', '江苏', '浙江', '山东', '四川', '河南', '湖北', '湖南',
   '河北', '福建', '安徽', '辽宁', '江西', '重庆', '陕西', '云南', '广西', '山西',
   '贵州', '黑龙江', '吉林', '甘肃', '内蒙古', '新疆', '海南', '宁夏', '青海', '西藏'
 ])
+
+const selectProvince = (prov: string) => {
+  selectedProvince.value = prov
+  fetchOilPrice()
+}
 
 const onProvinceChange = (e: any) => {
   selectedProvince.value = provinces.value[e.detail.value]
@@ -91,13 +111,13 @@ const onProvinceChange = (e: any) => {
 const fetchOilPrice = async () => {
   loading.value = true
   error.value = ''
-  
+
   try {
     const res: any = await getOilPrice(selectedProvince.value)
     if (res.code === 200 && res.newslist) {
       oilData.value = res.newslist
     } else if (res.newslist?.[0]?.note) {
-      error.value = '请先配置天行数据API Key'
+      error.value = '请先配置天行数据 API Key'
     } else {
       error.value = res.msg || '查询失败'
     }
@@ -120,27 +140,31 @@ onMounted(() => {
   padding: 30rpx;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 40rpx;
+.quick-provinces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
 }
 
-.title {
-  display: block;
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
-}
-
-.subtitle {
+.province-tag {
+  padding: 12rpx 24rpx;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999rpx;
   font-size: 24rpx;
-  color: #999;
+  color: #556;
+  border: 2rpx solid #eef2f7;
+}
+
+.province-tag.active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
 }
 
 .select-box {
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 25rpx 30rpx;
   margin-bottom: 30rpx;
 }
@@ -168,7 +192,7 @@ onMounted(() => {
 
 .oil-data {
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 30rpx;
   margin-bottom: 30rpx;
 }
@@ -177,54 +201,71 @@ onMounted(() => {
   text-align: center;
   font-size: 24rpx;
   color: #999;
+  margin-bottom: 24rpx;
+}
+
+.oil-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 30rpx;
 }
 
+.oil-province-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #243044;
+}
+
+.oil-province-label {
+  font-size: 22rpx;
+  color: #999;
+}
+
 .oil-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 20rpx;
 }
 
 .oil-item {
   background: #f8f9fa;
-  border-radius: 15rpx;
-  padding: 25rpx;
-}
-
-.oil-type {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20rpx;
-  text-align: center;
-}
-
-.oil-price-row {
+  border-radius: 18rpx;
+  padding: 30rpx 20rpx;
   display: flex;
-  justify-content: space-around;
-}
-
-.price-item {
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
-.price-label {
-  display: block;
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 8rpx;
+.oil-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 800;
+  color: #333;
+  margin-bottom: 16rpx;
 }
 
-.price-value {
-  font-size: 36rpx;
-  font-weight: bold;
+.oil-label {
+  font-size: 24rpx;
+  color: #7a869a;
+  margin-bottom: 10rpx;
+}
+
+.oil-price {
+  font-size: 40rpx;
+  font-weight: 800;
   color: #007aff;
 }
 
 .error-box {
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 60rpx 30rpx;
   text-align: center;
 }
@@ -242,12 +283,7 @@ onMounted(() => {
   border: none;
   border-radius: 50rpx;
   font-size: 28rpx;
-}
-
-.note {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
+  width: 280rpx;
 }
 
 .note-title {
@@ -263,5 +299,11 @@ onMounted(() => {
   font-size: 24rpx;
   color: #666;
   line-height: 1.8;
+}
+
+@media (min-width: 768px) {
+  .oil-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 </style>

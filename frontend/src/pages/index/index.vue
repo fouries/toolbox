@@ -1,11 +1,11 @@
 <template>
   <view class="container">
-    <view class="page-shell">
-      <!-- 顶部介绍：同一网址兼容 PC 和移动端 -->
+    <view class="page-shell home-shell">
       <view class="hero-section">
         <view class="hero-content">
+          <text class="hero-kicker">在线实用工具集合</text>
           <text class="hero-title">小巧的工具箱</text>
-          <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用。</text>
+          <text class="hero-subtitle">天气查询、今日油价、二维码生成、随机密码生成等常用工具，一个页面快速使用，电脑和手机都能舒适访问。</text>
         </view>
         <view class="hero-card">
           <text class="hero-card-title">已上线工具</text>
@@ -15,41 +15,35 @@
       </view>
 
       <view class="main-panel">
-        <!-- 顶部搜索 -->
         <view class="search-box">
           <uni-icons type="search" size="18" color="#999"></uni-icons>
           <input
             class="search-input"
             placeholder="搜索天气、油价、二维码、密码..."
+            confirm-type="search"
             v-model="searchText"
-            @input="onSearch"
           />
+          <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
         </view>
 
-        <!-- 分类标签 -->
         <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
           <view class="category-list">
             <view
               class="category-item"
               :class="{ active: activeCategory === 'all' }"
               @click="activeCategory = 'all'"
-            >
-              全部
-            </view>
+            >全部</view>
             <view
               class="category-item"
               :class="{ active: activeCategory === cat.id }"
               @click="activeCategory = cat.id"
               v-for="cat in categories"
               :key="cat.id"
-            >
-              {{ cat.name }}
-            </view>
+            >{{ cat.name }}</view>
           </view>
         </scroll-view>
 
-        <!-- 工具列表 -->
-        <view class="tool-grid">
+        <view class="tool-grid" v-if="filteredTools.length">
           <view
             class="tool-item"
             :class="{ 'tool-not-implemented': !tool.implemented }"
@@ -57,25 +51,28 @@
             v-for="tool in filteredTools"
             :key="tool.id"
           >
+            <text class="badge hot" v-if="tool.badge">{{ tool.badge }}</text>
             <view class="tool-icon" :style="{ background: tool.color }">
               <text class="icon-text">{{ tool.icon }}</text>
             </view>
             <text class="tool-name">{{ tool.name }}</text>
             <text class="tool-desc">{{ tool.desc }}</text>
-            <text class="coming-soon-badge" v-if="!tool.implemented">开发中</text>
+            <text class="coming-soon-badge" v-if="!tool.implemented">{{ tool.status || '开发中' }}</text>
           </view>
+        </view>
+
+        <view class="empty-state" v-else>
+          <text class="empty-icon">🔎</text>
+          <text class="empty-title">没有找到相关工具</text>
+          <text class="empty-desc">试试搜索：天气、油价、二维码、密码</text>
+          <button class="empty-btn" @click="clearSearch">清空搜索</button>
         </view>
       </view>
 
-
-      <!-- 底部信息 -->
       <view class="footer">
         <text class="footer-text">小巧的工具箱 v1.0</text>
         <!-- #ifdef H5 -->
-        <view
-          class="icp-beian"
-          @click="navigateToBeian"
-        >
+        <view class="icp-beian" @click="navigateToBeian">
           <text>粤ICP备2026056747号</text>
         </view>
         <!-- #endif -->
@@ -87,24 +84,42 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+interface CategoryItem {
+  id: string
+  name: string
+}
+
+interface ToolItem {
+  id: string
+  name: string
+  desc: string
+  icon: string
+  color: string
+  category: string
+  path: string
+  implemented: boolean
+  badge?: string
+  status?: string
+}
+
 const searchText = ref('')
 const activeCategory = ref('all')
 
-const categories = ref([
+const categories = ref<CategoryItem[]>([
   { id: 'life', name: '生活服务' },
   { id: 'code', name: '编码转换' },
   { id: 'other', name: '其他工具' }
 ])
 
-const tools = ref([
-  { id: 'oil-price', name: '油价查询', desc: '今日油价', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
-  { id: 'weather', name: '天气预报', desc: '实时天气', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
-  { id: 'calendar', name: '黄历日历', desc: '敬请期待', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index', implemented: false },
-  { id: 'qrcode', name: '二维码生成', desc: '一键生成', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
-  { id: 'password', name: '密码生成', desc: '随机密码', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true },
-  { id: 'base64', name: 'Base64', desc: '敬请期待', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false },
-  { id: 'url', name: 'URL编码', desc: '敬请期待', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false },
-  { id: 'json', name: 'JSON格式化', desc: '敬请期待', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false }
+const tools = ref<ToolItem[]>([
+  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true, badge: '常用' },
+  { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true, badge: '热门' },
+  { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index', implemented: false, status: '即将上线' },
+  { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true, badge: '常用' },
+  { id: 'password', name: '密码生成', desc: '自定义长度和字符类型', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true, badge: '安全' },
+  { id: 'base64', name: 'Base64', desc: '文本编码解码工具', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false, status: '规划中' },
+  { id: 'url', name: 'URL编码', desc: '网址参数编码解码', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false, status: '规划中' },
+  { id: 'json', name: 'JSON格式化', desc: '格式化与压缩 JSON', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false, status: '规划中' }
 ])
 
 const filteredTools = computed(() => {
@@ -114,29 +129,29 @@ const filteredTools = computed(() => {
     list = list.filter(t => t.category === activeCategory.value)
   }
 
-  if (searchText.value) {
-    const keyword = searchText.value.toLowerCase()
+  const keyword = searchText.value.trim().toLowerCase()
+  if (keyword) {
     list = list.filter(t =>
       t.name.toLowerCase().includes(keyword) ||
-      t.desc.toLowerCase().includes(keyword)
+      t.desc.toLowerCase().includes(keyword) ||
+      t.id.toLowerCase().includes(keyword)
     )
   }
 
   return list
 })
 
-const onSearch = () => {
-  // 搜索逻辑已在 computed 中处理
+const clearSearch = () => {
+  searchText.value = ''
+  activeCategory.value = 'all'
 }
 
-const goToTool = (tool: any) => {
+const goToTool = (tool: ToolItem) => {
   if (!tool.implemented) {
-    uni.showToast({ title: '功能开发中，敬请期待', icon: 'none' })
+    uni.showToast({ title: `${tool.name}${tool.status || '开发中'}`, icon: 'none' })
     return
   }
-  uni.navigateTo({
-    url: tool.path
-  })
+  uni.navigateTo({ url: tool.path })
 }
 
 const navigateToBeian = () => {
@@ -153,10 +168,8 @@ const navigateToBeian = () => {
   padding: 24rpx;
 }
 
-.page-shell {
-  width: 100%;
+.home-shell {
   max-width: 1120px;
-  margin: 0 auto;
 }
 
 .hero-section {
@@ -174,6 +187,16 @@ const navigateToBeian = () => {
 .hero-content {
   display: flex;
   flex-direction: column;
+}
+
+.hero-kicker {
+  display: inline-flex;
+  width: fit-content;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .hero-title {
@@ -236,6 +259,12 @@ const navigateToBeian = () => {
   font-size: 28rpx;
 }
 
+.clear-search {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: #1677ff;
+}
+
 .category-scroll {
   white-space: nowrap;
   margin-bottom: 30rpx;
@@ -292,9 +321,7 @@ const navigateToBeian = () => {
   margin-bottom: 15rpx;
 }
 
-.icon-text {
-  font-size: 48rpx;
-}
+.icon-text { font-size: 48rpx; }
 
 .tool-name {
   font-size: 29rpx;
@@ -306,10 +333,20 @@ const navigateToBeian = () => {
 .tool-desc {
   font-size: 23rpx;
   color: #7a869a;
+  line-height: 1.45;
 }
 
-.tool-not-implemented {
-  opacity: 0.58;
+.tool-not-implemented { opacity: 0.58; }
+
+.badge.hot {
+  position: absolute;
+  top: 15rpx;
+  left: 15rpx;
+  font-size: 18rpx;
+  padding: 4rpx 12rpx;
+  background: #e8f3ff;
+  color: #1677ff;
+  border-radius: 20rpx;
 }
 
 .coming-soon-badge {
@@ -321,6 +358,37 @@ const navigateToBeian = () => {
   background: #ff9800;
   color: #fff;
   border-radius: 20rpx;
+}
+
+.empty-state {
+  padding: 70rpx 20rpx;
+  text-align: center;
+  background: #f8fbff;
+  border-radius: 24rpx;
+  border: 2rpx dashed #dce8f8;
+}
+
+.empty-icon,
+.empty-title,
+.empty-desc {
+  display: block;
+}
+
+.empty-icon { font-size: 76rpx; margin-bottom: 16rpx; }
+.empty-title { font-size: 30rpx; color: #243044; font-weight: 700; }
+.empty-desc { margin: 12rpx 0 24rpx; font-size: 24rpx; color: #7a869a; }
+
+.empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 220rpx;
+  height: 70rpx;
+  line-height: 70rpx;
+  border-radius: 999rpx;
+  background: #1677ff;
+  color: #fff;
+  font-size: 26rpx;
 }
 
 .footer {
@@ -342,14 +410,10 @@ const navigateToBeian = () => {
 }
 
 .icp-beian:active,
-.tool-item:active {
-  opacity: 0.72;
-}
+.tool-item:active { opacity: 0.72; }
 
 @media (min-width: 768px) {
-  .container {
-    padding: 32px 24px;
-  }
+  .container { padding: 32px 24px; }
 
   .hero-section {
     flex-direction: row;
@@ -359,17 +423,9 @@ const navigateToBeian = () => {
     border-radius: 28px;
   }
 
-  .hero-content {
-    flex: 1;
-  }
-
-  .hero-title {
-    font-size: 48px;
-  }
-
-  .hero-subtitle {
-    font-size: 18px;
-  }
+  .hero-content { flex: 1; }
+  .hero-title { font-size: 48px; }
+  .hero-subtitle { font-size: 18px; }
 
   .hero-card {
     width: 260px;
@@ -391,12 +447,12 @@ const navigateToBeian = () => {
   .tool-item {
     min-height: 168px;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
   }
 
   .tool-item:hover {
     transform: translateY(-4px);
     box-shadow: 0 14px 32px rgba(20, 35, 90, 0.12);
   }
-
 }
 </style>

@@ -1,124 +1,129 @@
 <template>
   <view class="container">
-    <view class="search-section">
-      <view class="search-box">
-        <input 
-          v-model="city" 
-          placeholder="输入城市名称（如：北京、上海）"
-          class="search-input"
-          @confirm="fetchWeather"
-        />
-        <button class="search-btn" @click="fetchWeather">查询</button>
-      </view>
-      
-      <view class="hot-cities">
-        <text class="hot-label">热门城市:</text>
-        <view class="city-tags">
-          <text 
-            v-for="c in hotCities" 
-            :key="c" 
-            class="city-tag"
-            :class="{ active: city === c }"
-            @click="selectCity(c)"
-          >{{ c }}</text>
-        </view>
-      </view>
-    </view>
-
-    <view v-if="loading" class="loading">
-      <text>加载中...</text>
-    </view>
-
-    <view v-else-if="weatherData" class="weather-card">
-      <!-- 主要天气信息 -->
-      <view class="weather-main">
-        <view class="city-info">
-          <text class="city-name">{{ weatherData.area || city }}</text>
-          <text class="update-time">{{ weatherData.date }} {{ weatherData.week }}</text>
-        </view>
-        <view class="weather-icon">
-          <text class="temp">{{ formatTemp(weatherData.real) }}</text>
-          <text class="weather">{{ weatherData.weather }}</text>
-        </view>
+    <view class="page-shell">
+      <view class="page-header">
+        <text class="title">🌤️ 天气预报</text>
+        <text class="subtitle">输入城市名称，查看实时天气和7天预报</text>
       </view>
 
-      <!-- 详细信息 -->
-      <view class="weather-details">
-        <view class="detail-item">
-          <text class="detail-label">🌡️ 温度范围</text>
-          <text class="detail-value">{{ formatTemp(weatherData.lowest) }} ~ {{ formatTemp(weatherData.highest) }}</text>
+      <view class="search-section">
+        <view class="search-box">
+          <input
+            v-model="city"
+            placeholder="输入城市名称（如：北京、上海）"
+            class="search-input"
+            confirm-type="search"
+            @confirm="fetchWeather"
+          />
+          <button class="search-btn" @click="fetchWeather" :disabled="loading">查询</button>
         </view>
-        <view class="detail-item">
-          <text class="detail-label">💨 风向风力</text>
-          <text class="detail-value">{{ weatherData.wind }} {{ weatherData.windsc }}</text>
-        </view>
-        <view class="detail-item">
-          <text class="detail-label">💧 湿度</text>
-          <text class="detail-value">{{ weatherData.humidity }}%</text>
-        </view>
-        <view class="detail-item">
-          <text class="detail-label">🌅 日出</text>
-          <text class="detail-value">{{ weatherData.sunrise }}</text>
-        </view>
-        <view class="detail-item">
-          <text class="detail-label">🌇 日落</text>
-          <text class="detail-value">{{ weatherData.sunset }}</text>
-        </view>
-        <view class="detail-item">
-          <text class="detail-label">☀️ 紫外线</text>
-          <text class="detail-value">{{ getUvLevel(weatherData.uv_index) }}</text>
-        </view>
-      </view>
 
-      <!-- 未来天气预报 -->
-      <view v-if="forecastList.length > 1" class="forecast-section">
-        <text class="forecast-title">📆 未来7天预报</text>
-        <scroll-view class="forecast-scroll" scroll-x="true" show-scrollbar="false">
-          <view class="forecast-list">
-            <view 
-              v-for="(item, index) in forecastList.slice(1)" 
-              :key="index"
-              class="forecast-item"
-            >
-              <text class="forecast-date">{{ item.date.slice(5) }}</text>
-              <text class="forecast-week">{{ item.week }}</text>
-              <text class="forecast-icon">{{ getWeatherIcon(item.weather) }}</text>
-              <text class="forecast-weather">{{ item.weather }}</text>
-              <text class="forecast-temp">{{ formatTemp(item.lowest) }} ~ {{ formatTemp(item.highest) }}</text>
-            </view>
+        <view class="hot-cities">
+          <text class="hot-label">热门城市:</text>
+          <view class="city-tags">
+            <text
+              v-for="c in hotCities"
+              :key="c"
+              class="city-tag"
+              :class="{ active: city === c }"
+              @click="selectCity(c)"
+            >{{ c }}</text>
           </view>
-        </scroll-view>
+        </view>
       </view>
 
-      <!-- 生活指数提示 -->
-      <view v-if="weatherData.tips" class="tips-card">
-        <text class="tips-title">💡 生活提示</text>
-        <text class="tips-content">{{ weatherData.tips }}</text>
+      <view v-if="loading" class="loading">
+        <text class="loading-text">加载中...</text>
       </view>
-    </view>
 
-    <view v-else-if="errorMsg" class="error">
-      <text>{{ errorMsg }}</text>
-    </view>
+      <view v-else-if="weatherData" class="weather-card">
+        <view class="weather-main">
+          <view class="city-info">
+            <text class="city-name">{{ weatherData.area || city }}</text>
+            <text class="update-time">{{ weatherData.date }} {{ weatherData.week }}</text>
+          </view>
+          <view class="weather-icon">
+            <text class="temp">{{ formatTemp(weatherData.real) }}</text>
+            <text class="weather">{{ weatherData.weather }}</text>
+          </view>
+        </view>
 
-    <view v-else class="placeholder">
-      <text class="placeholder-icon">🌤️</text>
-      <text class="placeholder-text">输入城市名称查询天气</text>
+        <view class="weather-details">
+          <view class="detail-item">
+            <text class="detail-label">🌡️ 温度范围</text>
+            <text class="detail-value">{{ formatTemp(weatherData.lowest) }} ~ {{ formatTemp(weatherData.highest) }}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">💨 风向风力</text>
+            <text class="detail-value">{{ weatherData.wind }} {{ weatherData.windsc }}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">💧 湿度</text>
+            <text class="detail-value">{{ weatherData.humidity }}%</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">🌅 日出</text>
+            <text class="detail-value">{{ weatherData.sunrise }}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">🌇 日落</text>
+            <text class="detail-value">{{ weatherData.sunset }}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">☀️ 紫外线</text>
+            <text class="detail-value">{{ getUvLevel(weatherData.uv_index) }}</text>
+          </view>
+        </view>
+
+        <view v-if="forecastList.length > 1" class="forecast-section">
+          <text class="forecast-title">📆 未来7天预报</text>
+          <scroll-view class="forecast-scroll" scroll-x="true" show-scrollbar="false">
+            <view class="forecast-list">
+              <view
+                v-for="(item, index) in forecastList.slice(1)"
+                :key="index"
+                class="forecast-item"
+              >
+                <text class="forecast-date">{{ (item.date || '').slice(5) || '--' }}</text>
+                <text class="forecast-week">{{ item.week }}</text>
+                <text class="forecast-icon">{{ getWeatherIcon(item.weather) }}</text>
+                <text class="forecast-weather">{{ item.weather }}</text>
+                <text class="forecast-temp">{{ formatTemp(item.lowest) }} ~ {{ formatTemp(item.highest) }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view v-if="weatherData.tips" class="tips-card">
+          <text class="tips-title">💡 生活提示</text>
+          <text class="tips-content">{{ weatherData.tips }}</text>
+        </view>
+      </view>
+
+      <view v-else-if="errorMsg" class="error-box">
+        <text class="error-text">{{ errorMsg }}</text>
+        <button class="retry-btn" @click="fetchWeather">重新查询</button>
+      </view>
+
+      <view v-else class="placeholder">
+        <text class="placeholder-icon">🌤️</text>
+        <text class="placeholder-text">输入城市名称查询天气</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import api from '@/api'
+import { ref, onMounted } from 'vue'
+import { getWeather, type ApiResponse, type WeatherItem } from '@/api'
 
 const city = ref('北京')
-const weatherData = ref<any>(null)
-const forecastList = ref<any[]>([])
+const weatherData = ref<WeatherItem | null>(null)
+const forecastList = ref<WeatherItem[]>([])
 const loading = ref(false)
 const errorMsg = ref('')
 
-const hotCities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安']
+const hotCities = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安', '南京', '苏州', '重庆', '天津', '长沙', '厦门']
 
 const selectCity = (c: string) => {
   city.value = c
@@ -137,9 +142,7 @@ const fetchWeather = async () => {
   forecastList.value = []
 
   try {
-    const res: any = await api.getWeather(city.value)
-    console.log('天气响应:', res)
-    
+    const res = await getWeather(city.value) as any
     if (res.code === 200 && res.newslist && res.newslist.length > 0) {
       forecastList.value = res.newslist
       weatherData.value = res.newslist[0]
@@ -148,20 +151,18 @@ const fetchWeather = async () => {
       errorMsg.value = res.msg || '查询失败，请检查城市名称是否正确'
     }
   } catch (err: any) {
-    console.error('查询失败:', err)
     errorMsg.value = err.message || '网络错误，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
-const formatTemp = (temp: string) => {
+const formatTemp = (temp?: string) => {
   if (!temp) return '--'
-  // 去掉℃符号，只保留数字
   return temp.replace('℃', '') + '°'
 }
 
-const getUvLevel = (index: string) => {
+const getUvLevel = (index?: string) => {
   const val = Number(index) || 0
   if (val <= 2) return '弱'
   if (val <= 5) return '中等'
@@ -170,7 +171,7 @@ const getUvLevel = (index: string) => {
   return '极强'
 }
 
-const getWeatherIcon = (weather: string) => {
+const getWeatherIcon = (weather: string | undefined) => {
   if (!weather) return '☁️'
   if (weather.includes('晴')) return '☀️'
   if (weather.includes('云') || weather.includes('阴')) return '☁️'
@@ -182,8 +183,9 @@ const getWeatherIcon = (weather: string) => {
   return '🌤️'
 }
 
-// 页面加载时自动查询
-fetchWeather()
+onMounted(() => {
+  fetchWeather()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -195,7 +197,7 @@ fetchWeather()
 
 .search-section {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 30rpx;
   margin-bottom: 30rpx;
 }
@@ -259,28 +261,23 @@ fetchWeather()
   color: white;
 }
 
-.loading, .placeholder {
+.loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 100rpx 0;
-  color: white;
 }
 
-.placeholder-icon {
-  font-size: 120rpx;
-  margin-bottom: 30rpx;
-}
-
-.placeholder-text {
+.loading-text {
+  color: #fff;
   font-size: 28rpx;
   opacity: 0.8;
 }
 
 .weather-card {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 30rpx;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -348,7 +345,6 @@ fetchWeather()
   font-weight: 500;
 }
 
-/* 未来预报 */
 .forecast-section {
   padding: 0 40rpx 40rpx;
   border-top: 1px solid #eee;
@@ -362,14 +358,8 @@ fetchWeather()
   margin: 30rpx 0 20rpx;
 }
 
-.forecast-scroll {
-  white-space: nowrap;
-}
-
-.forecast-list {
-  display: flex;
-  gap: 20rpx;
-}
+.forecast-scroll { white-space: nowrap; }
+.forecast-list { display: flex; gap: 20rpx; }
 
 .forecast-item {
   display: flex;
@@ -382,32 +372,12 @@ fetchWeather()
   min-width: 140rpx;
 }
 
-.forecast-date {
-  font-size: 22rpx;
-  color: #666;
-}
+.forecast-date,
+.forecast-week { font-size: 20rpx; color: #999; }
+.forecast-icon { font-size: 40rpx; margin: 5rpx 0; }
+.forecast-weather { font-size: 22rpx; color: #333; }
+.forecast-temp { font-size: 20rpx; color: #666; }
 
-.forecast-week {
-  font-size: 20rpx;
-  color: #999;
-}
-
-.forecast-icon {
-  font-size: 40rpx;
-  margin: 5rpx 0;
-}
-
-.forecast-weather {
-  font-size: 22rpx;
-  color: #333;
-}
-
-.forecast-temp {
-  font-size: 20rpx;
-  color: #666;
-}
-
-/* 生活提示 */
 .tips-card {
   padding: 40rpx;
   border-top: 1px solid #eee;
@@ -427,16 +397,38 @@ fetchWeather()
   line-height: 1.8;
 }
 
-.error {
+.error-box {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 20rpx;
+  border-radius: var(--radius-md);
   padding: 60rpx 40rpx;
   text-align: center;
 }
 
-.error text {
+.error-text {
   display: block;
   color: #ff4757;
   font-size: 28rpx;
+  margin-bottom: 30rpx;
 }
+
+.retry-btn {
+  width: 280rpx;
+  background: #007aff;
+  color: #fff;
+  border: none;
+  border-radius: 50rpx;
+  font-size: 28rpx;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  color: white;
+}
+
+.placeholder-icon { font-size: 120rpx; margin-bottom: 30rpx; }
+.placeholder-text { font-size: 28rpx; opacity: 0.8; }
 </style>
