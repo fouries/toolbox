@@ -59,7 +59,7 @@
               v-for="tool in popularTools"
               :key="tool.id"
             >
-              <view class="quick-tool-icon">
+              <view class="quick-tool-icon" :style="{ background: tool.color }">
                 <text class="quick-icon-text">{{ tool.icon }}</text>
               </view>
               <view class="quick-tool-info">
