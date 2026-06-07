@@ -9,15 +9,17 @@
       <view class="location-card">
         <view>
           <text class="location-title">📍 当前地区油价</text>
-          <text class="location-desc">授权定位后自动选择所在省份</text>
+          <text class="location-desc">打开页面自动定位并查询所在省份油价</text>
         </view>
-        <button class="location-btn" @click="useCurrentLocation" :disabled="loading || locating">
-          {{ locating ? '定位中...' : '使用当前位置' }}
+        <button class="location-btn" @click="() => useCurrentLocation()" :disabled="loading || locating">
+          {{ locating ? '定位中...' : '重新定位' }}
         </button>
       </view>
       <text v-if="locationLabel" class="location-hint">当前定位：{{ locationLabel }}</text>
+      <text v-if="locationNotice" class="location-notice">{{ locationNotice }}</text>
 
       <!-- 快捷省份标签 -->
+      <text class="section-label">常用省份</text>
       <view class="quick-provinces">
         <text
           v-for="prov in quickProvinces"
@@ -29,10 +31,14 @@
       </view>
 
       <!-- 省份选择器 -->
+      <text class="section-label">更多省份</text>
       <view class="select-box">
         <picker mode="selector" :range="provinces" @change="onProvinceChange">
           <view class="picker">
-            <text>{{ selectedProvince }}</text>
+            <view>
+              <text class="picker-label">手动选择省份</text>
+              <text class="picker-value">{{ selectedProvince }}</text>
+            </view>
             <uni-icons type="right" size="16" color="#999"></uni-icons>
           </view>
         </picker>
@@ -102,6 +108,7 @@ const loading = ref(false)
 const locating = ref(false)
 const error = ref('')
 const locationLabel = ref('')
+const locationNotice = ref('')
 const oilData = ref<OilPriceItem[]>([])
 const selectedProvince = ref('北京')
 
@@ -116,12 +123,14 @@ const provinces = ref([
 const selectProvince = (prov: string) => {
   selectedProvince.value = prov
   locationLabel.value = ''
+  locationNotice.value = ''
   fetchOilPrice()
 }
 
-const useCurrentLocation = async () => {
+const useCurrentLocation = async (options: { initial?: boolean } = {}) => {
   locating.value = true
   error.value = ''
+  locationNotice.value = ''
   try {
     const address = await getCurrentAddress()
     const province = resolveProvince(address.province, provinces.value)
@@ -132,8 +141,15 @@ const useCurrentLocation = async () => {
     locationLabel.value = address.label || province
     await fetchOilPrice()
   } catch (err: any) {
-    error.value = err.message || '定位失败，请手动选择省份'
-    uni.showToast({ title: error.value, icon: 'none' })
+    const message = err.message || '定位失败，请手动选择省份'
+    if (options.initial) {
+      locationNotice.value = `${message}，已展示默认地区，可手动选择省份`
+      uni.showToast({ title: '定位失败，已展示默认地区', icon: 'none' })
+      await fetchOilPrice()
+    } else {
+      locationNotice.value = message
+      uni.showToast({ title: message, icon: 'none' })
+    }
   } finally {
     locating.value = false
   }
@@ -142,6 +158,7 @@ const useCurrentLocation = async () => {
 const onProvinceChange = (e: any) => {
   selectedProvince.value = provinces.value[e.detail.value]
   locationLabel.value = ''
+  locationNotice.value = ''
   fetchOilPrice()
 }
 
@@ -165,8 +182,12 @@ const fetchOilPrice = async () => {
   }
 }
 
+const initOilPricePage = async () => {
+  await useCurrentLocation({ initial: true })
+}
+
 onMounted(() => {
-  fetchOilPrice()
+  initOilPricePage()
 })
 </script>
 
@@ -190,7 +211,11 @@ onMounted(() => {
 
 .location-title,
 .location-desc,
-.location-hint {
+.location-hint,
+.location-notice,
+.section-label,
+.picker-label,
+.picker-value {
   display: block;
 }
 
@@ -211,8 +236,15 @@ onMounted(() => {
   margin: 0 0 20rpx 4rpx;
 }
 
+.location-notice {
+  margin: 0 0 20rpx 4rpx;
+  font-size: 24rpx;
+  color: #f59e0b;
+  line-height: 1.5;
+}
+
 .location-btn {
-  width: 190rpx;
+  min-width: 190rpx;
   height: 72rpx;
   line-height: 72rpx;
   border-radius: 999rpx;
@@ -221,6 +253,18 @@ onMounted(() => {
   font-size: 24rpx;
   border: none;
   padding: 0;
+  flex-shrink: 0;
+}
+
+.location-btn[disabled] {
+  opacity: 0.65;
+}
+
+.section-label {
+  font-size: 24rpx;
+  color: #667085;
+  margin: 0 0 14rpx 4rpx;
+  font-weight: 600;
 }
 
 .quick-provinces {
@@ -256,8 +300,19 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 30rpx;
   color: #333;
+}
+
+.picker-label {
+  font-size: 24rpx;
+  color: #98a2b3;
+  margin-bottom: 6rpx;
+}
+
+.picker-value {
+  font-size: 30rpx;
+  color: #243044;
+  font-weight: 600;
 }
 
 .loading {
