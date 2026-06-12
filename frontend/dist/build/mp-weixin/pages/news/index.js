@@ -1,0 +1,1 @@
+"use strict";const e=require("../../common/vendor.js"),s=require("../../utils/theme.js"),t=e.defineComponent({__name:"index",setup(t){const{themeClass:n}=s.useTheme();return(s,t)=>({a:e.n(e.unref(n))})}}),n=e._export_sfc(t,[["__scopeId","data-v-f1efb2d5"]]);wx.createPage(n);

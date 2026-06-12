@@ -1,6 +1,5 @@
 <template>
   <view :class="['container', themeClass]">
-    <ThemeSwitcher />
     <view class="page-shell">
       <view class="page-header">
         <text class="title">📱 二维码生成</text>
@@ -70,7 +69,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useTheme } from '@/utils/theme'
 import { ref, computed } from 'vue'
 import { generateQrcode as apiGenerateQrcode } from '@/api'

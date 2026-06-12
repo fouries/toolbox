@@ -1,8 +1,6 @@
 {
-  "navigationBarTitleText": "小巧的工具箱",
+  "navigationBarTitleText": "首页",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "usingComponents": {
-    "theme-switcher": "../../components/ThemeSwitcher"
-  }
+  "usingComponents": {}
 }

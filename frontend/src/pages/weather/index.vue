@@ -1,6 +1,5 @@
 <template>
   <view :class="['container', themeClass]">
-    <ThemeSwitcher />
     <view class="page-shell">
       <view class="page-header">
         <text class="title">🌤️ 天气预报</text>
@@ -119,7 +118,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useTheme } from '@/utils/theme'
 import { ref, onMounted } from 'vue'
 import { getWeather, type ApiResponse, type WeatherItem } from '@/api'

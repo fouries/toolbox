@@ -2,7 +2,5 @@
   "navigationBarTitleText": "二维码生成",
   "navigationBarBackgroundColor": "#007aff",
   "navigationBarTextStyle": "white",
-  "usingComponents": {
-    "theme-switcher": "../../components/ThemeSwitcher"
-  }
+  "usingComponents": {}
 }

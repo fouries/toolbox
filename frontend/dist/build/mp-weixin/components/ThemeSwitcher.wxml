@@ -1,1 +1,0 @@
-<button class="theme-switcher data-v-bead29be" size="mini" bindtap="{{b}}"><text class="theme-switcher-icon data-v-bead29be">{{a}}</text><text class="theme-switcher-text data-v-bead29be">主题</text></button>

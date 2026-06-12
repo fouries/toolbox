@@ -1,11 +1,7 @@
 <template>
   <view :class="['container', themeClass]">
-    <ThemeSwitcher />
     <view class="page-shell home-shell">
       <view class="hero-section">
-        <view class="hero-bg-dot dot-one"></view>
-        <view class="hero-bg-dot dot-two"></view>
-
         <view class="quick-panel">
           <view class="quick-panel-title">
             <text class="quick-panel-title-text">热门工具</text>
@@ -100,7 +96,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useTheme } from '@/utils/theme'
 import { ref, computed } from 'vue'
 
@@ -207,29 +202,6 @@ const navigateToBeian = () => {
   background: var(--theme-surface, rgba(255, 255, 255, 0.88)) !important;
   border: 2rpx solid var(--theme-border, rgba(255, 255, 255, 0.74));
   box-shadow: 0 18rpx 50rpx rgba(20, 35, 90, 0.08);
-}
-
-.hero-bg-dot {
-  position: absolute;
-  border-radius: 999rpx;
-  opacity: 0.18;
-  pointer-events: none;
-}
-
-.dot-one {
-  width: 260rpx;
-  height: 260rpx;
-  top: -96rpx;
-  right: -66rpx;
-  background: var(--theme-primary, #1677ff);
-}
-
-.dot-two {
-  width: 180rpx;
-  height: 180rpx;
-  left: -70rpx;
-  bottom: 80rpx;
-  background: var(--theme-accent, #31c48d);
 }
 
 .hero-content,

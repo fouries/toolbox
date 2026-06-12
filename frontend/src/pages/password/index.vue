@@ -1,6 +1,5 @@
 <template>
   <view :class="['container', themeClass]">
-    <ThemeSwitcher />
     <view class="page-shell">
       <view class="page-header">
         <text class="title">🔐 密码生成器</text>
@@ -94,7 +93,6 @@
 </template>
 
 <script setup lang="ts">
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useTheme } from '@/utils/theme'
 import { ref, computed } from 'vue'
 import { generatePassword as apiGeneratePassword } from '@/api'

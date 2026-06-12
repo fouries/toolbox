@@ -3,7 +3,23 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "小巧的工具箱",
+        "navigationBarTitleText": "首页",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/news/index",
+      "style": {
+        "navigationBarTitleText": "资讯",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "我的",
         "navigationBarBackgroundColor": "#ffffff",
         "navigationBarTextStyle": "black"
       }
@@ -43,9 +59,29 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "小巧的工具箱",
+    "navigationBarTitleText": "首页",
     "navigationBarBackgroundColor": "#ffffff",
     "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#8a96a8",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/news/index",
+        "text": "资讯"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "我的"
+      }
+    ]
   },
   "uniIdRouter": {}
 }

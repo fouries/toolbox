@@ -2,7 +2,5 @@
   "navigationBarTitleText": "天气预报",
   "navigationBarBackgroundColor": "#007aff",
   "navigationBarTextStyle": "white",
-  "usingComponents": {
-    "theme-switcher": "../../components/ThemeSwitcher"
-  }
+  "usingComponents": {}
 }
