@@ -6,42 +6,10 @@
         <view class="hero-bg-dot dot-one"></view>
         <view class="hero-bg-dot dot-two"></view>
 
-        <view class="hero-content">
-          <view class="hero-copy">
-            <view class="hero-heading">
-              <text class="hero-kicker">在线实用工具</text>
-              <view class="hero-meta-row">
-                <view class="hero-meta-card">
-                  <view class="meta-icon meta-icon-free">
-                    <text class="meta-icon-text">🎁</text>
-                  </view>
-                  <text class="meta-label">无需安装 · 即开即用</text>
-                </view>
-                <view class="hero-meta-card">
-                  <view class="meta-icon meta-icon-tools">
-                    <text class="meta-icon-text">🧰</text>
-                  </view>
-                  <text class="meta-label">简洁无广告</text>
-                </view>
-                <view class="hero-meta-card">
-                  <view class="meta-icon meta-icon-cross">
-                    <text class="meta-icon-text">📱</text>
-                  </view>
-                  <text class="meta-label">手机电脑都可用</text>
-                </view>
-              </view>
-            </view>
-            <text class="hero-subtitle">精选日常高频工具，轻量、快速、即开即用。天气、油价、二维码、密码等常用能力，一个入口快速找到。</text>
-          </view>
-        </view>
-
         <view class="quick-panel">
-          <view class="quick-panel-header">
-            <view>
-              <text class="section-kicker">快捷入口</text>
-              <text class="section-title">热门工具</text>
-            </view>
-            <text class="section-count">{{ popularTools.length }} 个常用</text>
+          <view class="quick-panel-title">
+            <text class="quick-panel-title-text">热门工具</text>
+            <text class="quick-panel-title-icon">🔥</text>
           </view>
 
           <view class="quick-tool-list">
@@ -56,76 +24,66 @@
               </view>
               <view class="quick-tool-info">
                 <text class="quick-tool-name">{{ tool.name }}</text>
-                <text class="quick-tool-desc">{{ tool.desc }}</text>
               </view>
               <text class="quick-arrow">›</text>
             </view>
           </view>
         </view>
-      </view>
 
-      <view class="main-panel">
-        <view class="panel-header">
-          <view>
-            <text class="section-kicker">全部工具</text>
-            <text class="section-title">按分类浏览</text>
-          </view>
-          <text class="section-count">{{ filteredTools.length }} 个结果</text>
-        </view>
-
-        <view class="tool-search-wrap">
-          <view class="search-box tool-search">
-            <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
-            <input
-              class="search-input"
-              placeholder="搜索天气、油价、二维码、密码..."
-              confirm-type="search"
-              v-model="searchText"
-            />
-            <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
-          </view>
-        </view>
-
-        <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
-          <view class="category-list">
-            <view
-              class="category-item"
-              :class="{ active: activeCategory === 'all' }"
-              @click="activeCategory = 'all'"
-            >全部</view>
-            <view
-              class="category-item"
-              :class="{ active: activeCategory === cat.id }"
-              @click="activeCategory = cat.id"
-              v-for="cat in categories"
-              :key="cat.id"
-            >{{ cat.name }}</view>
-          </view>
-        </scroll-view>
-
-        <view class="tool-grid" v-if="filteredTools.length">
-          <view
-            class="tool-item"
-            :class="{ 'tool-not-implemented': !tool.implemented }"
-            @click="goToTool(tool)"
-            v-for="tool in filteredTools"
-            :key="tool.id"
-          >
-            <text class="badge hot" v-if="tool.badge">{{ tool.badge }}</text>
-            <view class="tool-icon" :style="{ background: tool.color }">
-              <text class="icon-text">{{ tool.icon }}</text>
+        <view class="main-panel">
+          <view class="tool-search-wrap">
+            <view class="search-box tool-search">
+              <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
+              <input
+                class="search-input"
+                placeholder="搜索"
+                confirm-type="search"
+                v-model="searchText"
+              />
+              <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
             </view>
-            <text class="tool-name">{{ tool.name }}</text>
-            <text class="tool-desc">{{ tool.desc }}</text>
-            <text class="coming-soon-badge" v-if="!tool.implemented">{{ tool.status || '开发中' }}</text>
           </view>
-        </view>
 
-        <view class="empty-state" v-else>
-          <text class="empty-icon">🔎</text>
-          <text class="empty-title">没有找到相关工具</text>
-          <text class="empty-desc">试试搜索：天气、油价、二维码、密码</text>
-          <button class="empty-btn" @click="clearSearch">清空搜索</button>
+          <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
+            <view class="category-list">
+              <view
+                class="category-item"
+                :class="{ active: activeCategory === 'all' }"
+                @click="activeCategory = 'all'"
+              >全部</view>
+              <view
+                class="category-item"
+                :class="{ active: activeCategory === cat.id }"
+                @click="activeCategory = cat.id"
+                v-for="cat in categories"
+                :key="cat.id"
+              >{{ cat.name }}</view>
+            </view>
+          </scroll-view>
+
+          <view class="tool-grid" v-if="filteredTools.length">
+            <view
+              class="tool-item"
+              :class="{ 'tool-not-implemented': !tool.implemented }"
+              @click="goToTool(tool)"
+              v-for="tool in filteredTools"
+              :key="tool.id"
+            >
+              <view class="tool-icon" :style="{ background: tool.color }">
+                <text class="icon-text">{{ tool.icon }}</text>
+              </view>
+              <text class="tool-name">{{ tool.name }}</text>
+              <text class="tool-desc">{{ tool.desc }}</text>
+              <text class="coming-soon-badge" v-if="!tool.implemented">{{ tool.status || '开发中' }}</text>
+            </view>
+          </view>
+
+          <view class="empty-state" v-else>
+            <text class="empty-icon">🔎</text>
+            <text class="empty-title">没有找到相关工具</text>
+            <text class="empty-desc">试试搜索：天气、油价、二维码、密码</text>
+            <button class="empty-btn" @click="clearSearch">清空搜索</button>
+          </view>
         </view>
       </view>
 
@@ -162,7 +120,6 @@ interface ToolItem {
   category: string
   path: string
   implemented: boolean
-  badge?: string
   status?: string
 }
 
@@ -176,17 +133,17 @@ const categories = ref<CategoryItem[]>([
 ])
 
 const tools = ref<ToolItem[]>([
-  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true, badge: '常用' },
-  { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true, badge: '热门' },
+  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
+  { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#dfe6e9', category: 'life', path: '/pages/calendar/index', implemented: false, status: '即将上线' },
-  { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true, badge: '常用' },
-  { id: 'password', name: '密码生成', desc: '自定义长度和字符类型', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true, badge: '安全' },
+  { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
+  { id: 'password', name: '密码生成', desc: '自定义长度和字符类型', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true },
   { id: 'base64', name: 'Base64', desc: '文本编码解码工具', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false, status: '规划中' },
   { id: 'url', name: 'URL编码', desc: '网址参数编码解码', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false, status: '规划中' },
   { id: 'json', name: 'JSON格式化', desc: '格式化与压缩 JSON', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false, status: '规划中' }
 ])
 
-const popularTools = computed(() => tools.value.filter(t => t.implemented && t.badge).slice(0, 4))
+const popularTools = computed(() => tools.value.filter(t => t.implemented).slice(0, 4))
 
 const filteredTools = computed(() => {
   let list = tools.value
@@ -458,13 +415,16 @@ const navigateToBeian = () => {
   color: #d5deec;
 }
 
-.quick-panel,
-.main-panel {
+.quick-panel {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 30rpx;
   padding: 24rpx;
   border: 2rpx solid rgba(238, 242, 247, 0.9);
   box-shadow: 0 12rpx 34rpx rgba(20, 35, 90, 0.06);
+}
+
+.main-panel {
+  padding-top: 6rpx;
 }
 
 .quick-panel-header,
@@ -506,17 +466,38 @@ const navigateToBeian = () => {
   font-weight: 700;
 }
 
+.quick-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 18rpx;
+}
+
+.quick-panel-title-text {
+  font-size: 32rpx;
+  line-height: 1.2;
+  color: var(--theme-text, #243044);
+  font-weight: 800;
+}
+
+.quick-panel-title-icon {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
 .quick-tool-list {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 14rpx;
 }
 
 .quick-tool-card {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  padding: 18rpx;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 14rpx;
+  padding: 18rpx 14rpx;
   border-radius: 22rpx;
   background: linear-gradient(135deg, var(--theme-primary-soft, rgba(248, 250, 252, 0.78)) 0%, var(--theme-surface, rgba(255, 255, 255, 0.82)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
@@ -524,8 +505,8 @@ const navigateToBeian = () => {
 }
 
 .quick-tool-icon {
-  width: 76rpx;
-  height: 76rpx;
+  width: 68rpx;
+  height: 68rpx;
   border-radius: 22rpx;
   display: flex;
   align-items: center;
@@ -536,37 +517,30 @@ const navigateToBeian = () => {
 }
 
 .quick-icon-text {
-  font-size: 36rpx;
+  font-size: 32rpx;
 }
 
 .quick-tool-info {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .quick-tool-name {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: var(--theme-text, #243044);
   font-weight: 800;
 }
 
-.quick-tool-desc {
-  margin-top: 4rpx;
-  font-size: 22rpx;
-  color: var(--theme-text-secondary, #667085);
-  line-height: 1.35;
-}
-
 .quick-arrow {
   color: var(--theme-text-muted, #9aa6b8);
-  font-size: 42rpx;
+  font-size: 34rpx;
   line-height: 1;
 }
 
 .main-panel {
-  margin-bottom: 24rpx;
+  padding-top: 6rpx;
 }
 
 .category-scroll {
@@ -644,18 +618,6 @@ const navigateToBeian = () => {
 }
 
 .tool-not-implemented { opacity: 0.58; }
-
-.badge.hot {
-  position: absolute;
-  top: 15rpx;
-  left: 15rpx;
-  font-size: 18rpx;
-  padding: 4rpx 12rpx;
-  background: var(--theme-primary-soft, #e8f3ff);
-  color: var(--theme-primary, #1677ff);
-  border-radius: 20rpx;
-  font-weight: 700;
-}
 
 .coming-soon-badge {
   position: absolute;
@@ -753,10 +715,14 @@ const navigateToBeian = () => {
   .tool-search-wrap { margin: 0 0 24px; }
   .tool-search { max-width: 640px; }
   .search-input { font-size: 16px; }
-  .quick-panel,
-  .main-panel {
+  .quick-panel {
     padding: 28px;
     border-radius: 24px;
+  }
+
+  .main-panel {
+    grid-column: 1 / -1;
+    padding-top: 4px;
   }
 
   .quick-tool-card {

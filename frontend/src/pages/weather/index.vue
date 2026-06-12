@@ -265,7 +265,7 @@ onMounted(() => {
   height: 80rpx;
   line-height: 80rpx;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: #fff;
   border-radius: 40rpx;
   font-size: 28rpx;
   border: none;
@@ -311,7 +311,7 @@ onMounted(() => {
 
 .city-tag {
   padding: 10rpx 25rpx;
-  background: #f0f0f0;
+  background: #f5f5f5;
   border-radius: 30rpx;
   font-size: 24rpx;
   color: #666;
@@ -320,7 +320,7 @@ onMounted(() => {
 
 .city-tag.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: #fff;
 }
 
 .loading {
@@ -346,7 +346,7 @@ onMounted(() => {
 .weather-main {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 50rpx 40rpx;
-  color: white;
+  color: #fff;
 }
 
 .city-info {
@@ -429,7 +429,7 @@ onMounted(() => {
   align-items: center;
   gap: 8rpx;
   padding: 20rpx;
-  background: #f8f9fa;
+  background: #f5f5f5;
   border-radius: 15rpx;
   min-width: 140rpx;
 }
@@ -475,7 +475,7 @@ onMounted(() => {
 
 .retry-btn {
   width: 280rpx;
-  background: #007aff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
   border-radius: 50rpx;
@@ -488,7 +488,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 100rpx 0;
-  color: white;
+  color: #fff;
 }
 
 .placeholder-icon { font-size: 120rpx; margin-bottom: 30rpx; }

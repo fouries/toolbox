@@ -265,7 +265,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.88);
   border-radius: 999rpx;
   font-size: 24rpx;
-  color: #556;
+  color: #667085;
   border: 2rpx solid #eef2f7;
 }
 
@@ -338,7 +338,7 @@ onMounted(() => {
 .oil-province-name {
   font-size: 36rpx;
   font-weight: bold;
-  color: #243044;
+  color: #333;
 }
 
 .oil-province-label {
@@ -377,7 +377,7 @@ onMounted(() => {
 
 .oil-label {
   font-size: 24rpx;
-  color: #7a869a;
+  color: #667085;
   margin-bottom: 10rpx;
 }
 
@@ -421,7 +421,7 @@ onMounted(() => {
 .note-text {
   display: block;
   font-size: 24rpx;
-  color: #666;
+  color: #667085;
   line-height: 1.8;
 }
 

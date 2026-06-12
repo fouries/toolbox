@@ -7,9 +7,9 @@
     "pages/weather/index"
   ],
   "window": {
-    "navigationBarTextStyle": "white",
+    "navigationBarTextStyle": "black",
     "navigationBarTitleText": "小巧的工具箱",
-    "navigationBarBackgroundColor": "#007aff",
+    "navigationBarBackgroundColor": "#ffffff",
     "backgroundColor": "#f5f5f5"
   },
   "permission": {

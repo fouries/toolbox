@@ -4,8 +4,8 @@
       "path": "pages/index/index",
       "style": {
         "navigationBarTitleText": "小巧的工具箱",
-        "navigationBarBackgroundColor": "#007aff",
-        "navigationBarTextStyle": "white"
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
       }
     },
     {
@@ -42,9 +42,9 @@
     }
   ],
   "globalStyle": {
-    "navigationBarTextStyle": "white",
+    "navigationBarTextStyle": "black",
     "navigationBarTitleText": "小巧的工具箱",
-    "navigationBarBackgroundColor": "#007aff",
+    "navigationBarBackgroundColor": "#ffffff",
     "backgroundColor": "#f5f5f5"
   },
   "uniIdRouter": {}
