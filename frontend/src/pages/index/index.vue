@@ -77,7 +77,7 @@
           <view class="empty-state" v-else>
             <text class="empty-icon">🔎</text>
             <text class="empty-title">没有找到相关工具</text>
-            <text class="empty-desc">试试搜索：天气、油价、二维码、密码</text>
+            <text class="empty-desc">试试搜索：天气、油价、二维码、黄历</text>
             <button class="empty-btn" @click="clearSearch">清空搜索</button>
           </view>
         </view>
@@ -132,10 +132,7 @@ const tools = ref<ToolItem[]>([
   { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'life', path: '/pages/calendar/index', implemented: true },
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
-  { id: 'password', name: '密码生成', desc: '自定义长度和字符类型', icon: '🔐', color: '#fdcb6e', category: 'other', path: '/pages/password/index', implemented: true },
-  { id: 'base64', name: 'Base64', desc: '文本编码解码工具', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false, status: '规划中' },
-  { id: 'url', name: 'URL编码', desc: '网址参数编码解码', icon: '🔗', color: '#00b894', category: 'code', path: '/pages/url/index', implemented: false, status: '规划中' },
-  { id: 'json', name: 'JSON格式化', desc: '格式化与压缩 JSON', icon: '📋', color: '#e17055', category: 'code', path: '/pages/json/index', implemented: false, status: '规划中' }
+  { id: 'base64', name: 'Base64', desc: '文本编码解码工具', icon: '🔤', color: '#74b9ff', category: 'code', path: '/pages/base64/index', implemented: false, status: '规划中' }
 ])
 
 const popularTools = computed(() => tools.value.filter(t => t.implemented).slice(0, 4))

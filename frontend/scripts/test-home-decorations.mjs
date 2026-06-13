@@ -22,4 +22,8 @@ assert.match(source, /\.quick-tool-card\s*\{[\s\S]*padding:\s*14rpx 12rpx;/, 'po
 assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.quick-tool-list\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*144px\)\);/, 'desktop popular tools should use fixed compact card widths')
 assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.quick-tool-card\s*\{[\s\S]*min-height:\s*62px;/, 'desktop popular tool cards should be shorter')
 
+assert.doesNotMatch(source, /id:\s*'password'|name:\s*'密码生成'|path:\s*'\/pages\/password\/index'/, 'home page should not show the password generator card')
+assert.doesNotMatch(source, /id:\s*'url'|name:\s*'URL编码'|path:\s*'\/pages\/url\/index'/, 'home page should not show the URL encoder card')
+assert.doesNotMatch(source, /id:\s*'json'|name:\s*'JSON格式化'|path:\s*'\/pages\/json\/index'/, 'home page should not show the JSON formatter card')
+
 console.log('home page cards and popular tools use compact polished layouts')
