@@ -458,56 +458,59 @@ const navigateToBeian = () => {
 }
 
 .quick-tool-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14rpx;
 }
 
 .quick-tool-card {
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
+  justify-content: space-between;
   min-width: 0;
-  gap: 14rpx;
-  padding: 18rpx 14rpx;
-  border-radius: 22rpx;
-  background: linear-gradient(135deg, var(--theme-primary-soft, rgba(248, 250, 252, 0.78)) 0%, var(--theme-surface, rgba(255, 255, 255, 0.82)) 100%);
+  min-height: 104rpx;
+  gap: 12rpx;
+  padding: 18rpx 16rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
-  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04);
+  box-shadow: 0 8rpx 22rpx rgba(20, 35, 90, 0.045);
 }
 
 .quick-tool-icon {
-  width: 68rpx;
-  height: 68rpx;
-  border-radius: 22rpx;
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   background: var(--theme-hero, linear-gradient(135deg, #1677ff 0%, #31c48d 100%));
-  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.42), 0 10rpx 22rpx rgba(20, 35, 90, 0.08);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.42), 0 8rpx 18rpx rgba(20, 35, 90, 0.08);
 }
 
 .quick-icon-text {
-  font-size: 32rpx;
+  font-size: 30rpx;
 }
 
 .quick-tool-info {
-  flex: 0 0 auto;
+  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .quick-tool-name {
-  font-size: 26rpx;
+  font-size: 25rpx;
+  line-height: 1.2;
   color: var(--theme-text, #243044);
   font-weight: 800;
 }
 
 .quick-arrow {
+  flex-shrink: 0;
   color: var(--theme-text-muted, #9aa6b8);
-  font-size: 34rpx;
+  font-size: 30rpx;
   line-height: 1;
 }
 
@@ -699,10 +702,28 @@ const navigateToBeian = () => {
     padding-top: 4px;
   }
 
+  .quick-tool-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
   .quick-tool-card {
+    min-height: 72px;
+    padding: 14px 16px;
+    border-radius: 18px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
+
+  .quick-tool-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .quick-icon-text { font-size: 20px; }
+  .quick-tool-name { font-size: 15px; }
+  .quick-arrow { font-size: 22px; }
 
   .quick-tool-card:hover {
     transform: translateY(-2px);
