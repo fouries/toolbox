@@ -65,6 +65,24 @@ async def calendar(date: str = None):
     result = await TianApiService.get_calendar(date)
     return result
 
+@app.get("/api/news", summary="资讯查询", tags=["天行数据"])
+async def news(category: str = "internet"):
+    """查询互联网资讯、电竞资讯、汽车新闻"""
+    result = await TianApiService.get_info_news(category)
+    return result
+
+@app.get("/api/gold-price", summary="黄金行情", tags=["天行数据"])
+async def gold_price():
+    """查询黄金行情"""
+    result = await TianApiService.get_gold_price()
+    return result
+
+@app.get("/api/crude-oil", summary="原油价格", tags=["天行数据"])
+async def crude_oil():
+    """查询国际原油价格"""
+    result = await TianApiService.get_crude_oil()
+    return result
+
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
 async def reverse_location(latitude: float, longitude: float):
     """根据经纬度解析省、市、区，用于天气和油价定位。"""
@@ -129,7 +147,7 @@ async def root():
         "docs": "/docs",
         "status": "running",
         "apis": {
-            "天行数据": ["/api/oil-price", "/api/weather", "/api/calendar"],
+            "天行数据": ["/api/oil-price", "/api/weather", "/api/calendar", "/api/news", "/api/gold-price", "/api/crude-oil"],
             "定位服务": ["/api/location/reverse"],
             "本地工具": ["/api/qrcode", "/api/password"],
             "编码工具": ["/api/base64/encode", "/api/base64/decode", "/api/url/encode", "/api/url/decode", "/api/json/format"]

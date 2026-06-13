@@ -28,6 +28,37 @@ export interface OilPriceItem {
   time?: string
 }
 
+export interface CrudeOilItem {
+  name?: string
+  type?: string
+  price?: string
+  latestpri?: string
+  unit?: string
+  updown?: string
+  time?: string
+}
+
+export interface NewsItem {
+  title: string
+  description?: string
+  ctime?: string
+  source?: string
+  url?: string
+  picUrl?: string
+}
+
+export interface GoldPriceItem {
+  name?: string
+  type?: string
+  price?: string
+  latestpri?: string
+  buypri?: string
+  sellpri?: string
+  unit?: string
+  updown?: string
+  time?: string
+}
+
 export interface WeatherItem {
   area?: string
   date?: string
@@ -113,6 +144,18 @@ export const getOilPrice = (province: string = '北京') => {
   return request<OilPriceItem[]>(`/api/oil-price?province=${encodeURIComponent(province)}`)
 }
 
+export const getCrudeOilPrice = () => {
+  return request<CrudeOilItem[]>('/api/crude-oil')
+}
+
+export const getInfoNews = (category: string = 'internet') => {
+  return request<NewsItem[]>(`/api/news?category=${encodeURIComponent(category)}`)
+}
+
+export const getGoldPrice = () => {
+  return request<GoldPriceItem[]>('/api/gold-price')
+}
+
 export const getWeather = (city: string = '北京') => {
   return request<WeatherItem[]>(`/api/weather?city=${encodeURIComponent(city)}`)
 }
@@ -153,6 +196,9 @@ export const urlDecode = (encoded: string) => {
 
 export default {
   getOilPrice,
+  getCrudeOilPrice,
+  getInfoNews,
+  getGoldPrice,
   getWeather,
   reverseLocation,
   getCalendar,

@@ -71,6 +71,30 @@
         "navigationBarBackgroundColor": "#f97316",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/solar-terms/index",
+      "style": {
+        "navigationBarTitleText": "二十四节气",
+        "navigationBarBackgroundColor": "#16a34a",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/info-news/index",
+      "style": {
+        "navigationBarTitleText": "资讯查询",
+        "navigationBarBackgroundColor": "#2563eb",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/gold-price/index",
+      "style": {
+        "navigationBarTitleText": "黄金行情",
+        "navigationBarBackgroundColor": "#f59e0b",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {

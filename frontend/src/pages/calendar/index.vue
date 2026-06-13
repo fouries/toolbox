@@ -43,13 +43,24 @@
         <button class="today-btn" size="mini" @tap="goToday">回到今天</button>
       </view>
 
-      <view class="history-entry-card" @tap="goHistoryToday">
-        <view class="history-entry-icon">📜</view>
-        <view class="history-entry-content">
-          <text class="history-entry-title">历史上的今天</text>
-          <text class="history-entry-desc">看看这一天发生过哪些大事</text>
+      <view class="entry-card-grid">
+        <view class="history-entry-card" @tap="goHistoryToday">
+          <view class="history-entry-icon">📜</view>
+          <view class="history-entry-content">
+            <text class="history-entry-title">历史上的今天</text>
+            <text class="history-entry-desc">看看这一天发生过哪些大事</text>
+          </view>
+          <text class="history-entry-arrow">›</text>
         </view>
-        <text class="history-entry-arrow">›</text>
+
+        <view class="solar-term-entry-card" @tap="goSolarTerms">
+          <view class="history-entry-icon solar-term-entry-icon">🌾</view>
+          <view class="history-entry-content">
+            <text class="history-entry-title">二十四节气</text>
+            <text class="history-entry-desc">查询全年节气日期与物候提示</text>
+          </view>
+          <text class="history-entry-arrow">›</text>
+        </view>
       </view>
 
       <view class="detail-card card">
@@ -171,6 +182,10 @@ const goToday = () => {
 const goHistoryToday = () => {
   uni.navigateTo({ url: `/pages/history-today/index?date=${selectedDay.value.dateText}` })
 }
+
+const goSolarTerms = () => {
+  uni.navigateTo({ url: `/pages/solar-terms/index?date=${selectedDay.value.dateText}` })
+}
 </script>
 
 <style scoped>
@@ -191,6 +206,7 @@ const goHistoryToday = () => {
 
 .calendar-card,
 .history-entry-card,
+.solar-term-entry-card,
 .detail-card,
 .note-card {
   background: rgba(255, 255, 255, 0.96);
@@ -329,8 +345,15 @@ const goHistoryToday = () => {
   margin-top: 24rpx;
 }
 
-.history-entry-card {
+.entry-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18rpx;
   margin-top: 24rpx;
+}
+
+.history-entry-card,
+.solar-term-entry-card {
   display: flex;
   align-items: center;
   gap: 18rpx;
@@ -348,6 +371,11 @@ const goHistoryToday = () => {
   color: #fff;
   font-size: 36rpx;
   box-shadow: 0 10rpx 24rpx rgba(249, 115, 22, 0.22);
+}
+
+.solar-term-entry-icon {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 10rpx 24rpx rgba(34, 197, 94, 0.2);
 }
 
 .history-entry-content {
@@ -559,6 +587,7 @@ const goHistoryToday = () => {
 
   .calendar-card,
   .history-entry-card,
+  .solar-term-entry-card,
   .detail-card,
   .note-card {
     padding: 28px;
@@ -615,10 +644,12 @@ const goHistoryToday = () => {
   }
 
   .meta-grid,
+  .entry-card-grid,
   .almanac-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .entry-card-grid,
   .almanac-grid {
     grid-template-columns: repeat(2, 1fr);
   }

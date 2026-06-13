@@ -13,6 +13,9 @@ const files = [
   'password.html',
   'calendar.html',
   'history-today.html',
+  'gold-price.html',
+  'info-news.html',
+  'solar-terms.html',
 ]
 
 if (!existsSync(outputDir)) {

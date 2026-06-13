@@ -1,3 +1,13 @@
+export interface SolarTermItem {
+  name: string
+  date: string
+  month: number
+  day: number
+  index: number
+  season: string
+  desc: string
+}
+
 export interface CalendarDay {
   date: Date
   dateText: string
@@ -44,12 +54,34 @@ const lunarMonths = ['正月', '二月', '三月', '四月', '五月', '六月',
 const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十']
 const weekTexts = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
-const solarTerms = new Map<string, string>([
-  ['01-05', '小寒'], ['01-20', '大寒'], ['02-04', '立春'], ['02-19', '雨水'], ['03-05', '惊蛰'], ['03-20', '春分'],
-  ['04-04', '清明'], ['04-20', '谷雨'], ['05-05', '立夏'], ['05-21', '小满'], ['06-05', '芒种'], ['06-21', '夏至'],
-  ['07-07', '小暑'], ['07-22', '大暑'], ['08-07', '立秋'], ['08-23', '处暑'], ['09-07', '白露'], ['09-23', '秋分'],
-  ['10-08', '寒露'], ['10-23', '霜降'], ['11-07', '立冬'], ['11-22', '小雪'], ['12-07', '大雪'], ['12-21', '冬至']
-])
+const solarTermDefinitions = [
+  { key: '01-05', name: '小寒', season: '冬', desc: '寒气渐盛，注意防寒保暖。' },
+  { key: '01-20', name: '大寒', season: '冬', desc: '一年中最寒冷时段，适合养藏。' },
+  { key: '02-04', name: '立春', season: '春', desc: '春气始建，万物复苏。' },
+  { key: '02-19', name: '雨水', season: '春', desc: '降水渐增，草木萌动。' },
+  { key: '03-05', name: '惊蛰', season: '春', desc: '春雷惊蛰，万物生发。' },
+  { key: '03-20', name: '春分', season: '春', desc: '昼夜平分，春意正浓。' },
+  { key: '04-04', name: '清明', season: '春', desc: '气清景明，踏青祭扫。' },
+  { key: '04-20', name: '谷雨', season: '春', desc: '雨生百谷，适合播种。' },
+  { key: '05-05', name: '立夏', season: '夏', desc: '夏季开始，万物繁茂。' },
+  { key: '05-21', name: '小满', season: '夏', desc: '麦类籽粒渐满但未成熟。' },
+  { key: '06-05', name: '芒种', season: '夏', desc: '有芒作物成熟，忙于耕种。' },
+  { key: '06-21', name: '夏至', season: '夏', desc: '白昼最长，暑气渐盛。' },
+  { key: '07-07', name: '小暑', season: '夏', desc: '暑热初盛，注意避暑。' },
+  { key: '07-22', name: '大暑', season: '夏', desc: '一年中最热时段，防暑降温。' },
+  { key: '08-07', name: '立秋', season: '秋', desc: '秋季开始，暑热未消。' },
+  { key: '08-23', name: '处暑', season: '秋', desc: '暑气渐止，天气转凉。' },
+  { key: '09-07', name: '白露', season: '秋', desc: '露凝而白，昼夜温差加大。' },
+  { key: '09-23', name: '秋分', season: '秋', desc: '昼夜平分，秋意渐深。' },
+  { key: '10-08', name: '寒露', season: '秋', desc: '露水带寒，注意添衣。' },
+  { key: '10-23', name: '霜降', season: '秋', desc: '初霜将至，秋末冬来。' },
+  { key: '11-07', name: '立冬', season: '冬', desc: '冬季开始，万物收藏。' },
+  { key: '11-22', name: '小雪', season: '冬', desc: '气温下降，初雪渐临。' },
+  { key: '12-07', name: '大雪', season: '冬', desc: '降雪可能增多，宜温补。' },
+  { key: '12-21', name: '冬至', season: '冬', desc: '阴极阳生，白昼渐长。' }
+]
+
+const solarTerms = new Map<string, string>(solarTermDefinitions.map(item => [item.key, item.name]))
 
 const solarFestivals: Record<string, string> = {
   '01-01': '元旦',
@@ -161,6 +193,22 @@ function getLunar(date: Date) {
 
 export function formatDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+
+export function getSolarTermsForYear(year: number): SolarTermItem[] {
+  return solarTermDefinitions.map((item, index) => {
+    const [monthText, dayText] = item.key.split('-')
+    return {
+      name: item.name,
+      date: `${year}-${item.key}`,
+      month: Number(monthText),
+      day: Number(dayText),
+      index,
+      season: item.season,
+      desc: item.desc
+    }
+  })
 }
 
 export function getCalendarDay(date: Date, currentMonth = date.getMonth()): CalendarDay {

@@ -79,6 +79,20 @@
         </view>
       </view>
 
+      <view class="crude-oil-card" v-if="crudeOilData.length && !loading">
+        <view class="oil-card-header">
+          <text class="oil-province-name">国际原油价格</text>
+          <text class="oil-province-label">WTI / Brent 原油期货</text>
+        </view>
+        <view class="crude-grid">
+          <view class="crude-item" v-for="item in crudeOilData" :key="item.name || item.type">
+            <text class="crude-name">{{ item.name || item.type || '原油' }}</text>
+            <text class="crude-price">{{ formatCrudePrice(item) }}</text>
+            <text class="crude-meta">{{ item.updown || item.time || '行情参考' }}</text>
+          </view>
+        </view>
+      </view>
+
       <view class="error-box" v-if="error">
         <text class="error-text">{{ error }}</text>
         <button class="retry-btn" @click="fetchOilPrice">重新加载</button>
@@ -87,6 +101,7 @@
       <view class="note card">
         <text class="note-title">💡 说明</text>
         <text class="note-text">• 油价单位：元/升</text>
+        <text class="note-text">• 原油价格展示 WTI、Brent 等国际原油期货行情参考</text>
         <text class="note-text">• 数据每日凌晨更新</text>
         <text class="note-text">• 实际价格以加油站为准</text>
       </view>
@@ -97,7 +112,7 @@
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
 import { ref, onMounted } from 'vue'
-import { getOilPrice, type OilPriceItem } from '@/api'
+import { getCrudeOilPrice, getOilPrice, type CrudeOilItem, type OilPriceItem } from '@/api'
 import { getCurrentAddress } from '@/utils/location'
 import { resolveProvince } from '@/utils/location-format'
 
@@ -108,6 +123,7 @@ const error = ref('')
 const locationLabel = ref('')
 const locationNotice = ref('')
 const oilData = ref<OilPriceItem[]>([])
+const crudeOilData = ref<CrudeOilItem[]>([])
 const selectedProvince = ref('北京')
 
 const quickProvinces = ['北京', '上海', '天津', '广东', '江苏', '浙江', '山东', '四川']
@@ -165,19 +181,35 @@ const fetchOilPrice = async () => {
   error.value = ''
 
   try {
-    const res: any = await getOilPrice(selectedProvince.value)
-    if (res.code === 200 && res.newslist) {
-      oilData.value = res.newslist
-    } else if (res.newslist?.[0]?.note) {
+    const oilRes: any = await getOilPrice(selectedProvince.value)
+    if (oilRes.code === 200 && oilRes.newslist) {
+      oilData.value = oilRes.newslist
+    } else if (oilRes.newslist?.[0]?.note) {
       error.value = '请先配置天行数据 API Key'
     } else {
-      error.value = res.msg || '查询失败'
+      error.value = oilRes.msg || '查询失败'
     }
   } catch (e: any) {
     error.value = e.message || '网络错误'
   } finally {
     loading.value = false
   }
+
+  try {
+    const crudeRes: any = await getCrudeOilPrice()
+    if (crudeRes.code === 200 && Array.isArray(crudeRes.newslist)) {
+      crudeOilData.value = crudeRes.newslist
+    } else {
+      crudeOilData.value = []
+    }
+  } catch (e) {
+    crudeOilData.value = []
+  }
+}
+
+const formatCrudePrice = (item: CrudeOilItem) => {
+  const price = item.price || item.latestpri || '--'
+  return item.unit ? `${price} ${item.unit}` : `${price}`
 }
 
 const initOilPricePage = async () => {
@@ -312,7 +344,8 @@ onMounted(() => {
   color: #999;
 }
 
-.oil-data {
+.oil-data,
+.crude-oil-card {
   background: #fff;
   border-radius: var(--radius-md);
   padding: 30rpx;
@@ -385,6 +418,44 @@ onMounted(() => {
   color: #007aff;
 }
 
+.crude-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18rpx;
+}
+
+.crude-item {
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  border: 1rpx solid #e2e8f0;
+}
+
+.crude-name,
+.crude-price,
+.crude-meta {
+  display: block;
+}
+
+.crude-name {
+  color: #334155;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.crude-price {
+  margin-top: 12rpx;
+  color: #0f172a;
+  font-size: 36rpx;
+  font-weight: 850;
+}
+
+.crude-meta {
+  margin-top: 8rpx;
+  color: #64748b;
+  font-size: 22rpx;
+}
+
 .error-box {
   background: #fff;
   border-radius: var(--radius-md);
@@ -424,7 +495,8 @@ onMounted(() => {
 }
 
 @media (min-width: 768px) {
-  .oil-grid {
+  .oil-grid,
+  .crude-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }

@@ -8,7 +8,10 @@
     "pages/password/index",
     "pages/weather/index",
     "pages/calendar/index",
-    "pages/history-today/index"
+    "pages/history-today/index",
+    "pages/solar-terms/index",
+    "pages/info-news/index",
+    "pages/gold-price/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

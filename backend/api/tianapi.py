@@ -1,4 +1,5 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
@@ -9,6 +10,88 @@ TIANAPI_BASE = "https://apis.tianapi.com"
 
 class TianApiService:
     """天行数据API聚合服务"""
+
+    GOLD_KIND_NAMES = {
+        "au9999": "Au99.99 黄金",
+        "au9995": "Au99.95 黄金",
+        "agTplusD": "白银 T+D",
+        "auTplusD": "黄金 T+D",
+        "mAuTplusD": "迷你黄金 T+D",
+    }
+
+    @staticmethod
+    def _fallback_news(category: str) -> List[Dict[str, str]]:
+        mapping = {
+            "internet": [
+                {"title": "AI 应用加速落地，互联网产品进入智能化升级阶段", "description": "从搜索、办公到电商，智能助手正在成为互联网产品的新入口。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+                {"title": "云服务和大模型基础设施持续扩容", "description": "算力、数据和应用生态成为科技企业竞争重点。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+            ],
+            "esports": [
+                {"title": "电竞赛事热度提升，俱乐部商业化持续探索", "description": "主场、直播内容和品牌合作成为电竞生态的重要增长点。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+                {"title": "游戏版本更新带动战术变化", "description": "职业队伍围绕新版本持续调整阵容与打法。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+            ],
+            "auto": [
+                {"title": "新能源汽车市场竞争加剧，智能座舱成为亮点", "description": "车企持续围绕续航、补能和智能驾驶体验升级。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+                {"title": "用车成本与油电价格成为消费者关注重点", "description": "购车决策更重视全生命周期成本和补能便利性。", "source": "小巧的工具箱", "url": "https://quan1234.com/"},
+            ],
+        }
+        now = datetime.now().strftime("%Y-%m-%d")
+        return [{**item, "ctime": now} for item in mapping.get(category, mapping["internet"])]
+
+    @staticmethod
+    def _fallback_gold() -> List[Dict[str, str]]:
+        now = datetime.now().strftime("%Y-%m-%d")
+        return [
+            {"name": "国内黄金", "price": "--", "unit": "元/克", "updown": "--", "time": now},
+            {"name": "国际现货黄金", "price": "--", "unit": "美元/盎司", "updown": "--", "time": now},
+            {"name": "足金零售参考", "price": "--", "unit": "元/克", "updown": "--", "time": now},
+        ]
+
+    @staticmethod
+    def _fallback_crude_oil() -> List[Dict[str, str]]:
+        now = datetime.now().strftime("%Y-%m-%d")
+        return [
+            {"name": "WTI 原油", "price": "--", "unit": "美元/桶", "updown": "--", "time": now},
+            {"name": "Brent 布伦特原油", "price": "--", "unit": "美元/桶", "updown": "--", "time": now},
+        ]
+
+    @staticmethod
+    def _format_change(value: Any, rate: Any) -> str:
+        if value in (None, "") and rate in (None, ""):
+            return ""
+        if value in (None, ""):
+            return str(rate)
+        if rate in (None, ""):
+            return str(value)
+        rate_text = str(rate)
+        if rate_text and not rate_text.endswith("%"):
+            rate_text = f"{rate_text}%"
+        return f"{value} ({rate_text})"
+
+    @staticmethod
+    def _normalize_gold_item(item: Dict[str, Any]) -> Dict[str, str]:
+        code = str(item.get("code") or "").strip()
+        return {
+            "name": TianApiService.GOLD_KIND_NAMES.get(code, code or "黄金"),
+            "type": code,
+            "price": str(item.get("latestprice") or item.get("price") or "--"),
+            "unit": "元/克",
+            "updown": TianApiService._format_change(item.get("rafvalue"), item.get("raf")),
+            "time": str(item.get("updatetime") or item.get("time") or ""),
+            "buypri": str(item.get("buyprice") or ""),
+            "sellpri": str(item.get("sellprice") or ""),
+        }
+
+    @staticmethod
+    def _normalize_crude_item(item: Dict[str, Any]) -> Dict[str, str]:
+        return {
+            "name": str(item.get("name") or "原油"),
+            "type": str(item.get("code") or ""),
+            "price": str(item.get("nowprice") or item.get("price") or "--"),
+            "unit": "美元/桶",
+            "updown": TianApiService._format_change(item.get("diffnum"), item.get("diffrate")),
+            "time": str(item.get("updatetime") or item.get("time") or ""),
+        }
     
     @staticmethod
     def _get_params(key: str, **kwargs) -> Dict[str, str]:
@@ -21,10 +104,11 @@ class TianApiService:
     async def _request(path: str, cache_key: str = None, cache_ttl: int = 300, **kwargs) -> Dict[str, Any]:
         """通用请求方法"""
         api_key = settings.TIANAPI_KEY
+        fallback = kwargs.pop("fallback", None)
         
         if not api_key:
             # 返回模拟数据用于测试
-            return {"code": 200, "msg": "success", "newslist": [{"note": "请在 .env 文件中配置 TIANAPI_KEY"}]}
+            return {"code": 200, "msg": "success", "fallback": True, "newslist": fallback or [{"note": "请在 .env 文件中配置 TIANAPI_KEY"}]}
         
         async with HttpClient() as client:
             params = TianApiService._get_params(api_key, **kwargs)
@@ -38,13 +122,22 @@ class TianApiService:
             # 调用API
             url = f"{TIANAPI_BASE}{path}"
             result = await client.get(url, params=params)
+
+            if result.get("code") != 200 and fallback is not None:
+                return {
+                    "code": 200,
+                    "msg": result.get("msg") or "success",
+                    "fallback": True,
+                    "upstream_code": result.get("code"),
+                    "newslist": fallback,
+                }
             
             # 适配不同的返回格式
             if result.get("code") == 200 and "result" in result:
                 result_data = result["result"]
                 
-                # 天气API特殊格式: result.list 是数组
-                if isinstance(result_data, dict) and "list" in result_data and isinstance(result_data["list"], list):
+                # 天气API特殊格式: result.list 是数组，同时需要城市字段
+                if path == "/tianqi/index" and isinstance(result_data, dict) and "list" in result_data and isinstance(result_data["list"], list):
                     # 天气API: 把城市信息加到每条数据里
                     for item in result_data["list"]:
                         item["area"] = result_data.get("area", kwargs.get("city", ""))
@@ -54,6 +147,13 @@ class TianApiService:
                         item["aqi"] = ""
                         item["quality"] = "未知"
                     result["newslist"] = result_data["list"]
+
+                # 新版新闻/行情 API 常见格式: result.list 或 result.newslist
+                elif isinstance(result_data, dict) and isinstance(result_data.get("list"), list):
+                    result["newslist"] = result_data["list"]
+
+                elif isinstance(result_data, dict) and isinstance(result_data.get("newslist"), list):
+                    result["newslist"] = result_data["newslist"]
                 
                 # 普通格式: result是数组
                 elif isinstance(result_data, list):
@@ -123,3 +223,70 @@ class TianApiService:
             cache_ttl=settings.CACHE_TTL_DEFAULT,
             **params
         )
+
+    @staticmethod
+    async def get_info_news(category: str = "internet") -> Dict[str, Any]:
+        """资讯查询：互联网、电竞、汽车新闻。"""
+        endpoint_map = {
+            "internet": "/internet/index",
+            "esports": "/esports/index",
+            "auto": "/auto/index",
+        }
+        category = category if category in endpoint_map else "internet"
+        cache_key = make_cache_key("news", category=category)
+        return await TianApiService._request(
+            endpoint_map[category],
+            cache_key=cache_key,
+            cache_ttl=settings.CACHE_TTL_DEFAULT,
+            num=10,
+            form=1,
+            fallback=TianApiService._fallback_news(category)
+        )
+
+    @staticmethod
+    async def get_gold_price() -> Dict[str, Any]:
+        """黄金行情查询。"""
+        cache_key = make_cache_key("gold", kinds="au9999,au9995,agTplusD")
+        result = await TianApiService._request(
+            "/gold/index",
+            cache_key=cache_key,
+            cache_ttl=settings.CACHE_TTL_DEFAULT,
+            kinds="au9999,au9995,agTplusD",
+            fallback=TianApiService._fallback_gold()
+        )
+        if result.get("code") == 200 and not result.get("fallback") and isinstance(result.get("newslist"), list):
+            result["newslist"] = [TianApiService._normalize_gold_item(item) for item in result["newslist"]]
+        return result
+
+    @staticmethod
+    async def get_crude_oil() -> Dict[str, Any]:
+        """国际原油价格查询。"""
+        if not settings.TIANAPI_KEY:
+            return {"code": 200, "msg": "success", "newslist": TianApiService._fallback_crude_oil()}
+
+        items: List[Dict[str, str]] = []
+        upstream_errors: List[str] = []
+        for crude_code in ("wti", "blt"):
+            result = await TianApiService._request(
+                "/crude/index",
+                cache_key=make_cache_key("crude_oil", code=crude_code),
+                cache_ttl=settings.CACHE_TTL_DEFAULT,
+                code=crude_code
+            )
+            if result.get("code") == 200 and isinstance(result.get("newslist"), list) and result["newslist"]:
+                item = result["newslist"][0]
+                if isinstance(item, dict):
+                    item.setdefault("code", crude_code)
+                    items.append(TianApiService._normalize_crude_item(item))
+            else:
+                upstream_errors.append(str(result.get("msg") or result.get("error") or crude_code))
+
+        if items:
+            return {"code": 200, "msg": "success", "newslist": items}
+
+        return {
+            "code": 200,
+            "msg": "; ".join(upstream_errors) or "原油接口暂不可用",
+            "fallback": True,
+            "newslist": TianApiService._fallback_crude_oil()
+        }

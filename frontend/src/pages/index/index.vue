@@ -123,14 +123,19 @@ const activeCategory = ref('all')
 
 const categories = ref<CategoryItem[]>([
   { id: 'life', name: '生活服务' },
+  { id: 'market', name: '资讯行情' },
   { id: 'code', name: '编码转换' },
   { id: 'other', name: '其他工具' }
 ])
 
 const tools = ref<ToolItem[]>([
-  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
+  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油和原油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
   { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'life', path: '/pages/calendar/index', implemented: true },
+  { id: 'internet-news', name: '互联网资讯', desc: '互联网、AI 和科技行业动态', icon: '🌐', color: '#2563eb', category: 'market', path: '/pages/info-news/index?category=internet', implemented: true },
+  { id: 'esports-news', name: '电竞资讯', desc: '电竞赛事与游戏产业消息', icon: '🎮', color: '#7c3aed', category: 'market', path: '/pages/info-news/index?category=esports', implemented: true },
+  { id: 'auto-news', name: '汽车新闻', desc: '新车上市、行业政策和用车资讯', icon: '🚗', color: '#0f766e', category: 'market', path: '/pages/info-news/index?category=auto', implemented: true },
+  { id: 'gold-price', name: '黄金行情', desc: '黄金价格与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true },
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true }
 ])
 
@@ -170,7 +175,8 @@ const goToTool = (tool: ToolItem) => {
 
 const navigateToBeian = () => {
   // #ifdef H5
-  window.open('https://beian.miit.gov.cn/', '_blank')
+  const opened = window.open('https://beian.miit.gov.cn/', '_blank', 'noopener,noreferrer')
+  if (opened) opened.opener = null
   // #endif
 }
 </script>
