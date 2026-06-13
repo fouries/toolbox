@@ -25,5 +25,6 @@ assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.quick-tool-card\s*
 assert.doesNotMatch(source, /id:\s*'password'|name:\s*'密码生成'|path:\s*'\/pages\/password\/index'/, 'home page should not show the password generator card')
 assert.doesNotMatch(source, /id:\s*'url'|name:\s*'URL编码'|path:\s*'\/pages\/url\/index'/, 'home page should not show the URL encoder card')
 assert.doesNotMatch(source, /id:\s*'json'|name:\s*'JSON格式化'|path:\s*'\/pages\/json\/index'/, 'home page should not show the JSON formatter card')
+assert.doesNotMatch(source, /id:\s*'base64'|name:\s*'Base64'|path:\s*'\/pages\/base64\/index'/, 'home page should not show the Base64 card')
 
 console.log('home page cards and popular tools use compact polished layouts')
