@@ -19,14 +19,26 @@ assert.match(
 
 assert.match(
   uniScss,
-  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*\.uni-app--showtabbar\s+uni-page-wrapper[\s\S]*height:\s*calc\(100% - 56px - env\(safe-area-inset-bottom\)\)\s*!important;/,
-  'mobile H5 should reserve viewport height for the fixed bottom tabbar'
+  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*\.uni-app--showtabbar\s+uni-page-wrapper[\s\S]*height:\s*calc\(100% - 60px - env\(safe-area-inset-bottom\)\)\s*!important;/,
+  'mobile H5 should reserve viewport height for the taller fixed bottom tabbar'
 )
 
 assert.match(
   uniScss,
-  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*\.uni-app--showtabbar\s+\.container[\s\S]*padding-bottom:\s*calc\(24rpx \+ 56px \+ env\(safe-area-inset-bottom\)\)\s*!important;/,
-  'mobile H5 should keep extra bottom safe spacing above the fixed bottom tabbar'
+  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*\.uni-app--showtabbar\s+\.container[\s\S]*padding-bottom:\s*calc\(24rpx \+ 60px \+ env\(safe-area-inset-bottom\)\)\s*!important;/,
+  'mobile H5 should keep extra bottom safe spacing above the taller fixed bottom tabbar'
+)
+
+assert.match(
+  uniScss,
+  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*height:\s*60px\s*!important;/,
+  'mobile H5 toolbar should be taller to match larger text'
+)
+
+assert.match(
+  uniScss,
+  /@media\s+screen\s+and\s+\(max-width:\s*767px\)[\s\S]*uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar__label[\s\S]*font-size:\s*15px;/,
+  'mobile H5 toolbar label font should be larger and easier to read'
 )
 
 assert.match(

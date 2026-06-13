@@ -426,22 +426,35 @@ button::after {
 /* #ifdef H5 */
 @media screen and (max-width: 767px) {
   .uni-app--showtabbar uni-page-wrapper {
-    height: calc(100% - 56px) !important;
-    height: calc(100% - 56px - constant(safe-area-inset-bottom)) !important;
-    height: calc(100% - 56px - env(safe-area-inset-bottom)) !important;
+    height: calc(100% - 60px) !important;
+    height: calc(100% - 60px - constant(safe-area-inset-bottom)) !important;
+    height: calc(100% - 60px - env(safe-area-inset-bottom)) !important;
     overflow-y: auto;
     box-sizing: border-box;
   }
 
   .uni-app--showtabbar uni-page-head[uni-page-head-type='default'] ~ uni-page-wrapper {
-    height: calc(100% - 44px - 56px) !important;
-    height: calc(100% - 44px - constant(safe-area-inset-top) - 56px - constant(safe-area-inset-bottom)) !important;
-    height: calc(100% - 44px - env(safe-area-inset-top) - 56px - env(safe-area-inset-bottom)) !important;
+    height: calc(100% - 44px - 60px) !important;
+    height: calc(100% - 44px - constant(safe-area-inset-top) - 60px - constant(safe-area-inset-bottom)) !important;
+    height: calc(100% - 44px - env(safe-area-inset-top) - 60px - env(safe-area-inset-bottom)) !important;
+  }
+
+  uni-tabbar.uni-tabbar-bottom .uni-tabbar {
+    height: 60px !important;
+    min-height: 60px;
+    padding-top: 4px !important;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+  }
+
+  uni-tabbar.uni-tabbar-bottom .uni-tabbar__label {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
   }
 
   .uni-app--showtabbar .container {
-    padding-bottom: calc(24rpx + 56px + constant(safe-area-inset-bottom)) !important;
-    padding-bottom: calc(24rpx + 56px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(24rpx + 60px + constant(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(24rpx + 60px + env(safe-area-inset-bottom)) !important;
   }
 
   .uni-app--showtabbar uni-page-wrapper::after {
