@@ -169,7 +169,7 @@ const goToday = () => {
 }
 
 const goHistoryToday = () => {
-  uni.navigateTo({ url: '/pages/history-today/index' })
+  uni.navigateTo({ url: `/pages/history-today/index?date=${selectedDay.value.dateText}` })
 }
 </script>
 

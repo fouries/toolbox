@@ -68,11 +68,15 @@ assert.match(page, /goToday/, 'calendar page should provide a return-to-today ac
 assert.match(page, /class="history-entry-card"/, 'calendar page should show a history-today entry card')
 assert.match(page, /历史上的今天/, 'calendar page should label the history-today entry')
 assert.match(page, /goHistoryToday/, 'calendar page should provide a jump handler for history today')
-assert.match(page, /uni\.navigateTo\(\{\s*url:\s*'\/pages\/history-today\/index'/s, 'calendar page should navigate to the history today page')
+assert.match(page, /date=\$\{selectedDay\.value\.dateText\}/, 'calendar page should pass the selected date to history today')
+assert.match(page, /uni\.navigateTo\(\{\s*url:\s*`\/pages\/history-today\/index\?date=/s, 'calendar page should navigate to the history today page with a date query')
 
 assert.match(historyPage, /历史上的今天/, 'history today page should render title text')
 assert.match(historyPage, /<picker[^>]+mode="date"[^>]+@change="onDateChange"/s, 'history today page should provide a date picker')
 assert.match(historyPage, /getHistoryTodayEvents/, 'history today page should load events from the utility')
+assert.match(historyPage, /onLoad/, 'history today page should read the date passed by the calendar route')
+assert.match(historyPage, /options\?\.date/, 'history today page should accept a date route parameter')
+assert.match(historyPage, /stripHtml/, 'history today page should strip HTML from remote history event titles and descriptions')
 assert.match(historyPage, /v-for="event in events"/, 'history today page should render events list')
 assert.match(historyPage, /event\.year/, 'history today page should show event years')
 assert.match(historyPage, /class="event-card"/, 'history today page should use event cards')
@@ -80,6 +84,8 @@ assert.match(historyPage, /goCalendar/, 'history today page should provide a way
 
 assert.match(historyUtil, /export\s+interface\s+HistoryTodayEvent/, 'history utility should export HistoryTodayEvent type')
 assert.match(historyUtil, /export\s+function\s+getHistoryTodayEvents/, 'history utility should export getHistoryTodayEvents')
+assert.match(historyUtil, /export\s+async\s+function\s+fetchHistoryTodayEvents/, 'history utility should export async remote history fetcher')
+assert.match(historyUtil, /baike\.baidu\.com\/cms\/home\/eventsOnHistory/, 'history utility should fetch full daily history data from Baidu Baike')
 assert.match(historyUtil, /const\s+historyTodayData\s*=/, 'history utility should include local historical event data')
 assert.match(historyUtil, /fallbackEvents/, 'history utility should provide fallback events for sparse dates')
 

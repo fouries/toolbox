@@ -2,8 +2,17 @@ export interface HistoryTodayEvent {
   year: number
   title: string
   desc: string
-  category: '历史' | '科技' | '文化' | '人物' | '中国'
+  category: '历史' | '科技' | '文化' | '人物' | '中国' | '出生' | '逝世'
 }
+
+type BaiduHistoryEvent = {
+  year?: string | number
+  title?: string
+  desc?: string
+  type?: string
+}
+
+declare const uni: any
 
 const historyTodayData = {
   '01-01': [
@@ -73,8 +82,75 @@ export function formatDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+export function parseDateText(value?: string): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function stripHtml(value = ''): string {
+  return value
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normalizeYear(value: string | number | undefined): number {
+  const year = Number.parseInt(String(value ?? '0'), 10)
+  return Number.isFinite(year) ? year : 0
+}
+
+function normalizeCategory(type?: string): HistoryTodayEvent['category'] {
+  if (type === 'birth') return '出生'
+  if (type === 'death') return '逝世'
+  return '历史'
+}
+
+function normalizeEvents(events: BaiduHistoryEvent[] = []): HistoryTodayEvent[] {
+  return events
+    .map(event => ({
+      year: normalizeYear(event.year),
+      title: stripHtml(event.title || '历史事件'),
+      desc: stripHtml(event.desc || event.title || '暂无详细介绍。'),
+      category: normalizeCategory(event.type)
+    }))
+    .filter(event => event.title || event.desc)
+    .sort((a, b) => a.year - b.year)
+}
+
 export function getHistoryTodayEvents(date: Date): HistoryTodayEvent[] {
   const key = formatMonthDay(date)
   const events = historyTodayData[key]
   return (events && events.length ? events : fallbackEvents).slice().sort((a, b) => a.year - b.year)
+}
+
+export async function fetchHistoryTodayEvents(date: Date): Promise<HistoryTodayEvent[]> {
+  const month = pad(date.getMonth() + 1)
+  const dayKey = `${month}${pad(date.getDate())}`
+  const url = `https://baike.baidu.com/cms/home/eventsOnHistory/${month}.json`
+
+  return new Promise<HistoryTodayEvent[]>(resolve => {
+    uni.request({
+      url,
+      method: 'GET',
+      timeout: 8000,
+      success: (response: any) => {
+        if (response.statusCode !== 200 || !response.data) {
+          resolve(getHistoryTodayEvents(date))
+          return
+        }
+
+        const payload = typeof response.data === 'string' ? JSON.parse(response.data) : response.data
+        const remoteEvents = normalizeEvents(payload?.[month]?.[dayKey])
+        resolve(remoteEvents.length ? remoteEvents : getHistoryTodayEvents(date))
+      },
+      fail: () => resolve(getHistoryTodayEvents(date))
+    })
+  }).catch(() => getHistoryTodayEvents(date))
 }

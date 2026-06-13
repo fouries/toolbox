@@ -44,21 +44,48 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { formatDate, formatMonthDay, getHistoryTodayEvents } from '@/utils/history-today'
+import {
+  fetchHistoryTodayEvents,
+  formatDate,
+  formatMonthDay,
+  getHistoryTodayEvents,
+  parseDateText,
+  stripHtml,
+  type HistoryTodayEvent
+} from '@/utils/history-today'
 
 const { themeClass } = useTheme()
 
 const selectedDate = ref(new Date())
+const events = ref<HistoryTodayEvent[]>(getHistoryTodayEvents(selectedDate.value))
+const loading = ref(false)
 const selectedDateText = computed(() => formatDate(selectedDate.value))
 const monthDayText = computed(() => formatMonthDay(selectedDate.value).replace('-', '月') + '日')
 const displayDate = computed(() => `${selectedDate.value.getFullYear()}年${monthDayText.value}`)
-const events = computed(() => getHistoryTodayEvents(selectedDate.value))
 
-const onDateChange = (event: any) => {
+const loadEvents = async () => {
+  loading.value = true
+  events.value = await fetchHistoryTodayEvents(selectedDate.value)
+  loading.value = false
+}
+
+onLoad((options) => {
+  const routeDate = parseDateText(options?.date)
+  if (routeDate) {
+    selectedDate.value = routeDate
+    events.value = getHistoryTodayEvents(routeDate)
+  }
+  loadEvents()
+})
+
+const onDateChange = async (event: any) => {
   const value = event?.detail?.value
-  if (!value) return
-  selectedDate.value = new Date(`${value}T00:00:00`)
+  const date = parseDateText(value)
+  if (!date) return
+  selectedDate.value = date
+  await loadEvents()
 }
 
 const goCalendar = () => {
