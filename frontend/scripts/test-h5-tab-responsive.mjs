@@ -77,4 +77,22 @@ assert.match(
   'desktop H5 tab items should be compact top-nav links instead of stretched bottom items'
 )
 
+assert.match(
+  uniScss,
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*height:\s*58px\s*!important;/,
+  'desktop H5 toolbar should be tall enough for larger nav text'
+)
+
+assert.match(
+  uniScss,
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar__item[\s\S]*min-width:\s*96px;/,
+  'desktop H5 toolbar items should stay visually balanced with larger text'
+)
+
+assert.match(
+  uniScss,
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar__label[\s\S]*font-size:\s*17px;/,
+  'desktop H5 toolbar label font should be larger and easier to read'
+)
+
 console.log('H5 tabBar has mobile-bottom and desktop top-right responsive styles')

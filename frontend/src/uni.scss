@@ -466,14 +466,14 @@ button::after {
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar {
-    height: 52px !important;
-    min-height: 52px;
+    height: 58px !important;
+    min-height: 58px;
     justify-content: flex-end;
     align-items: center;
-    padding: 4px 8px !important;
+    padding: 5px 10px !important;
     border: 1px solid rgba(226, 232, 240, 0.86);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.88) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
     box-shadow: 0 12px 30px rgba(20, 35, 90, 0.12);
     backdrop-filter: blur(14px);
     pointer-events: auto;
@@ -485,9 +485,9 @@ button::after {
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar__item {
     flex: 0 0 auto;
-    min-width: 88px;
-    height: 40px;
-    padding: 0 14px;
+    min-width: 96px;
+    height: 46px;
+    padding: 0 18px;
     border-radius: 999px;
     flex-direction: row;
   }
@@ -497,8 +497,10 @@ button::after {
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar__label {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar ~ .uni-placeholder {
