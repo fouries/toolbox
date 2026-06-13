@@ -55,6 +55,14 @@
         "navigationBarBackgroundColor": "#007aff",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/calendar/index",
+      "style": {
+        "navigationBarTitleText": "黄历日历",
+        "navigationBarBackgroundColor": "#f97316",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {

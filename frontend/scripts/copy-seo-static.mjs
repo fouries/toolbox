@@ -11,6 +11,7 @@ const files = [
   'oil-price.html',
   'qrcode.html',
   'password.html',
+  'calendar.html',
 ]
 
 if (!existsSync(outputDir)) {
