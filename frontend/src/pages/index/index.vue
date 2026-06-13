@@ -546,47 +546,49 @@ const navigateToBeian = () => {
 .tool-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20rpx;
+  gap: 16rpx;
 }
 
 .tool-item {
   position: relative;
-  min-height: 220rpx;
+  min-height: 156rpx;
   background: rgba(255, 255, 255, 0.94);
-  border-radius: 24rpx;
-  padding: 30rpx 20rpx;
+  border-radius: 22rpx;
+  padding: 22rpx 18rpx 20rpx;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
   border: 2rpx solid rgba(238, 242, 247, 0.95);
-  box-shadow: 0 10rpx 26rpx rgba(20, 35, 90, 0.05);
+  box-shadow: 0 8rpx 22rpx rgba(20, 35, 90, 0.045);
 }
 
 .tool-icon {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 30rpx;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15rpx;
+  margin-bottom: 14rpx;
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.38), 0 8rpx 18rpx rgba(20, 35, 90, 0.08);
 }
 
-.icon-text { font-size: 48rpx; }
+.icon-text { font-size: 36rpx; }
 
 .tool-name {
-  font-size: 29rpx;
+  font-size: 28rpx;
   font-weight: 800;
   color: var(--theme-text, #243044);
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
+  line-height: 1.2;
 }
 
 .tool-desc {
-  font-size: 23rpx;
+  font-size: 22rpx;
   color: var(--theme-text-secondary, #7a869a);
-  line-height: 1.45;
+  line-height: 1.38;
 }
 
 .tool-not-implemented { opacity: 0.58; }
@@ -710,14 +712,28 @@ const navigateToBeian = () => {
 
   .tool-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
+    gap: 16px;
   }
 
   .tool-item {
-    min-height: 168px;
+    min-height: 136px;
+    padding: 20px 18px 18px;
+    border-radius: 18px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
+
+  .tool-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+  }
+
+  .icon-text { font-size: 22px; }
+
+  .tool-name { font-size: 16px; }
+  .tool-desc { font-size: 13px; }
 
   .tool-item:hover {
     transform: translateY(-2px);
