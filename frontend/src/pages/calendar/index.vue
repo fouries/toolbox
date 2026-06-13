@@ -43,6 +43,15 @@
         <button class="today-btn" size="mini" @tap="goToday">回到今天</button>
       </view>
 
+      <view class="history-entry-card" @tap="goHistoryToday">
+        <view class="history-entry-icon">📜</view>
+        <view class="history-entry-content">
+          <text class="history-entry-title">历史上的今天</text>
+          <text class="history-entry-desc">看看这一天发生过哪些大事</text>
+        </view>
+        <text class="history-entry-arrow">›</text>
+      </view>
+
       <view class="detail-card card">
         <view class="detail-top">
           <view class="date-stack">
@@ -158,6 +167,10 @@ const goToday = () => {
   syncMonthToDate(now)
   selectedDay.value = getCalendarDay(now, now.getMonth())
 }
+
+const goHistoryToday = () => {
+  uni.navigateTo({ url: '/pages/history-today/index' })
+}
 </script>
 
 <style scoped>
@@ -177,6 +190,7 @@ const goToday = () => {
 }
 
 .calendar-card,
+.history-entry-card,
 .detail-card,
 .note-card {
   background: rgba(255, 255, 255, 0.96);
@@ -313,6 +327,52 @@ const goToday = () => {
 
 .detail-card {
   margin-top: 24rpx;
+}
+
+.history-entry-card {
+  margin-top: 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 24rpx;
+}
+
+.history-entry-icon {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  color: #fff;
+  font-size: 36rpx;
+  box-shadow: 0 10rpx 24rpx rgba(249, 115, 22, 0.22);
+}
+
+.history-entry-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.history-entry-title {
+  color: #3b2415;
+  font-size: 30rpx;
+  font-weight: 760;
+}
+
+.history-entry-desc {
+  color: #8a5a35;
+  font-size: 24rpx;
+}
+
+.history-entry-arrow {
+  color: #c2410c;
+  font-size: 48rpx;
+  line-height: 1;
 }
 
 .detail-top {
@@ -498,6 +558,7 @@ const goToday = () => {
   }
 
   .calendar-card,
+  .history-entry-card,
   .detail-card,
   .note-card {
     padding: 28px;

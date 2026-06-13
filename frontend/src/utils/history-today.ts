@@ -1,0 +1,80 @@
+export interface HistoryTodayEvent {
+  year: number
+  title: string
+  desc: string
+  category: '历史' | '科技' | '文化' | '人物' | '中国'
+}
+
+const historyTodayData = {
+  '01-01': [
+    { year: 1912, title: '中华民国成立', desc: '孙中山在南京宣誓就任临时大总统。', category: '中国' },
+    { year: 1995, title: '世界贸易组织成立', desc: 'WTO 正式取代关贸总协定，成为多边贸易体系核心机构。', category: '历史' }
+  ],
+  '02-14': [
+    { year: 1876, title: '贝尔申请电话专利', desc: '亚历山大·贝尔申请电话相关专利，通信技术迎来重要节点。', category: '科技' },
+    { year: 1989, title: 'GPS 第一颗现代化卫星发射', desc: '全球定位系统逐步进入现代化建设阶段。', category: '科技' }
+  ],
+  '03-08': [
+    { year: 1910, title: '国际妇女节倡议形成', desc: '国际社会主义妇女大会推动设立妇女节。', category: '历史' },
+    { year: 1952, title: '人类首次成功安装人工心脏瓣膜', desc: '医学工程技术取得重要进展。', category: '科技' }
+  ],
+  '04-04': [
+    { year: 1975, title: '微软公司成立', desc: '比尔·盖茨和保罗·艾伦创立微软。', category: '科技' },
+    { year: 1968, title: '马丁·路德·金遇刺', desc: '美国民权运动领袖马丁·路德·金在孟菲斯遇刺。', category: '人物' }
+  ],
+  '05-01': [
+    { year: 1886, title: '芝加哥工人大罢工', desc: '争取八小时工作制的工人运动成为劳动节重要来源。', category: '历史' },
+    { year: 1950, title: '新中国第一部婚姻法公布', desc: '《中华人民共和国婚姻法》正式公布施行。', category: '中国' }
+  ],
+  '06-01': [
+    { year: 1926, title: '玛丽莲·梦露出生', desc: '美国演员玛丽莲·梦露出生。', category: '人物' },
+    { year: 1980, title: 'CNN 开播', desc: '美国有线电视新闻网正式开播，24小时新闻频道兴起。', category: '文化' }
+  ],
+  '07-01': [
+    { year: 1921, title: '中国共产党成立纪念日', desc: '中国共产党第一次全国代表大会于1921年召开，7月1日成为建党纪念日。', category: '中国' },
+    { year: 1997, title: '香港回归祖国', desc: '中国政府恢复对香港行使主权。', category: '中国' }
+  ],
+  '08-08': [
+    { year: 2008, title: '北京奥运会开幕', desc: '第29届夏季奥林匹克运动会在北京开幕。', category: '中国' },
+    { year: 1967, title: '东盟成立', desc: '东南亚国家联盟在曼谷成立。', category: '历史' }
+  ],
+  '09-10': [
+    { year: 1985, title: '中国第一个教师节', desc: '新中国第一个教师节正式庆祝。', category: '中国' },
+    { year: 1960, title: '欧佩克成立', desc: '石油输出国组织在巴格达成立。', category: '历史' }
+  ],
+  '10-01': [
+    { year: 1949, title: '中华人民共和国成立', desc: '中华人民共和国中央人民政府成立典礼在北京举行。', category: '中国' },
+    { year: 1958, title: 'NASA 正式运行', desc: '美国国家航空航天局正式开始运行。', category: '科技' }
+  ],
+  '11-11': [
+    { year: 1918, title: '第一次世界大战停战', desc: '协约国与德国签署停战协定，第一次世界大战结束。', category: '历史' },
+    { year: 2009, title: '互联网购物节兴起', desc: '双十一逐渐发展为重要的网络购物节。', category: '文化' }
+  ],
+  '12-25': [
+    { year: 1642, title: '牛顿出生', desc: '物理学家艾萨克·牛顿出生。', category: '人物' },
+    { year: 1991, title: '苏联解体', desc: '苏联正式解体，冷战格局发生重大变化。', category: '历史' }
+  ]
+} as Record<string, HistoryTodayEvent[]>
+
+const fallbackEvents: HistoryTodayEvent[] = [
+  { year: 1900, title: '时代中的这一天', desc: '历史每天都在发生。你可以切换日期，查看更多精选事件。', category: '历史' },
+  { year: 2000, title: '记住今天', desc: '把今天的安排写进日历，也许它会成为你的“历史上的今天”。', category: '文化' }
+]
+
+function pad(num: number): string {
+  return String(num).padStart(2, '0')
+}
+
+export function formatMonthDay(date: Date): string {
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function getHistoryTodayEvents(date: Date): HistoryTodayEvent[] {
+  const key = formatMonthDay(date)
+  const events = historyTodayData[key]
+  return (events && events.length ? events : fallbackEvents).slice().sort((a, b) => a.year - b.year)
+}

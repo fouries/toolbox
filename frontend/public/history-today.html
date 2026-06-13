@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="baidu-site-verification" content="codeva-zlKpvLe4bI" />
+  <title>历史上的今天_每日历史事件查询 - 小巧的工具箱</title>
+  <meta name="description" content="小巧的工具箱历史上的今天支持按日期查询历史事件、年份和事件简介，可从黄历日历一键跳转查看。" />
+  <meta name="keywords" content="历史上的今天,历史事件查询,今日历史,每日大事,小巧的工具箱" />
+  <link rel="canonical" href="https://quan1234.com/history-today.html" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #3b2415; background: #fff7ed; line-height: 1.75; }
+    a { color: inherit; }
+    .site-header { background: linear-gradient(135deg, #fb923c, #f97316 56%, #c2410c); color: #fff; }
+    .nav { max-width: 1120px; margin: 0 auto; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-weight: 800; font-size: 18px; text-decoration: none; }
+    .nav-links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; }
+    .nav-links a { text-decoration: none; opacity: .92; }
+    .hero { max-width: 1120px; margin: 0 auto; padding: 54px 20px 76px; display: grid; grid-template-columns: minmax(0, 1.3fr) 360px; gap: 36px; align-items: center; }
+    .badge { display: inline-block; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.18); font-size: 14px; }
+    h1 { margin: 18px 0 14px; font-size: 44px; line-height: 1.16; }
+    .hero p { margin: 0; color: rgba(255,255,255,.9); font-size: 18px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+    .cta { display: inline-block; padding: 12px 22px; border-radius: 999px; background: #fff; color: #c2410c; text-decoration: none; font-weight: 800; }
+    .cta.secondary { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.45); }
+    .tool-preview { border-radius: 28px; padding: 28px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22); box-shadow: 0 24px 60px rgba(0,0,0,.12); }
+    .tool-icon { width: 76px; height: 76px; border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(255,255,255,.22); }
+    .tool-preview strong { display: block; margin-top: 18px; font-size: 22px; }
+    .tool-preview span { display: block; margin-top: 8px; color: rgba(255,255,255,.84); }
+    main { max-width: 1120px; margin: -38px auto 44px; padding: 0 20px; }
+    .layout-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) 340px; gap: 22px; align-items: start; }
+    .card { background: #fff; border-radius: 22px; padding: 28px; margin-bottom: 22px; box-shadow: 0 12px 34px rgba(194, 65, 12, .10); }
+    h2 { margin: 0 0 14px; color: #c2410c; font-size: 24px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    ul { margin: 12px 0 0; padding-left: 22px; }
+    li { margin: 8px 0; }
+    .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .feature-grid div { padding: 14px; border-radius: 16px; background: #fff7ed; }
+    .event-sample { padding: 14px 0; border-top: 1px solid #fed7aa; }
+    .event-sample:first-child { border-top: 0; padding-top: 0; }
+    .event-year { color: #c2410c; font-weight: 850; margin-right: 8px; }
+    .side-list a { display: block; margin: 10px 0; padding: 12px 14px; border-radius: 14px; background: #fff7ed; color: #c2410c; text-decoration: none; }
+    footer { text-align: center; color: #9a6a45; padding: 28px 16px; }
+    @media (max-width: 720px) {
+      .nav { align-items: flex-start; flex-direction: column; }
+      .nav-links { gap: 10px; }
+      .hero { grid-template-columns: 1fr; padding: 34px 16px 58px; gap: 22px; }
+      h1 { font-size: 32px; }
+      .hero p { font-size: 16px; }
+      main { margin-top: -28px; padding: 0 14px; }
+      .layout-grid, .feature-grid { grid-template-columns: 1fr; }
+      .card { padding: 22px; border-radius: 18px; }
+      .tool-preview { padding: 22px; border-radius: 22px; }
+      .cta { width: 100%; text-align: center; }
+    }
+  </style>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "历史上的今天",
+      "url": "https://quan1234.com/history-today.html",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web",
+      "description": "按日期查询历史上的今天发生过的精选历史事件。"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "小巧的工具箱", "item": "https://quan1234.com/" },
+        { "@type": "ListItem", "position": 2, "name": "历史上的今天", "item": "https://quan1234.com/history-today.html" }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">小巧的工具箱</a>
+      <div class="nav-links">
+        <a href="/calendar.html">黄历日历</a>
+        <a href="/weather.html">天气查询</a>
+        <a href="/oil-price.html">油价查询</a>
+        <a href="/qrcode.html">二维码生成</a>
+      </div>
+    </nav>
+    <section class="hero">
+      <div>
+        <span class="badge">生活服务 · 历史上的今天</span>
+        <h1>历史上的今天：每日历史事件查询</h1>
+        <p>选择任意日期，查看这一天发生过的精选历史事件、年份和简要介绍，也可以从黄历日历中一键跳转。</p>
+        <div class="cta-row">
+          <a class="cta" href="/#/pages/history-today/index">打开历史上的今天</a>
+          <a class="cta secondary" href="/calendar.html">查看黄历日历</a>
+        </div>
+      </div>
+      <div class="tool-preview">
+        <div class="tool-icon">📜</div>
+        <strong>历史上的今天</strong>
+        <span>按日期浏览历史事件，让每天都有可读的故事。</span>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <div class="layout-grid">
+      <section>
+        <article class="card">
+          <h2>历史上的今天能查什么？</h2>
+          <p>页面按日期展示精选历史事件，包含年份、事件标题、分类和简要说明，适合日常阅读、素材整理和纪念日查询。</p>
+          <div class="feature-grid">
+            <div><h3>按日期查询</h3><p>选择日期即可查看对应历史事件。</p></div>
+            <div><h3>事件时间线</h3><p>按年份从早到晚排列，阅读更清晰。</p></div>
+            <div><h3>事件分类</h3><p>区分历史、科技、人物、文化和中国事件。</p></div>
+            <div><h3>黄历联动</h3><p>老黄历页面内提供入口，一键跳转。</p></div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>示例事件</h2>
+          <div class="event-sample"><span class="event-year">1949</span>中华人民共和国成立典礼在北京举行。</div>
+          <div class="event-sample"><span class="event-year">1997</span>香港回归祖国，中国政府恢复对香港行使主权。</div>
+          <div class="event-sample"><span class="event-year">2008</span>北京奥运会开幕。</div>
+        </article>
+        <article class="card">
+          <h2>使用说明</h2>
+          <ul>
+            <li>点击“打开历史上的今天”进入交互页面。</li>
+            <li>通过日期选择器切换月份和日期。</li>
+            <li>在黄历日历页面点击“历史上的今天”入口也可跳转。</li>
+          </ul>
+        </article>
+      </section>
+      <aside class="card">
+        <h2>相关工具</h2>
+        <div class="side-list">
+          <a href="/calendar.html">黄历日历</a>
+          <a href="/weather.html">天气预报</a>
+          <a href="/oil-price.html">油价查询</a>
+          <a href="/password.html">随机密码生成器</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>© 小巧的工具箱 · 粤ICP备2026056747号</footer>
+</body>
+</html>

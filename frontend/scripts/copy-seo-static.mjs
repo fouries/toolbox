@@ -12,6 +12,7 @@ const files = [
   'qrcode.html',
   'password.html',
   'calendar.html',
+  'history-today.html',
 ]
 
 if (!existsSync(outputDir)) {
