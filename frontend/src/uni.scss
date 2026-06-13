@@ -453,37 +453,41 @@ button::after {
   uni-tabbar.uni-tabbar-bottom,
   uni-tabbar.uni-tabbar-bottom .uni-tabbar {
     position: fixed;
-    top: 0;
+    top: 18px;
     bottom: auto !important;
-    left: 0;
-    right: 0;
-    width: 100%;
+    left: auto !important;
+    right: max(24px, calc((100vw - 1120px) / 2 + 24px));
+    width: auto;
   }
 
   uni-tabbar.uni-tabbar-bottom {
     z-index: 1000;
+    pointer-events: none;
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar {
-    height: 64px !important;
-    min-height: 64px;
-    justify-content: center;
+    height: 52px !important;
+    min-height: 52px;
+    justify-content: flex-end;
     align-items: center;
-    padding-bottom: 0 !important;
-    box-shadow: 0 8px 24px rgba(20, 35, 90, 0.06);
+    padding: 4px 8px !important;
+    border: 1px solid rgba(226, 232, 240, 0.86);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88) !important;
+    box-shadow: 0 12px 30px rgba(20, 35, 90, 0.12);
+    backdrop-filter: blur(14px);
+    pointer-events: auto;
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar-border {
-    top: auto;
-    bottom: 0;
-    background-color: rgba(226, 232, 240, 0.96) !important;
+    display: none !important;
   }
 
   uni-tabbar.uni-tabbar-bottom .uni-tabbar__item {
     flex: 0 0 auto;
-    min-width: 108px;
-    height: 44px;
-    padding: 0 18px;
+    min-width: 88px;
+    height: 40px;
+    padding: 0 14px;
     border-radius: 999px;
     flex-direction: row;
   }
@@ -513,7 +517,7 @@ button::after {
   .uni-app--showtabbar uni-page-head[uni-page-head-type='default'] ~ uni-page-wrapper {
     height: 100% !important;
     min-height: 100%;
-    padding-top: 64px !important;
+    padding-top: 88px !important;
     box-sizing: border-box;
   }
 

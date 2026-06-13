@@ -31,8 +31,20 @@ assert.match(
 
 assert.match(
   uniScss,
-  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*top:\s*0;/,
-  'desktop H5 should move the native bottom tabbar to the top'
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*top:\s*18px;/,
+  'desktop H5 should move the native bottom tabbar to the page top-right corner'
+)
+
+assert.match(
+  uniScss,
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*right:\s*max\(24px,\s*calc\(\(100vw - 1120px\) \/ 2 \+ 24px\)\);/,
+  'desktop H5 should align the navigation to the right side of the page content'
+)
+
+assert.match(
+  uniScss,
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*left:\s*auto\s*!important;/,
+  'desktop H5 should not stretch the navigation from the left edge'
 )
 
 assert.match(
@@ -43,8 +55,14 @@ assert.match(
 
 assert.match(
   uniScss,
-  /\.uni-app--showtabbar\s+uni-page-wrapper[\s\S]*padding-top:\s*64px\s*!important;/,
-  'desktop H5 should reserve top space for the top navigation'
+  /uni-tabbar\.uni-tabbar-bottom\s+\.uni-tabbar[\s\S]*width:\s*auto;/,
+  'desktop H5 navigation should shrink-wrap its links instead of spanning full width'
+)
+
+assert.match(
+  uniScss,
+  /\.uni-app--showtabbar\s+uni-page-wrapper[\s\S]*padding-top:\s*88px\s*!important;/,
+  'desktop H5 should reserve top space for the floating top-right navigation'
 )
 
 assert.match(
@@ -59,4 +77,4 @@ assert.match(
   'desktop H5 tab items should be compact top-nav links instead of stretched bottom items'
 )
 
-console.log('H5 tabBar has mobile-bottom and desktop-top responsive styles')
+console.log('H5 tabBar has mobile-bottom and desktop top-right responsive styles')
