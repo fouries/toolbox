@@ -77,6 +77,9 @@ assert.doesNotMatch(hotSearchDetailPage, /<view\s+class="hot-image-section card"
 assert.match(hotSearchDetailPage, /\.hot-image-section\s*\{[\s\S]*margin-top:\s*16rpx;/, 'hot image section should sit immediately below the detail title')
 assert.match(hotSearchDetailPage, /\.hot-image\s*\{[\s\S]*width:\s*100%;[\s\S]*border-radius:\s*20rpx;/, 'detail title image should be full width')
 assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page should fetch backend detail content')
+assert.doesNotMatch(hotSearchDetailPage, /<view class="content-card card"/, 'hot search detail page should remove the 热搜内容 second card')
+assert.doesNotMatch(hotSearchDetailPage, /<text class="content-title">热搜内容<\/text>/, 'hot search detail page should not show 热搜内容 heading')
+assert.doesNotMatch(hotSearchDetailPage, /v-for="section in detail\.sections"/, 'hot search detail page should not render backend hot-search sections')
 assert.match(hotSearchDetailPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}/, 'related news should use native news detail route')
 
 const backendMain = fs.readFileSync(backendMainPath, 'utf8')

@@ -38,14 +38,6 @@
           </view>
         </view>
 
-        <view class="content-card card" v-if="detail?.sections?.length">
-          <text class="content-title">热搜内容</text>
-          <view class="content-section" v-for="section in detail.sections" :key="section.title">
-            <text class="section-subtitle">{{ section.title }}</text>
-            <text class="section-body">{{ section.body }}</text>
-          </view>
-        </view>
-
         <view class="section-header">
           <text class="section-title">相关资讯</text>
           <button class="refresh-btn" @tap="loadDetail" :disabled="loading">刷新</button>
