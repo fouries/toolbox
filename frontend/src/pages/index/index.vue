@@ -203,14 +203,9 @@ const refreshClickedTool = (toolId: string, clicks: number) => {
   }
 }
 
-const goToTool = async (tool: ToolItem) => {
-  if (!tool.implemented) {
-    uni.showToast({ title: `${tool.name}${tool.status || '开发中'}`, icon: 'none' })
-    return
-  }
-
+const trackToolClick = async (toolId: string) => {
   try {
-    const result = await recordToolClick(tool.id)
+    const result = await recordToolClick(toolId)
     const clicked = (result.data || result.newslist) as ToolPopularityItem | undefined
     if (clicked?.id && typeof clicked.clicks === 'number') {
       refreshClickedTool(clicked.id, clicked.clicks)
@@ -218,8 +213,16 @@ const goToTool = async (tool: ToolItem) => {
   } catch (error) {
     console.warn('记录工具点击失败', error)
   }
+}
+
+const goToTool = (tool: ToolItem) => {
+  if (!tool.implemented) {
+    uni.showToast({ title: `${tool.name}${tool.status || '开发中'}`, icon: 'none' })
+    return
+  }
 
   uni.navigateTo({ url: tool.path })
+  void trackToolClick(tool.id)
 }
 
 const navigateToBeian = () => {

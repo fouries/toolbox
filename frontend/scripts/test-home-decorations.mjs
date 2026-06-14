@@ -27,7 +27,10 @@ assert.match(source, /const\s+toolClickCounts\s*=\s*ref<Record<string,\s*number>
 assert.match(source, /const\s+loadPopularTools\s*=\s*async\s*\(\)\s*=>/, 'home page should load global popular tools from backend')
 assert.match(source, /getPopularTools\(8\)/, 'home page should request enough popular tool rankings from backend')
 assert.match(source, /const\s+rankedTools\s*=\s*tools\.value[\s\S]*toolClickCounts\.value\[b\.id\][\s\S]*toolClickCounts\.value\[a\.id\]/, 'popular tools should sort by backend click counts')
-assert.match(source, /recordToolClick\(tool\.id\)/, 'tool clicks should be recorded to backend before navigation')
+assert.match(source, /const\s+trackToolClick\s*=\s*async\s*\(toolId:\s*string\)\s*=>/, 'home page should record clicks in a non-blocking helper')
+assert.match(source, /recordToolClick\(toolId\)/, 'tool clicks should be recorded to backend')
+assert.doesNotMatch(source, /const\s+goToTool\s*=\s*async/, 'tool navigation handler should not be async')
+assert.match(source, /const\s+goToTool\s*=\s*\(tool:\s*ToolItem\)\s*=>\s*\{[\s\S]*uni\.navigateTo\(\{\s*url:\s*tool\.path\s*\}\)[\s\S]*void\s+trackToolClick\(tool\.id\)/, 'tool card should navigate immediately and record the click in background')
 assert.match(source, /onMounted\(\(\)\s*=>\s*\{\s*loadPopularTools\(\)/s, 'home page should refresh popular tools when opened')
 assert.doesNotMatch(source, /filter\(t\s*=>\s*t\.implemented\)\.slice\(0,\s*4\)/, 'popular tools should not be the static first four implemented tools')
 
