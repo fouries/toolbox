@@ -179,7 +179,7 @@ class NewsDetailService:
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:
-            async with HttpClient(timeout=12) as client:
+            async with HttpClient(timeout=12, follow_redirects=True) as client:
                 html_text = await client.get_text(
                     url,
                     headers={

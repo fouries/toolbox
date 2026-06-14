@@ -4,12 +4,13 @@ from typing import Optional, Dict, Any
 import json
 
 class HttpClient:
-    def __init__(self, timeout: int = 30):
+    def __init__(self, timeout: int = 30, follow_redirects: bool = False):
         self.timeout = timeout
+        self.follow_redirects = follow_redirects
         self._client: Optional[httpx.AsyncClient] = None
     
     async def __aenter__(self):
-        self._client = httpx.AsyncClient(timeout=self.timeout)
+        self._client = httpx.AsyncClient(timeout=self.timeout, follow_redirects=self.follow_redirects)
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):

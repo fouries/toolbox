@@ -15,10 +15,11 @@ class DummyCache:
 
 class DummyHttpClient:
     calls = []
+    init_kwargs = []
     response_text = ""
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.__class__.init_kwargs.append(kwargs)
 
     async def __aenter__(self):
         return self
@@ -40,6 +41,7 @@ def setup_module(module):
 
     DummyCache.store = {}
     DummyHttpClient.calls = []
+    DummyHttpClient.init_kwargs = []
     DummyHttpClient.response_text = ""
     news_detail.cache = DummyCache()
     news_detail.HttpClient = DummyHttpClient
@@ -88,9 +90,24 @@ def test_news_detail_rejects_unsafe_urls():
     assert "无效" in result["msg"]
 
 
+def test_news_detail_http_client_is_created_with_redirect_following_enabled():
+    html = """
+    <html><body><article><p>重定向后的新闻正文内容，足够用于详情页展示。</p></article></body></html>
+    """
+    DummyHttpClient.response_text = html
+    DummyHttpClient.init_kwargs = []
+
+    result = run(NewsDetailService.fetch_detail("https://example.com/news/redirect"))
+
+    assert result["code"] == 200
+    assert DummyHttpClient.init_kwargs[-1]["follow_redirects"] is True
+
+
 if __name__ == "__main__":
     setup_module(None)
     test_news_detail_fetches_sanitizes_and_caches_article_body()
     setup_module(None)
     test_news_detail_rejects_unsafe_urls()
+    setup_module(None)
+    test_news_detail_http_client_is_created_with_redirect_following_enabled()
     print("news detail service tests passed")
