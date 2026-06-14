@@ -47,15 +47,11 @@
 
       <view class="realtime-oil-card" v-if="oilData && !loading">
         <view class="realtime-card-top">
-          <view>
-            <text class="realtime-title">实时油价参考</text>
-            <text class="realtime-subtitle">{{ selectedProvince }} 汽柴油参考价 · 每日更新，接口缓存约 1 小时</text>
+          <view class="realtime-card-meta">
+            <text class="realtime-title">实时油价</text>
+            <text class="realtime-update-time">更新时间: {{ oilUpdateText() }}</text>
           </view>
-          <text class="oil-province-label">单位：元/升</text>
-        </view>
-
-        <view class="update-time">
-          <text>更新时间: {{ oilUpdateText() }}</text>
+          <text class="oil-province-label oil-unit-label">单位:元/升</text>
         </view>
 
         <view class="oil-grid">
@@ -107,7 +103,7 @@
       <view class="note card">
         <text class="note-title">💡 说明</text>
         <text class="note-text">• 油价单位：元/升</text>
-        <text class="note-text">• 实时油价参考来自成品油接口，通常每日更新，本服务缓存约 1 小时</text>
+        <text class="note-text">• 实时油价来自成品油接口，通常每日更新，本服务缓存约 1 小时</text>
         <text class="note-text">• 原油价格展示 WTI 原油、Brent 原油等国际原油期货行情参考</text>
         <text class="note-text">• 实际价格以加油站为准</text>
       </view>
@@ -390,11 +386,16 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 20rpx;
-  margin-bottom: 18rpx;
+  margin-bottom: 24rpx;
+}
+
+.realtime-card-meta {
+  flex: 1;
+  min-width: 0;
 }
 
 .realtime-title,
-.realtime-subtitle {
+.realtime-update-time {
   display: block;
 }
 
@@ -404,10 +405,15 @@ onMounted(() => {
   color: #172033;
 }
 
-.realtime-subtitle {
+.realtime-update-time {
   margin-top: 8rpx;
   font-size: 24rpx;
   color: #667085;
+}
+
+.oil-unit-label {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .oil-card-header {

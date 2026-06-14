@@ -49,14 +49,38 @@ assert.match(
 
 assert.match(
   source,
+  /<text\s+class="realtime-title">实时油价<\/text>/,
+  'realtime oil price card title should be 实时油价'
+)
+
+assert.doesNotMatch(
+  source,
   /实时油价参考/,
-  'realtime oil price card should be labelled as reference data'
+  'realtime oil price card should not use the old 参考 title'
+)
+
+assert.doesNotMatch(
+  source,
+  /<text\s+class="realtime-subtitle">/,
+  'realtime oil price card should remove the subtitle description under the title'
 )
 
 assert.match(
   source,
-  /每日更新，接口缓存约\s*1\s*小时/,
-  'realtime oil price card should explain data timeliness'
+  /<text\s+class="realtime-update-time">更新时间[:：]\s*\{\{\s*oilUpdateText\(\)\s*\}\}<\/text>/,
+  'realtime oil price card should show update time under the title'
+)
+
+assert.match(
+  source,
+  /<text\s+class="oil-province-label oil-unit-label">单位[:：]元\/升<\/text>/,
+  'realtime oil price card should keep the unit label on the right'
+)
+
+assert.match(
+  source,
+  /\.oil-unit-label\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/s,
+  'unit label should not wrap to the next line'
 )
 
 assert.match(
