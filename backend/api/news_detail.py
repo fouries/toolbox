@@ -138,9 +138,21 @@ class NewsDetailService:
         return _normalize_space(match.group(0)) if match else ""
 
     @staticmethod
+    def _extract_main_content_html(html_text: str) -> str:
+        container_patterns = [
+            r'<div[^>]+id=["\']artibody["\'][^>]*>(.*?)(?:<div[^>]+class=["\'][^"\']*article_share|<article\b[^>]*class=["\'][^"\']*comment|</section>)',
+            r'<div[^>]+class=["\'][^"\']*(?:article-content|article_content|article-body|main-content)[^"\']*["\'][^>]*>(.*?)</div>',
+            r'<article\b(?![^>]+class=["\'][^"\']*comment)[^>]*>(.*?)</article>',
+        ]
+        for pattern in container_patterns:
+            match = re.search(pattern, html_text, re.IGNORECASE | re.DOTALL)
+            if match:
+                return match.group(1)
+        return html_text
+
+    @staticmethod
     def _extract_content(html_text: str) -> str:
-        article_match = re.search(r"<article\b[^>]*>(.*?)</article>", html_text, re.IGNORECASE | re.DOTALL)
-        source_html = article_match.group(1) if article_match else html_text
+        source_html = NewsDetailService._extract_main_content_html(html_text)
         parser = _ReadableHtmlParser()
         parser.feed(source_html)
         lines = [_normalize_space(line) for line in "".join(parser.parts).splitlines()]

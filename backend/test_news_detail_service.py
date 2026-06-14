@@ -103,6 +103,31 @@ def test_news_detail_http_client_is_created_with_redirect_following_enabled():
     assert DummyHttpClient.init_kwargs[-1]["follow_redirects"] is True
 
 
+def test_news_detail_prefers_article_body_container_over_comment_article():
+    html = """
+    <html>
+      <body>
+        <h1>电竞新闻标题</h1>
+        <div id="artibody">
+          <p>全体召唤师集合！英雄联盟手游再次联合NBA搞大事啦！</p>
+          <p>作为两大竞技领域的强强联手，本次联动将篮球赛场的竞技精神融入召唤师峡谷。</p>
+        </div>
+        <article class="comment">
+          <h2>热门评论（0）</h2>
+          <ul><li>暂无评论~~</li></ul>
+        </article>
+      </body>
+    </html>
+    """
+
+    detail = NewsDetailService._build_detail("https://dj.sina.com.cn/article/demo.shtml", html)
+
+    assert "全体召唤师集合" in detail["content"]
+    assert "竞技精神" in detail["content"]
+    assert "热门评论" not in detail["content"]
+    assert "暂无评论" not in detail["content"]
+
+
 if __name__ == "__main__":
     setup_module(None)
     test_news_detail_fetches_sanitizes_and_caches_article_body()
@@ -110,4 +135,6 @@ if __name__ == "__main__":
     test_news_detail_rejects_unsafe_urls()
     setup_module(None)
     test_news_detail_http_client_is_created_with_redirect_following_enabled()
+    setup_module(None)
+    test_news_detail_prefers_article_body_container_over_comment_article()
     print("news detail service tests passed")
