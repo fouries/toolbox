@@ -517,9 +517,8 @@ onMounted(() => {
 
 .quick-tool-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 46%));
-  justify-content: center;
-  gap: 12rpx;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
 }
 
 .quick-tool-card {
@@ -527,19 +526,19 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  min-height: 88rpx;
-  gap: 10rpx;
-  padding: 14rpx 12rpx;
-  border-radius: 20rpx;
+  min-height: 76rpx;
+  gap: 8rpx;
+  padding: 10rpx 10rpx;
+  border-radius: 18rpx;
   background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
   box-shadow: 0 6rpx 18rpx rgba(20, 35, 90, 0.04);
 }
 
 .quick-tool-icon {
-  width: 54rpx;
-  height: 54rpx;
-  border-radius: 18rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -549,7 +548,7 @@ onMounted(() => {
 }
 
 .quick-icon-text {
-  font-size: 26rpx;
+  font-size: 24rpx;
 }
 
 .quick-tool-info {
@@ -560,7 +559,7 @@ onMounted(() => {
 }
 
 .quick-tool-name {
-  font-size: 25rpx;
+  font-size: 24rpx;
   line-height: 1.2;
   color: var(--theme-text, #243044);
   font-weight: 800;
@@ -569,7 +568,7 @@ onMounted(() => {
 .quick-arrow {
   flex-shrink: 0;
   color: var(--theme-text-muted, #9aa6b8);
-  font-size: 30rpx;
+  font-size: 26rpx;
   line-height: 1;
 }
 
@@ -762,28 +761,27 @@ onMounted(() => {
   }
 
   .quick-tool-list {
-    grid-template-columns: repeat(4, minmax(0, 144px));
-    justify-content: center;
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .quick-tool-card {
-    min-height: 62px;
-    padding: 11px 12px;
-    border-radius: 16px;
+    min-height: 52px;
+    padding: 8px 10px;
+    border-radius: 14px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
 
   .quick-tool-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 11px;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
   }
 
-  .quick-icon-text { font-size: 18px; }
-  .quick-tool-name { font-size: 14px; }
-  .quick-arrow { font-size: 20px; }
+  .quick-icon-text { font-size: 16px; }
+  .quick-tool-name { font-size: 13px; }
+  .quick-arrow { font-size: 18px; }
 
   .quick-tool-card:hover {
     transform: translateY(-2px);
