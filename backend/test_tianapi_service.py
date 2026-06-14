@@ -220,18 +220,41 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     assert result['data']['rawHotItem']['word'] == '百度真实热搜'
 
 
-def test_baidu_hot_search_does_not_replace_failed_upstream_with_category_topics():
+def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
         ('/baiduhot/index', None): {"code": 150, "msg": "热搜接口暂不可用"},
+        ('https://top.baidu.com/api/board', None): {
+            "success": True,
+            "data": {
+                "cards": [{
+                    "component": "hotList",
+                    "content": [{
+                        "index": 0,
+                        "word": "百度官方热搜",
+                        "query": "百度官方热搜",
+                        "hotScore": "7807881",
+                        "desc": "来自百度官方热搜榜的摘要",
+                        "url": "https://www.baidu.com/s?wd=official&sa=fyb_news",
+                    }]
+                }]
+            }
+        },
     }
 
     result = run(TianApiService.get_hot_search('baidu'))
 
+    paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
+    assert paths == ['/baiduhot/index', 'https://top.baidu.com/api/board']
     assert result['code'] == 200
-    assert result['fallback'] is True
+    assert result.get('fallback') is not True
     assert result['data']['title'] == '百度热搜榜'
-    assert result['data']['items'] == []
+    assert result['data']['items'][0]['rank'] == 1
+    assert result['data']['items'][0]['title'] == '百度官方热搜'
+    assert result['data']['items'][0]['hot'] == '7807881'
+    assert result['data']['items'][0]['description'] == '来自百度官方热搜榜的摘要'
+    assert result['data']['items'][0]['url'] == 'https://www.baidu.com/s?wd=official&sa=fyb_news'
+    assert result['data']['items'][0]['raw']['word'] == '百度官方热搜'
     assert all(topic not in str(result['data']) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
 
 
@@ -275,7 +298,7 @@ if __name__ == '__main__':
         test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
-        test_baidu_hot_search_does_not_replace_failed_upstream_with_category_topics,
+        test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)

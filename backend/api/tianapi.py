@@ -10,6 +10,7 @@ from config import get_settings
 settings = get_settings()
 
 TIANAPI_BASE = "https://apis.tianapi.com"
+BAIDU_TOP_API = "https://top.baidu.com/api/board"
 
 class TianApiService:
     """天行数据API聚合服务"""
@@ -554,6 +555,62 @@ class TianApiService:
         return {"code": 200, "msg": result.get("msg") or "每日简报接口暂不可用", "fallback": True, "data": TianApiService._fallback_daily_brief()}
 
     @staticmethod
+    def _normalize_baidu_top_api_result(result: Dict[str, Any]) -> Dict[str, Any]:
+        data = result.get("data") if isinstance(result.get("data"), dict) else {}
+        cards = data.get("cards") if isinstance(data.get("cards"), list) else []
+        raw_items: List[Dict[str, Any]] = []
+        for card in cards:
+            if not isinstance(card, dict):
+                continue
+            content = card.get("content")
+            if not (isinstance(content, list) and content):
+                continue
+            dict_content = [item for item in content if isinstance(item, dict)]
+            if not dict_content:
+                continue
+            if any(item.get("word") or item.get("query") for item in dict_content):
+                raw_items = dict_content
+                break
+            nested = dict_content[0].get("content")
+            if isinstance(nested, list):
+                raw_items = [item for item in nested if isinstance(item, dict)]
+                break
+        items: List[Dict[str, Any]] = []
+        for index, item in enumerate(raw_items):
+            title = str(item.get("word") or item.get("query") or item.get("title") or "").strip()
+            if not title:
+                continue
+            hot = str(item.get("hotScore") or item.get("hot_value") or item.get("hot") or item.get("newHotName") or item.get("labelTagName") or "")
+            description = str(item.get("desc") or item.get("description") or "")
+            url = str(item.get("url") or item.get("appUrl") or item.get("rawUrl") or item.get("mobilUrl") or "")
+            if not url:
+                url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news"
+            items.append({
+                "rank": len(items) + 1,
+                "title": title,
+                "hot": hot,
+                "description": description,
+                "url": url,
+                "raw": dict(item),
+            })
+        return {
+            "platform": "baidu",
+            "title": TianApiService._hot_search_title("baidu"),
+            "updateTime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "items": items,
+        }
+
+    @staticmethod
+    async def _get_baidu_top_search() -> Dict[str, Any]:
+        async with HttpClient(timeout=15) as client:
+            result = await client.get(BAIDU_TOP_API, params={"platform": "pc", "tab": "realtime"})
+        if result.get("success") is True:
+            data = TianApiService._normalize_baidu_top_api_result(result)
+            if data["items"]:
+                return {"code": 200, "msg": "success", "data": data}
+        return {"code": 200, "msg": result.get("msg") or result.get("error") or "百度热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search("baidu")}
+
+    @staticmethod
     async def get_hot_search(platform: str = "weibo") -> Dict[str, Any]:
         """微博热搜榜 / 百度热搜榜。"""
         endpoint_map = {
@@ -572,4 +629,6 @@ class TianApiService:
             data = TianApiService._normalize_hot_search_result(platform, result)
             if data["items"]:
                 return {"code": 200, "msg": "success", "data": data}
+        if platform == "baidu":
+            return await TianApiService._get_baidu_top_search()
         return {"code": 200, "msg": result.get("msg") or "热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search(platform)}
