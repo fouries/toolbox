@@ -11,6 +11,7 @@
     "pages/history-today/index",
     "pages/solar-terms/index",
     "pages/info-news/index",
+    "pages/news-detail/index",
     "pages/gold-price/index"
   ],
   "window": {

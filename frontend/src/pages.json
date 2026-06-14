@@ -89,6 +89,14 @@
       }
     },
     {
+      "path": "pages/news-detail/index",
+      "style": {
+        "navigationBarTitleText": "资讯详情",
+        "navigationBarBackgroundColor": "#2563eb",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/gold-price/index",
       "style": {
         "navigationBarTitleText": "黄金行情",

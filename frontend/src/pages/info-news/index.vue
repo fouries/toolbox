@@ -102,14 +102,13 @@ const isSafeNewsUrl = (url?: string): url is string => {
 const openNews = (item: NewsItem) => {
   const safeUrl = item.url
   if (!isSafeNewsUrl(safeUrl)) return
-  // #ifdef H5
-  const opened = window.open(safeUrl, '_blank', 'noopener,noreferrer')
-  if (opened) opened.opener = null
-  // #endif
-  // #ifndef H5
-  uni.setClipboardData({ data: safeUrl })
-  uni.showToast({ title: '链接已复制', icon: 'none' })
-  // #endif
+  uni.navigateTo({
+    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}`,
+    fail: () => {
+      uni.setClipboardData({ data: safeUrl })
+      uni.showToast({ title: '链接已复制，请到浏览器打开', icon: 'none' })
+    }
+  })
 }
 
 onLoad((options: any) => {

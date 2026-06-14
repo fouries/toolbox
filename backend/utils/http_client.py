@@ -28,6 +28,16 @@ class HttpClient:
             return {"error": f"HTTP {e.response.status_code}", "data": None}
         except Exception as e:
             return {"error": str(e), "data": None}
+
+    async def get_text(self, url: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> str:
+        if not self._client:
+            raise RuntimeError("HttpClient not initialized")
+
+        response = await self._client.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        if not response.encoding:
+            response.encoding = "utf-8"
+        return response.text
     
     async def post(self, url: str, data: Dict[str, Any] = None, json_data: Dict[str, Any] = None) -> Dict[str, Any]:
         if not self._client:

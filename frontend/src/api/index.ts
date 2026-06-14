@@ -47,6 +47,17 @@ export interface NewsItem {
   picUrl?: string
 }
 
+export interface NewsDetail {
+  title: string
+  source?: string
+  publishTime?: string
+  description?: string
+  content: string
+  sourceUrl: string
+  cachedAt?: string
+  fromCache?: boolean
+}
+
 export interface GoldPriceItem {
   name?: string
   type?: string
@@ -157,6 +168,10 @@ export const getInfoNews = (category: string = 'internet') => {
   return request<NewsItem[]>(`/api/news?category=${encodeURIComponent(category)}`)
 }
 
+export const getNewsDetail = (url: string) => {
+  return request<NewsDetail>(`/api/news/detail?url=${encodeURIComponent(url)}`, { timeout: 20000 })
+}
+
 export const getGoldPrice = () => {
   return request<GoldPriceItem[]>('/api/gold-price')
 }
@@ -214,6 +229,7 @@ export default {
   getOilPrice,
   getCrudeOilPrice,
   getInfoNews,
+  getNewsDetail,
   getGoldPrice,
   getWeather,
   reverseLocation,

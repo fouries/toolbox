@@ -8,6 +8,7 @@ import asyncio
 from config import get_settings
 from utils.cache import cache
 from api.tianapi import TianApiService
+from api.news_detail import NewsDetailService
 from api.tools import ToolsService
 from api.location import LocationService
 from api.tool_stats import get_tool_stats_service
@@ -74,6 +75,12 @@ async def calendar(date: str = None):
 async def news(category: str = "internet"):
     """查询互联网资讯、电竞资讯、汽车新闻"""
     result = await TianApiService.get_info_news(category)
+    return result
+
+@app.get("/api/news/detail", summary="资讯详情", tags=["天行数据"])
+async def news_detail(url: str):
+    """抓取并缓存资讯正文，供小程序原生详情页展示。"""
+    result = await NewsDetailService.fetch_detail(url)
     return result
 
 @app.get("/api/gold-price", summary="黄金行情", tags=["天行数据"])
