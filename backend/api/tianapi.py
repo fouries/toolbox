@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -93,6 +94,7 @@ class TianApiService:
                     "hot": "--",
                     "description": description,
                     "url": f"https://m.baidu.com/s?word={quote(topic)}&sa=fyb_news" if platform == "baidu" else f"https://s.weibo.com/weibo?q={quote(topic)}&t=31&band_rank=12&Refer=top",
+                    "raw": {"title": topic, "description": description, "fallback": True},
                 }
                 for index, (topic, description) in enumerate(topics)
             ],
@@ -185,6 +187,7 @@ class TianApiService:
             "hot": hot,
             "description": description,
             "url": url,
+            "raw": dict(item),
         }
 
     @staticmethod
@@ -402,6 +405,32 @@ class TianApiService:
         return f"“{keyword}”正在{platform_name}受到关注，相关讨论可能涉及新闻进展、公众反馈和后续影响。"
 
     @staticmethod
+    def _parse_hot_raw(raw: Any) -> Dict[str, Any]:
+        if isinstance(raw, dict):
+            return raw
+        if not raw:
+            return {}
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                return {}
+            return parsed if isinstance(parsed, dict) else {}
+        return {}
+
+    @staticmethod
+    def _build_hot_raw_section(platform_name: str, keyword: str, hot: str, desc_text: str, raw_item: Dict[str, Any]) -> Dict[str, str]:
+        title = str(raw_item.get("word") or raw_item.get("hotword") or raw_item.get("title") or raw_item.get("keyword") or keyword)
+        heat = str(raw_item.get("hotScore") or raw_item.get("hotwordnum") or raw_item.get("num") or raw_item.get("hot") or hot or "--")
+        desc = TianApiService._clean_hot_description(str(raw_item.get("desc") or raw_item.get("description") or "")) or desc_text
+        parts = [f"平台：{platform_name}", f"关键词：{title}"]
+        if heat:
+            parts.append(f"热度：{heat}")
+        if desc:
+            parts.append(f"接口摘要：{desc}")
+        return {"title": f"{platform_name}返回信息", "body": "\n".join(parts)}
+
+    @staticmethod
     def _build_hot_search_detail(
         platform: str,
         keyword: str,
@@ -409,6 +438,7 @@ class TianApiService:
         description: str = "",
         url: str = "",
         related_news: Optional[List[Dict[str, Any]]] = None,
+        raw_item: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         platform = platform if platform in {"weibo", "baidu"} else "weibo"
         platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
@@ -418,7 +448,10 @@ class TianApiService:
         desc_text = TianApiService._clean_hot_description(description) or TianApiService._fallback_hot_detail_description(platform_name, keyword)
         summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
         news_titles = "；".join(item.get("title", "") for item in related_news[:3] if item.get("title"))
+        raw_item = raw_item or {}
+        raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
         sections = [
+            raw_section,
             {"title": "热点概览", "body": summary},
             {"title": "为什么值得关注", "body": f"该话题来自{platform_name}，通常反映用户短时间内集中搜索、讨论或转发的公共关注点。"},
             {"title": "相关资讯", "body": news_titles or "暂未匹配到强相关资讯，可稍后刷新或复制原链接查看平台搜索结果。"},
@@ -436,6 +469,7 @@ class TianApiService:
             "content": content,
             "sections": sections,
             "relatedNews": related_news,
+            "rawHotItem": raw_item,
             "updatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
@@ -446,6 +480,7 @@ class TianApiService:
         hot: str = "",
         description: str = "",
         url: str = "",
+        raw: str = "",
     ) -> Dict[str, Any]:
         """热搜详情：按热搜词聚合站内资讯并生成小程序可展示正文。"""
         keyword = str(keyword or "").strip()
@@ -473,6 +508,7 @@ class TianApiService:
             description=str(description or ""),
             url=str(url or ""),
             related_news=matched[:8],
+            raw_item=TianApiService._parse_hot_raw(raw),
         )
         return {"code": 200, "msg": "success", "data": data}
 

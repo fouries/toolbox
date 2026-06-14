@@ -77,6 +77,7 @@ export interface HotSearchItem {
   hot?: string
   description?: string
   url?: string
+  raw?: Record<string, unknown>
 }
 
 export interface HotSearchData {
@@ -102,6 +103,7 @@ export interface HotSearchDetailData {
   content: string
   sections: HotSearchDetailSection[]
   relatedNews: NewsItem[]
+  rawHotItem?: Record<string, unknown>
   updatedAt?: string
 }
 
@@ -233,6 +235,7 @@ export const getHotSearchDetail = (params: {
   hot?: string
   description?: string
   url?: string
+  raw?: string
 }) => {
   const query = buildQueryString(params as Record<string, unknown>)
   return request<HotSearchDetailData>(`/api/hot-search/detail?${query}`, { timeout: 20000 })

@@ -108,9 +108,9 @@ async def hot_search(platform: str = "weibo"):
     return result
 
 @app.get("/api/hot-search/detail", summary="热搜详情", tags=["天行数据"])
-async def hot_search_detail(platform: str = "weibo", keyword: str = "", hot: str = "", description: str = "", url: str = ""):
+async def hot_search_detail(platform: str = "weibo", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
     """按热搜关键词聚合站内资讯，生成小程序原生详情内容。"""
-    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url)
+    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url, raw)
     return result
 
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])

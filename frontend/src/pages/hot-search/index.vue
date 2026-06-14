@@ -117,7 +117,8 @@ const openHotDetail = (item: HotSearchItem) => {
     `keyword=${encodeURIComponent(item.title)}`,
     `hot=${encodeURIComponent(item.hot || '')}`,
     `description=${encodeURIComponent(item.description || '')}`,
-    `url=${encodeURIComponent(item.url || '')}`
+    `url=${encodeURIComponent(item.url || '')}`,
+    `raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
   ].join('&')
   uni.navigateTo({ url: `/pages/hot-search-detail/index?${params}` })
 }

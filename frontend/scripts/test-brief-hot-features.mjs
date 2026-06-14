@@ -55,6 +55,7 @@ assert.match(hotSearchPage, /v-for="item in hotItems"/, 'hot search page should 
 assert.match(hotSearchPage, /@tap="openHotDetail\(item\)"/, 'hot search items should navigate to native detail page')
 assert.match(hotSearchPage, /uni\.navigateTo\(\{[\s\S]*\/pages\/hot-search-detail\/index\?/, 'hot search item tap should use internal detail route')
 assert.match(hotSearchPage, /encodeURIComponent\(item\.title\)/, 'hot search detail route should encode title')
+assert.match(hotSearchPage, /raw=\$\{encodeURIComponent\(JSON\.stringify\(item\.raw \|\| item\)\)\}/, 'hot search detail route should pass the raw hot-search API item')
 assert.doesNotMatch(hotSearchPage, /@tap="copyHotLink\(item\)"/, 'hot search list should not only copy links on item tap')
 assert.match(hotSearchPage, /onLoad/, 'hot search page should read platform from route query')
 
@@ -62,6 +63,7 @@ const hotSearchDetailPage = fs.readFileSync(hotSearchDetailPagePath, 'utf8')
 assert.match(hotSearchDetailPage, /热搜详情/, 'hot search detail page should render title text')
 assert.match(hotSearchDetailPage, /keyword/, 'hot search detail page should read keyword from route query')
 assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page should fetch backend detail content')
+assert.match(hotSearchDetailPage, /rawHotData/, 'hot search detail page should forward the raw hot-search API item')
 assert.match(hotSearchDetailPage, /detail\.summary/, 'hot search detail page should render backend summary')
 assert.match(hotSearchDetailPage, /v-for="section in detail\.sections"/, 'hot search detail page should render backend content sections')
 assert.match(hotSearchDetailPage, /copyHotLink/, 'hot search detail page should keep copy-link fallback')
@@ -81,5 +83,6 @@ assert.match(backendTianApi, /"\/bulletin\/index"/, 'daily brief should use Tian
 assert.match(backendTianApi, /get_hot_search/, 'TianApi service should implement hot search fetcher')
 assert.match(backendTianApi, /"weibo":\s*"\/weibohot\/index"/, 'weibo hot search should use TianAPI /weibohot/index endpoint')
 assert.match(backendTianApi, /"baidu":\s*"\/baiduhot\/index"/, 'baidu hot search should use TianAPI /baiduhot/index endpoint')
+assert.match(backendTianApi, /rawHotItem/, 'hot search detail should include the raw hot-search API item in the response')
 
 console.log('daily brief and hot search features are valid')

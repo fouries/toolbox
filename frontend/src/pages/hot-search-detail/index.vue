@@ -89,6 +89,7 @@ const keyword = ref('')
 const hot = ref('')
 const description = ref('')
 const sourceUrl = ref('')
+const rawHotData = ref('')
 const loading = ref(false)
 const error = ref('')
 const detail = ref<HotSearchDetailData | null>(null)
@@ -129,7 +130,8 @@ const loadDetail = async () => {
       keyword: keyword.value,
       hot: hot.value,
       description: description.value,
-      url: sourceUrl.value
+      url: sourceUrl.value,
+      raw: rawHotData.value
     })
     if (res.code === 200 && res.data) {
       detail.value = res.data
@@ -170,6 +172,7 @@ onLoad((options: any) => {
   hot.value = decodeURIComponent(options?.hot || '')
   description.value = decodeURIComponent(options?.description || '')
   sourceUrl.value = decodeURIComponent(options?.url || '')
+  rawHotData.value = decodeURIComponent(options?.raw || '')
   loadDetail()
 })
 </script>
