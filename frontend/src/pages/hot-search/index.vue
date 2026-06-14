@@ -38,14 +38,14 @@
       </view>
 
       <view class="hot-list" v-else>
-        <view class="hot-card card" v-for="item in hotItems" :key="`${item.rank}-${item.title}`" @tap="copyHotLink(item)">
+        <view class="hot-card card" v-for="item in hotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
           <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
             <text class="hot-desc" v-if="item.description">{{ item.description }}</text>
             <view class="hot-meta">
               <text v-if="item.hot">热度：{{ item.hot }}</text>
-              <text>{{ item.url ? '点击复制链接' : '点击复制关键词' }}</text>
+              <text>{{ item.url ? '点击查看详情' : '点击查看相关资讯' }}</text>
             </view>
           </view>
           <text class="hot-arrow">›</text>
@@ -54,7 +54,7 @@
 
       <view class="note-card card">
         <text class="note-title">说明</text>
-        <text class="note-text">小程序端不直接打开第三方搜索页，点击热搜条目会复制链接或关键词，可到浏览器中查看详情。</text>
+        <text class="note-text">点击热搜条目会进入小程序原生详情页，展示关键词、热度和相关资讯；详情页仍保留复制原链接兜底。</text>
       </view>
     </view>
   </view>
@@ -109,13 +109,17 @@ const switchPlatform = (platform: PlatformId) => {
   fetchHotSearch()
 }
 
-const copyHotLink = (item: HotSearchItem) => {
-  const data = item.url || item.title
-  if (!data) return
-  uni.setClipboardData({
-    data,
-    success: () => uni.showToast({ title: item.url ? '链接已复制' : '关键词已复制', icon: 'none' })
-  })
+const openHotDetail = (item: HotSearchItem) => {
+  if (!item.title) return
+  const params = [
+    `platform=${encodeURIComponent(activePlatform.value)}`,
+    `title=${encodeURIComponent(currentConfig.value.title)}`,
+    `keyword=${encodeURIComponent(item.title)}`,
+    `hot=${encodeURIComponent(item.hot || '')}`,
+    `description=${encodeURIComponent(item.description || '')}`,
+    `url=${encodeURIComponent(item.url || '')}`
+  ].join('&')
+  uni.navigateTo({ url: `/pages/hot-search-detail/index?${params}` })
 }
 
 onLoad((options: any) => {

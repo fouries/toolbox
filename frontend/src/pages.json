@@ -119,6 +119,14 @@
         "navigationBarBackgroundColor": "#f97316",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/hot-search-detail/index",
+      "style": {
+        "navigationBarTitleText": "热搜详情",
+        "navigationBarBackgroundColor": "#f97316",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {
