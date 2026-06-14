@@ -72,9 +72,10 @@ assert.match(hotSearchDetailPage, /热搜详情/, 'hot search detail page should
 assert.match(hotSearchDetailPage, /keyword/, 'hot search detail page should read keyword from route query')
 assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page should fetch backend detail content')
 assert.match(hotSearchDetailPage, /hotImage/, 'hot search detail page should read image from route query')
-assert.match(hotSearchDetailPage, /<view\s+class="hot-image-section card"\s+v-if="hotImage"[\s\S]*<image\s+class="hot-image"\s+:src="hotImage"\s+mode="widthFix"/, 'hot search detail page should render baidu image in the detail body')
-assert.match(hotSearchDetailPage, /\.hot-image-section\s*\{[\s\S]*margin-bottom:\s*22rpx;/, 'hot image section should be a body card after navigation')
-assert.match(hotSearchDetailPage, /\.hot-image\s*\{[\s\S]*width:\s*100%;[\s\S]*border-radius:\s*20rpx;/, 'detail body image should be full width')
+assert.match(hotSearchDetailPage, /<text class="keyword-title">\{\{ detail\?\.keyword \|\| keyword \|\| '未知热搜' \}\}<\/text>[\s\S]*<view\s+class="hot-image-section"\s+v-if="hotImage"[\s\S]*<image\s+class="hot-image"\s+:src="hotImage"\s+mode="widthFix"/, 'hot search detail page should render baidu image directly under the jumped-to keyword title')
+assert.doesNotMatch(hotSearchDetailPage, /<view\s+class="hot-image-section card"/, 'hot search image should not be a separate card below the title card')
+assert.match(hotSearchDetailPage, /\.hot-image-section\s*\{[\s\S]*margin-top:\s*16rpx;/, 'hot image section should sit immediately below the detail title')
+assert.match(hotSearchDetailPage, /\.hot-image\s*\{[\s\S]*width:\s*100%;[\s\S]*border-radius:\s*20rpx;/, 'detail title image should be full width')
 assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page should fetch backend detail content')
 assert.match(hotSearchDetailPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}/, 'related news should use native news detail route')
 

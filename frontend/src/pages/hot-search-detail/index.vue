@@ -24,6 +24,9 @@
             <text class="platform-tag">{{ platformName }}</text>
           </view>
           <text class="keyword-title">{{ detail?.keyword || keyword || '未知热搜' }}</text>
+          <view class="hot-image-section" v-if="hotImage">
+            <image class="hot-image" :src="hotImage" mode="widthFix"></image>
+          </view>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="keyword-meta">
             <text v-if="detail?.hot || hot">热度：{{ detail?.hot || hot }}</text>
@@ -33,10 +36,6 @@
           <view class="action-row">
             <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
           </view>
-        </view>
-
-        <view class="hot-image-section card" v-if="hotImage">
-          <image class="hot-image" :src="hotImage" mode="widthFix"></image>
         </view>
 
         <view class="content-card card" v-if="detail?.sections?.length">
@@ -211,8 +210,7 @@ onLoad((options: any) => {
 }
 
 .keyword-card,
-.content-card,
-.hot-image-section {
+.content-card {
   margin-bottom: 22rpx;
 }
 
@@ -307,6 +305,10 @@ onLoad((options: any) => {
   font-size: 30rpx;
   font-weight: 820;
   margin-bottom: 18rpx;
+}
+
+.hot-image-section {
+  margin-top: 16rpx;
 }
 
 .hot-image {
