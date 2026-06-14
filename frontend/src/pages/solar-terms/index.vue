@@ -8,8 +8,8 @@
 
       <view class="summary-card card">
         <view>
-          <text class="summary-label">当前年份</text>
-          <text class="summary-year">{{ currentYear }} 年</text>
+          <text class="summary-label">当前日期</text>
+          <text class="summary-date">{{ selectedDateText }}</text>
         </view>
         <picker mode="date" :value="selectedDateText" @change="onDateChange">
           <view class="date-switch">切换日期</view>
@@ -17,10 +17,10 @@
       </view>
 
       <view class="highlight-grid">
-        <view class="highlight-card card" v-if="currentTerm">
-          <text class="highlight-label">今日节气</text>
-          <text class="highlight-title">{{ currentTerm.name }}</text>
-          <text class="highlight-desc">{{ currentTerm.date }} · {{ currentTerm.desc }}</text>
+        <view class="highlight-card card" v-if="currentSolarTerm">
+          <text class="highlight-label">当前节气</text>
+          <text class="highlight-title">{{ currentSolarTerm.name }}</text>
+          <text class="highlight-desc">{{ currentSolarTerm.date }} · {{ currentSolarTerm.desc }}</text>
         </view>
         <view class="highlight-card card" v-if="nextTerm">
           <text class="highlight-label">下一个节气</text>
@@ -32,7 +32,7 @@
       <view class="term-list card">
         <view
           class="term-card"
-          :class="{ active: term.date === selectedDateText, next: nextTerm?.date === term.date }"
+          :class="{ active: currentSolarTerm?.date === term.date, next: nextTerm?.date === term.date }"
           v-for="term in solarTerms"
           :key="term.name"
         >
@@ -68,7 +68,14 @@ const currentYear = computed(() => selectedDate.value.getFullYear())
 const selectedDateText = computed(() => formatDate(selectedDate.value))
 const solarTerms = computed(() => getSolarTermsForYear(currentYear.value))
 
-const currentTerm = computed(() => solarTerms.value.find(term => term.date === selectedDateText.value) || null)
+const currentSolarTerm = computed<SolarTermItem | null>(() => {
+  const selectedTime = selectedDate.value.getTime()
+  const passedTerms = solarTerms.value.filter(term => new Date(`${term.date}T00:00:00`).getTime() <= selectedTime)
+  if (passedTerms.length > 0) return passedTerms[passedTerms.length - 1]
+
+  const previousYearTerms = getSolarTermsForYear(currentYear.value - 1)
+  return previousYearTerms[previousYearTerms.length - 1] || null
+})
 const nextTerm = computed<SolarTermItem | null>(() => {
   const selectedTime = selectedDate.value.getTime()
   return solarTerms.value.find(term => new Date(`${term.date}T00:00:00`).getTime() >= selectedTime) || solarTerms.value[0]
@@ -123,7 +130,7 @@ onLoad((options: any) => {
 }
 
 .summary-label,
-.summary-year,
+.summary-date,
 .highlight-label,
 .highlight-title,
 .highlight-desc,
@@ -143,7 +150,7 @@ onLoad((options: any) => {
   font-size: 24rpx;
 }
 
-.summary-year {
+.summary-date {
   margin-top: 6rpx;
   color: #14532d;
   font-size: 42rpx;
@@ -273,7 +280,7 @@ onLoad((options: any) => {
     gap: 18px;
   }
 
-  .summary-year {
+  .summary-date {
     font-size: 34px;
   }
 
