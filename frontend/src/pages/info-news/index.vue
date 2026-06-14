@@ -94,13 +94,19 @@ const switchCategory = (category: string) => {
   fetchNews()
 }
 
+const normalizeNewsUrl = (url?: string): string => {
+  if (!url) return ''
+  if (url.startsWith('//')) return `https:${url}`
+  return url
+}
+
 const isSafeNewsUrl = (url?: string): url is string => {
   if (!url) return false
   return /^https?:\/\//i.test(url)
 }
 
 const openNews = (item: NewsItem) => {
-  const safeUrl = item.url
+  const safeUrl = normalizeNewsUrl(item.url)
   if (!isSafeNewsUrl(safeUrl)) return
   uni.navigateTo({
     url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}`,

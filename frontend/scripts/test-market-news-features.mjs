@@ -83,6 +83,8 @@ assert.match(infoNewsPage, /互联网资讯|电竞资讯|汽车新闻/, 'info ne
 assert.match(infoNewsPage, /getInfoNews/, 'info news page should fetch category news')
 assert.match(infoNewsPage, /v-for="item in newsList"/, 'info news page should render a news list')
 assert.match(infoNewsPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}/, 'info news cards should navigate to native detail page')
+assert.match(infoNewsPage, /normalizeNewsUrl/, 'info news cards should normalize protocol-relative esports URLs before navigation')
+assert.match(infoNewsPage, /url\.startsWith\('\/\/'\)[\s\S]*`https:\$\{url\}`/, 'protocol-relative esports URLs should be converted to https URLs')
 assert.match(infoNewsPage, /onLoad/, 'info news page should read category from route query')
 
 const newsDetailPage = fs.readFileSync(newsDetailPagePath, 'utf8')
