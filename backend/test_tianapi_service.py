@@ -183,9 +183,13 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['platform'] == 'weibo'
     assert result['data']['keyword'] == '微博话题'
     assert result['data']['sourceUrl'] == 'https://s.weibo.com/weibo?q=test'
-    assert '微博话题' in result['data']['summary']
-    assert '微博话题' in result['data']['content']
+    assert '微博话题 引发关注' in result['data']['summary']
+    assert '网友正在讨论微博话题的最新进展' in result['data']['summary']
+    assert '微博话题 引发关注' in result['data']['content']
+    assert '网友正在讨论微博话题的最新进展' in result['data']['content']
+    assert '通常反映用户短时间内集中搜索' not in result['data']['content']
     assert result['data']['sections']
+    assert result['data']['sections'][0]['title'] == '相关新闻内容'
     assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
 
 

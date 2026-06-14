@@ -424,17 +424,25 @@ class TianApiService:
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
         hot_text = f"，当前热度为 {hot}" if hot else ""
         desc_text = TianApiService._clean_hot_description(description) or TianApiService._fallback_hot_detail_description(platform_name, keyword)
-        summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
-        news_titles = "；".join(item.get("title", "") for item in related_news[:3] if item.get("title"))
         raw_item = raw_item or {}
         raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
-        sections = [
-            raw_section,
-            {"title": "热点概览", "body": summary},
-            {"title": "为什么值得关注", "body": f"该话题来自{platform_name}，通常反映用户短时间内集中搜索、讨论或转发的公共关注点。"},
-            {"title": "相关资讯", "body": news_titles or "暂未匹配到强相关资讯，可稍后刷新或复制原链接查看平台搜索结果。"},
-            {"title": "查看建议", "body": "小程序端无法直接打开微博、百度等第三方搜索页，已优先展示站内聚合内容，并保留复制原链接兜底。"},
-        ]
+        news_content_lines = []
+        for item in related_news[:5]:
+            item_title = str(item.get("title") or "").strip()
+            item_desc = str(item.get("description") or "").strip()
+            if item_title and item_desc:
+                news_content_lines.append(f"{item_title}：{item_desc}")
+            elif item_title:
+                news_content_lines.append(item_title)
+            elif item_desc:
+                news_content_lines.append(item_desc)
+        news_content = "\n".join(news_content_lines)
+        if news_content_lines:
+            summary = news_content_lines[0]
+            sections = [{"title": "相关新闻内容", "body": news_content}]
+        else:
+            summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
+            sections = [raw_section]
         content = "\n".join(section["body"] for section in sections if section["body"])
         return {
             "platform": platform,
