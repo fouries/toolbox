@@ -185,6 +185,34 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
 
 
+def test_baidu_fallback_hot_detail_does_not_show_unavailable_message():
+    fallback = TianApiService._fallback_hot_search('baidu')
+    assert fallback['items']
+    assert all('接口暂不可用' not in item['description'] for item in fallback['items'])
+
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+
+    for item in fallback['items'][:4]:
+        result = run(TianApiService.get_hot_search_detail(
+            platform='baidu',
+            keyword=item['title'],
+            hot=item['hot'],
+            description='热搜接口暂不可用，展示备用热点分类。',
+            url=item['url'],
+        ))
+        text = result['data']['summary'] + result['data']['content']
+        assert result['code'] == 200
+        assert item['title'] in text
+        assert '热搜接口暂不可用' not in text
+        assert '接口暂不可用' not in text
+        assert result['data']['sections']
+
+
 if __name__ == '__main__':
     setup_module(None)
     for test in [
@@ -195,6 +223,7 @@ if __name__ == '__main__':
         test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines,
         test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
+        test_baidu_fallback_hot_detail_does_not_show_unavailable_message,
     ]:
         setup_module(None)
         test()

@@ -75,7 +75,13 @@ class TianApiService:
     @staticmethod
     def _fallback_hot_search(platform: str) -> Dict[str, Any]:
         platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
-        topics = ["今日热点", "民生新闻", "科技动态", "财经观察", "文娱资讯"]
+        topics = [
+            ("今日热点", "汇总今日全网关注度较高的新闻、政策、社会与生活服务信息。"),
+            ("民生新闻", "关注教育、医疗、交通、天气、消费等与日常生活相关的公共信息。"),
+            ("科技动态", "追踪人工智能、互联网产品、智能硬件和产业技术更新。"),
+            ("财经观察", "聚焦市场行情、消费趋势、企业动态和宏观经济相关资讯。"),
+            ("文娱资讯", "整理影视、演出、综艺、明星动态和大众文化热点。"),
+        ]
         return {
             "platform": platform,
             "title": platform_name,
@@ -85,10 +91,10 @@ class TianApiService:
                     "rank": index + 1,
                     "title": topic,
                     "hot": "--",
-                    "description": "热搜接口暂不可用，展示备用热点分类。",
-                    "url": "https://quan1234.com/",
+                    "description": description,
+                    "url": f"https://m.baidu.com/s?word={quote(topic)}&sa=fyb_news" if platform == "baidu" else f"https://s.weibo.com/weibo?q={quote(topic)}&t=31&band_rank=12&Refer=top",
                 }
-                for index, topic in enumerate(topics)
+                for index, (topic, description) in enumerate(topics)
             ],
         }
 
@@ -375,6 +381,27 @@ class TianApiService:
         }
 
     @staticmethod
+    def _clean_hot_description(description: str) -> str:
+        description = str(description or "").strip()
+        unavailable_markers = ("热搜接口暂不可用", "接口暂不可用", "展示备用热点分类")
+        if not description or any(marker in description for marker in unavailable_markers):
+            return ""
+        return description
+
+    @staticmethod
+    def _fallback_hot_detail_description(platform_name: str, keyword: str) -> str:
+        mapping = {
+            "今日热点": "这里汇总今日较受关注的新闻、政策、社会与生活服务信息，适合快速了解当天热点脉络。",
+            "民生新闻": "这里关注教育、医疗、交通、天气、消费等与日常生活密切相关的公共信息。",
+            "科技动态": "这里追踪人工智能、互联网产品、智能硬件和产业技术更新，帮助了解科技行业变化。",
+            "财经观察": "这里聚焦市场行情、消费趋势、企业动态和宏观经济相关资讯，便于把握财经热点。",
+            "文娱资讯": "这里整理影视、演出、综艺、明星动态和大众文化热点，适合快速浏览文娱话题。",
+        }
+        if keyword in mapping:
+            return mapping[keyword]
+        return f"“{keyword}”正在{platform_name}受到关注，相关讨论可能涉及新闻进展、公众反馈和后续影响。"
+
+    @staticmethod
     def _build_hot_search_detail(
         platform: str,
         keyword: str,
@@ -388,7 +415,7 @@ class TianApiService:
         related_news = related_news or []
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
         hot_text = f"，当前热度为 {hot}" if hot else ""
-        desc_text = description or f"“{keyword}”正在{platform_name}受到关注。"
+        desc_text = TianApiService._clean_hot_description(description) or TianApiService._fallback_hot_detail_description(platform_name, keyword)
         summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
         news_titles = "；".join(item.get("title", "") for item in related_news[:3] if item.get("title"))
         sections = [
