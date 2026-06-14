@@ -100,6 +100,11 @@ export interface ReverseLocationResult {
   country?: string
 }
 
+export interface ToolPopularityItem {
+  id: string
+  clicks: number
+}
+
 function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
 
@@ -194,6 +199,17 @@ export const urlDecode = (encoded: string) => {
   return request(`/api/url/decode?encoded=${encodeURIComponent(encoded)}`)
 }
 
+export const getPopularTools = (limit: number = 4) => {
+  return request<ToolPopularityItem[]>(`/api/tools/popular?limit=${limit}`)
+}
+
+export const recordToolClick = (toolId: string) => {
+  return request<ToolPopularityItem>('/api/tools/click', {
+    method: 'POST',
+    data: { tool_id: toolId }
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -207,5 +223,7 @@ export default {
   base64Encode,
   base64Decode,
   urlEncode,
-  urlDecode
+  urlDecode,
+  getPopularTools,
+  recordToolClick
 }

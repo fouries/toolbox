@@ -97,7 +97,8 @@
 
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
-import { ref, computed } from 'vue'
+import { getPopularTools, recordToolClick, type ToolPopularityItem } from '@/api'
+import { ref, computed, onMounted } from 'vue'
 
 const { themeClass } = useTheme()
 
@@ -120,6 +121,7 @@ interface ToolItem {
 
 const searchText = ref('')
 const activeCategory = ref('all')
+const toolClickCounts = ref<Record<string, number>>({})
 
 const categories = ref<CategoryItem[]>([
   { id: 'life', name: '生活服务' },
@@ -139,7 +141,18 @@ const tools = ref<ToolItem[]>([
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true }
 ])
 
-const popularTools = computed(() => tools.value.filter(t => t.implemented).slice(0, 4))
+const popularTools = computed(() => {
+  const rankedTools = tools.value
+    .filter(tool => tool.implemented)
+    .slice()
+    .sort((a, b) => {
+      const diff = (toolClickCounts.value[b.id] || 0) - (toolClickCounts.value[a.id] || 0)
+      if (diff !== 0) return diff
+      return tools.value.findIndex(tool => tool.id === a.id) - tools.value.findIndex(tool => tool.id === b.id)
+    })
+
+  return rankedTools.slice(0, 4)
+})
 
 const filteredTools = computed(() => {
   let list = tools.value
@@ -165,11 +178,47 @@ const clearSearch = () => {
   activeCategory.value = 'all'
 }
 
-const goToTool = (tool: ToolItem) => {
+const applyPopularity = (rankings: ToolPopularityItem[]) => {
+  const counts: Record<string, number> = {}
+  rankings.forEach(item => {
+    counts[item.id] = item.clicks
+  })
+  toolClickCounts.value = counts
+}
+
+const loadPopularTools = async () => {
+  try {
+    const result = await getPopularTools(8)
+    const rankings = (result.data || result.newslist || []) as ToolPopularityItem[]
+    applyPopularity(rankings)
+  } catch (error) {
+    console.warn('加载热门工具失败', error)
+  }
+}
+
+const refreshClickedTool = (toolId: string, clicks: number) => {
+  toolClickCounts.value = {
+    ...toolClickCounts.value,
+    [toolId]: clicks
+  }
+}
+
+const goToTool = async (tool: ToolItem) => {
   if (!tool.implemented) {
     uni.showToast({ title: `${tool.name}${tool.status || '开发中'}`, icon: 'none' })
     return
   }
+
+  try {
+    const result = await recordToolClick(tool.id)
+    const clicked = (result.data || result.newslist) as ToolPopularityItem | undefined
+    if (clicked?.id && typeof clicked.clicks === 'number') {
+      refreshClickedTool(clicked.id, clicked.clicks)
+    }
+  } catch (error) {
+    console.warn('记录工具点击失败', error)
+  }
+
   uni.navigateTo({ url: tool.path })
 }
 
@@ -179,6 +228,10 @@ const navigateToBeian = () => {
   if (opened) opened.opener = null
   // #endif
 }
+
+onMounted(() => {
+  loadPopularTools()
+})
 </script>
 
 <style scoped>

@@ -22,6 +22,15 @@ assert.match(source, /\.quick-tool-card\s*\{[\s\S]*padding:\s*14rpx 12rpx;/, 'po
 assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.quick-tool-list\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*144px\)\);/, 'desktop popular tools should use fixed compact card widths')
 assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.quick-tool-card\s*\{[\s\S]*min-height:\s*62px;/, 'desktop popular tool cards should be shorter')
 
+assert.match(source, /import\s+\{\s*getPopularTools\s*,\s*recordToolClick\s*,\s*type\s+ToolPopularityItem\s*\}\s+from\s+'@\/api'/, 'home page should import popularity APIs')
+assert.match(source, /const\s+toolClickCounts\s*=\s*ref<Record<string,\s*number>>\(\{\}\)/, 'home page should keep click counts from backend')
+assert.match(source, /const\s+loadPopularTools\s*=\s*async\s*\(\)\s*=>/, 'home page should load global popular tools from backend')
+assert.match(source, /getPopularTools\(8\)/, 'home page should request enough popular tool rankings from backend')
+assert.match(source, /const\s+rankedTools\s*=\s*tools\.value[\s\S]*toolClickCounts\.value\[b\.id\][\s\S]*toolClickCounts\.value\[a\.id\]/, 'popular tools should sort by backend click counts')
+assert.match(source, /recordToolClick\(tool\.id\)/, 'tool clicks should be recorded to backend before navigation')
+assert.match(source, /onMounted\(\(\)\s*=>\s*\{\s*loadPopularTools\(\)/s, 'home page should refresh popular tools when opened')
+assert.doesNotMatch(source, /filter\(t\s*=>\s*t\.implemented\)\.slice\(0,\s*4\)/, 'popular tools should not be the static first four implemented tools')
+
 assert.doesNotMatch(source, /id:\s*'password'|name:\s*'密码生成'|path:\s*'\/pages\/password\/index'/, 'home page should not show the password generator card')
 assert.doesNotMatch(source, /id:\s*'url'|name:\s*'URL编码'|path:\s*'\/pages\/url\/index'/, 'home page should not show the URL encoder card')
 assert.doesNotMatch(source, /id:\s*'json'|name:\s*'JSON格式化'|path:\s*'\/pages\/json\/index'/, 'home page should not show the JSON formatter card')

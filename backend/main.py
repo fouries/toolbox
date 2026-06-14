@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import asyncio
 
@@ -9,8 +10,12 @@ from utils.cache import cache
 from api.tianapi import TianApiService
 from api.tools import ToolsService
 from api.location import LocationService
+from api.tool_stats import get_tool_stats_service
 
 settings = get_settings()
+
+class ToolClickRequest(BaseModel):
+    tool_id: str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -90,6 +95,20 @@ async def reverse_location(latitude: float, longitude: float):
     return result
 
 # ==================== 本地工具 API ====================
+
+@app.get("/api/tools/popular", summary="热门工具排行", tags=["工具统计"])
+async def popular_tools(limit: int = 4):
+    """按全站点击次数返回热门工具。"""
+    result = get_tool_stats_service().get_popular(limit)
+    return {"code": 200, "msg": "success", "data": result}
+
+@app.post("/api/tools/click", summary="记录工具点击", tags=["工具统计"])
+async def record_tool_click(payload: ToolClickRequest):
+    """记录一次工具点击，用于实时刷新全站热门工具。"""
+    result = get_tool_stats_service().record_click(payload.tool_id)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "未知工具"))
+    return result
 
 @app.get("/api/qrcode", summary="二维码生成", tags=["本地工具"])
 async def generate_qrcode(text: str, size: int = 256):
