@@ -58,6 +58,34 @@ export interface NewsDetail {
   fromCache?: boolean
 }
 
+export interface DailyBriefItem {
+  rank: number
+  title: string
+  url?: string
+  source?: string
+}
+
+export interface DailyBriefData {
+  date?: string
+  source?: string
+  items: DailyBriefItem[]
+}
+
+export interface HotSearchItem {
+  rank: number
+  title: string
+  hot?: string
+  description?: string
+  url?: string
+}
+
+export interface HotSearchData {
+  platform: string
+  title: string
+  updateTime?: string
+  items: HotSearchItem[]
+}
+
 export interface GoldPriceItem {
   name?: string
   type?: string
@@ -170,6 +198,14 @@ export const getInfoNews = (category: string = 'internet') => {
 
 export const getNewsDetail = (url: string) => {
   return request<NewsDetail>(`/api/news/detail?url=${encodeURIComponent(url)}`, { timeout: 20000 })
+}
+
+export const getDailyBrief = () => {
+  return request<DailyBriefData>('/api/daily-brief')
+}
+
+export const getHotSearch = (platform: string = 'weibo') => {
+  return request<HotSearchData>(`/api/hot-search?platform=${encodeURIComponent(platform)}`)
 }
 
 export const getGoldPrice = () => {

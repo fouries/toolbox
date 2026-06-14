@@ -12,7 +12,9 @@
     "pages/solar-terms/index",
     "pages/info-news/index",
     "pages/news-detail/index",
-    "pages/gold-price/index"
+    "pages/gold-price/index",
+    "pages/daily-brief/index",
+    "pages/hot-search/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

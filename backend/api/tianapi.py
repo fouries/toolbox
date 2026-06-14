@@ -1,5 +1,7 @@
+import re
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from urllib.parse import quote
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
@@ -56,6 +58,41 @@ class TianApiService:
         ]
 
     @staticmethod
+    def _fallback_daily_brief() -> Dict[str, Any]:
+        today = datetime.now().strftime("%Y-%m-%d")
+        titles = [
+            "关注今日国内外重要新闻与民生动态",
+            "留意天气、交通和出行服务信息",
+            "市场行情波动频繁，投资消费请以权威信息为准",
+            "热点内容实时变化，可稍后刷新获取最新简报",
+        ]
+        return {
+            "date": today,
+            "source": "小巧的工具箱",
+            "items": [{"rank": index + 1, "title": title} for index, title in enumerate(titles)],
+        }
+
+    @staticmethod
+    def _fallback_hot_search(platform: str) -> Dict[str, Any]:
+        platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
+        topics = ["今日热点", "民生新闻", "科技动态", "财经观察", "文娱资讯"]
+        return {
+            "platform": platform,
+            "title": platform_name,
+            "updateTime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "items": [
+                {
+                    "rank": index + 1,
+                    "title": topic,
+                    "hot": "--",
+                    "description": "热搜接口暂不可用，展示备用热点分类。",
+                    "url": "https://quan1234.com/",
+                }
+                for index, topic in enumerate(topics)
+            ],
+        }
+
+    @staticmethod
     def _format_change(value: Any, rate: Any) -> str:
         if value in (None, "") and rate in (None, ""):
             return ""
@@ -91,6 +128,74 @@ class TianApiService:
             "unit": "美元/桶",
             "updown": TianApiService._format_change(item.get("diffnum"), item.get("diffrate")),
             "time": str(item.get("updatetime") or item.get("time") or ""),
+        }
+
+    @staticmethod
+    def _normalize_brief_line(value: Any, rank: int) -> Dict[str, Any]:
+        if isinstance(value, dict):
+            title = str(value.get("title") or value.get("content") or value.get("digest") or value.get("news") or "")
+            url = str(value.get("url") or value.get("link") or "")
+            source = str(value.get("source") or "")
+        else:
+            title = str(value or "")
+            url = ""
+            source = ""
+        title = re.sub(r"^\s*\d+\s*[、.．-]\s*", "", title).strip()
+        item: Dict[str, Any] = {"rank": rank, "title": title}
+        if url:
+            item["url"] = url
+        if source:
+            item["source"] = source
+        return item
+
+    @staticmethod
+    def _normalize_daily_brief_result(result: Dict[str, Any]) -> Dict[str, Any]:
+        raw = result.get("result") if isinstance(result.get("result"), dict) else result
+        raw_items = raw.get("list") or raw.get("newslist") or raw.get("items") or []
+        if isinstance(raw_items, str):
+            raw_items = [line for line in re.split(r"[\n\r]+", raw_items) if line.strip()]
+        items = [TianApiService._normalize_brief_line(item, index + 1) for index, item in enumerate(raw_items)]
+        items = [item for item in items if item["title"]]
+        return {
+            "date": str(raw.get("ctime") or raw.get("date") or raw.get("time") or datetime.now().strftime("%Y-%m-%d")),
+            "source": str(raw.get("source") or "每日简报"),
+            "items": items,
+        }
+
+    @staticmethod
+    def _normalize_hot_item(item: Dict[str, Any], rank: int, platform: str) -> Dict[str, Any]:
+        title = str(item.get("hotword") or item.get("word") or item.get("note") or item.get("title") or item.get("keyword") or "")
+        hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("num") or item.get("hot") or "")
+        description = str(item.get("desc") or item.get("description") or "")
+        url = str(item.get("url") or item.get("mobilUrl") or "")
+        if not url and platform == "weibo" and title:
+            word = str(item.get("word_scheme") or title)
+            url = f"https://s.weibo.com/weibo?q={quote(word)}&t=31&band_rank=12&Refer=top"
+        if not url and platform == "baidu" and title:
+            url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news"
+        return {
+            "rank": rank,
+            "title": title,
+            "hot": hot,
+            "description": description,
+            "url": url,
+        }
+
+    @staticmethod
+    def _normalize_hot_search_result(platform: str, result: Dict[str, Any]) -> Dict[str, Any]:
+        raw = result.get("result") if isinstance(result.get("result"), dict) else result
+        raw_items = raw.get("list") or raw.get("newslist") or raw.get("data") or []
+        items = []
+        for index, item in enumerate(raw_items):
+            if isinstance(item, dict):
+                normalized = TianApiService._normalize_hot_item(item, index + 1, platform)
+                if normalized["title"]:
+                    items.append(normalized)
+        return {
+            "platform": platform,
+            "title": "微博热搜榜" if platform == "weibo" else "百度热搜",
+            "updateTime": str(raw.get("update_time") or raw.get("updatetime") or raw.get("time") or datetime.now().strftime("%Y-%m-%d %H:%M")),
+            "items": items,
         }
     
     @staticmethod
@@ -290,3 +395,40 @@ class TianApiService:
             "fallback": True,
             "newslist": TianApiService._fallback_crude_oil()
         }
+
+    @staticmethod
+    async def get_daily_brief() -> Dict[str, Any]:
+        """每日简报。"""
+        if not settings.TIANAPI_KEY:
+            return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._fallback_daily_brief()}
+        result = await TianApiService._request(
+            "/bulletin/index",
+            cache_key=make_cache_key("daily_brief", date=datetime.now().strftime("%Y-%m-%d")),
+            cache_ttl=settings.CACHE_TTL_DEFAULT,
+        )
+        if result.get("code") == 200:
+            data = TianApiService._normalize_daily_brief_result(result)
+            if data["items"]:
+                return {"code": 200, "msg": "success", "data": data}
+        return {"code": 200, "msg": result.get("msg") or "每日简报接口暂不可用", "fallback": True, "data": TianApiService._fallback_daily_brief()}
+
+    @staticmethod
+    async def get_hot_search(platform: str = "weibo") -> Dict[str, Any]:
+        """微博热搜榜 / 百度热搜。"""
+        endpoint_map = {
+            "weibo": "/weibohot/index",
+            "baidu": "/baiduhot/index",
+        }
+        platform = platform if platform in endpoint_map else "weibo"
+        if not settings.TIANAPI_KEY:
+            return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._fallback_hot_search(platform)}
+        result = await TianApiService._request(
+            endpoint_map[platform],
+            cache_key=make_cache_key("hot_search", platform=platform),
+            cache_ttl=settings.CACHE_TTL_DEFAULT,
+        )
+        if result.get("code") == 200:
+            data = TianApiService._normalize_hot_search_result(platform, result)
+            if data["items"]:
+                return {"code": 200, "msg": "success", "data": data}
+        return {"code": 200, "msg": result.get("msg") or "热搜接口暂不可用", "fallback": True, "data": TianApiService._fallback_hot_search(platform)}

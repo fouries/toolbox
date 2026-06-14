@@ -119,6 +119,42 @@ def test_crude_endpoint_queries_wti_and_blt_and_normalizes_market_fields():
     assert len(result['newslist']) == 2
 
 
+def test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/bulletin/index', None): {"code": 200, "msg": "success", "result": {"list": ["1、今日要闻", "2、财经动态"], "ctime": "2026-06-14"}}
+    }
+
+    result = run(TianApiService.get_daily_brief())
+
+    assert DummyHttpClient.calls[0][0].endswith('/bulletin/index')
+    assert result['data']['date'] == '2026-06-14'
+    assert result['data']['items'][0]['title'] == '今日要闻'
+    assert result['data']['items'][0]['rank'] == 1
+    assert result['data']['items'][1]['title'] == '财经动态'
+
+
+def test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/weibohot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"hotword": "微博话题", "hotwordnum": "123456", "word_scheme": "微博话题"}]}},
+        ('/baiduhot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"word": "百度话题", "hotScore": "9999", "desc": "话题摘要", "url": "https://m.baidu.com/s?word=test"}]}},
+    }
+
+    weibo = run(TianApiService.get_hot_search('weibo'))
+    baidu = run(TianApiService.get_hot_search('baidu'))
+
+    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/weibohot/index', '/baiduhot/index']
+    assert weibo['data']['platform'] == 'weibo'
+    assert weibo['data']['items'][0]['title'] == '微博话题'
+    assert weibo['data']['items'][0]['hot'] == '123456'
+    assert weibo['data']['items'][0]['url'].startswith('https://s.weibo.com/weibo')
+    assert baidu['data']['platform'] == 'baidu'
+    assert baidu['data']['items'][0]['title'] == '百度话题'
+    assert baidu['data']['items'][0]['description'] == '话题摘要'
+    assert baidu['data']['items'][0]['url'] == 'https://m.baidu.com/s?word=test'
+
+
 if __name__ == '__main__':
     setup_module(None)
     for test in [
@@ -126,6 +162,8 @@ if __name__ == '__main__':
         test_gold_endpoint_sends_kinds_and_normalizes_market_fields,
         test_gold_fallback_is_not_renormalized_when_api_key_is_missing,
         test_crude_endpoint_queries_wti_and_blt_and_normalizes_market_fields,
+        test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines,
+        test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
     ]:
         setup_module(None)
         test()

@@ -95,6 +95,18 @@ async def crude_oil():
     result = await TianApiService.get_crude_oil()
     return result
 
+@app.get("/api/daily-brief", summary="每日简报", tags=["天行数据"])
+async def daily_brief():
+    """查询每日简报。"""
+    result = await TianApiService.get_daily_brief()
+    return result
+
+@app.get("/api/hot-search", summary="热搜榜", tags=["天行数据"])
+async def hot_search(platform: str = "weibo"):
+    """查询微博热搜榜或百度热搜。"""
+    result = await TianApiService.get_hot_search(platform)
+    return result
+
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
 async def reverse_location(latitude: float, longitude: float):
     """根据经纬度解析省、市、区，用于天气和油价定位。"""

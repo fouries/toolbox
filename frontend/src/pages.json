@@ -103,6 +103,22 @@
         "navigationBarBackgroundColor": "#f59e0b",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/daily-brief/index",
+      "style": {
+        "navigationBarTitleText": "每日简报",
+        "navigationBarBackgroundColor": "#4f46e5",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/hot-search/index",
+      "style": {
+        "navigationBarTitleText": "热搜榜",
+        "navigationBarBackgroundColor": "#f97316",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {
