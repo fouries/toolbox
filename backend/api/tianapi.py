@@ -74,30 +74,16 @@ class TianApiService:
         }
 
     @staticmethod
-    def _fallback_hot_search(platform: str) -> Dict[str, Any]:
-        platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
-        topics = [
-            ("今日热点", "汇总今日全网关注度较高的新闻、政策、社会与生活服务信息。"),
-            ("民生新闻", "关注教育、医疗、交通、天气、消费等与日常生活相关的公共信息。"),
-            ("科技动态", "追踪人工智能、互联网产品、智能硬件和产业技术更新。"),
-            ("财经观察", "聚焦市场行情、消费趋势、企业动态和宏观经济相关资讯。"),
-            ("文娱资讯", "整理影视、演出、综艺、明星动态和大众文化热点。"),
-        ]
+    def _hot_search_title(platform: str) -> str:
+        return "微博热搜榜" if platform == "weibo" else "百度热搜榜"
+
+    @staticmethod
+    def _empty_hot_search(platform: str) -> Dict[str, Any]:
         return {
             "platform": platform,
-            "title": platform_name,
+            "title": TianApiService._hot_search_title(platform),
             "updateTime": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "items": [
-                {
-                    "rank": index + 1,
-                    "title": topic,
-                    "hot": "--",
-                    "description": description,
-                    "url": f"https://m.baidu.com/s?word={quote(topic)}&sa=fyb_news" if platform == "baidu" else f"https://s.weibo.com/weibo?q={quote(topic)}&t=31&band_rank=12&Refer=top",
-                    "raw": {"title": topic, "description": description, "fallback": True},
-                }
-                for index, (topic, description) in enumerate(topics)
-            ],
+            "items": [],
         }
 
     @staticmethod
@@ -202,7 +188,7 @@ class TianApiService:
                     items.append(normalized)
         return {
             "platform": platform,
-            "title": "微博热搜榜" if platform == "weibo" else "百度热搜",
+            "title": TianApiService._hot_search_title(platform),
             "updateTime": str(raw.get("update_time") or raw.get("updatetime") or raw.get("time") or datetime.now().strftime("%Y-%m-%d %H:%M")),
             "items": items,
         }
@@ -393,15 +379,6 @@ class TianApiService:
 
     @staticmethod
     def _fallback_hot_detail_description(platform_name: str, keyword: str) -> str:
-        mapping = {
-            "今日热点": "这里汇总今日较受关注的新闻、政策、社会与生活服务信息，适合快速了解当天热点脉络。",
-            "民生新闻": "这里关注教育、医疗、交通、天气、消费等与日常生活密切相关的公共信息。",
-            "科技动态": "这里追踪人工智能、互联网产品、智能硬件和产业技术更新，帮助了解科技行业变化。",
-            "财经观察": "这里聚焦市场行情、消费趋势、企业动态和宏观经济相关资讯，便于把握财经热点。",
-            "文娱资讯": "这里整理影视、演出、综艺、明星动态和大众文化热点，适合快速浏览文娱话题。",
-        }
-        if keyword in mapping:
-            return mapping[keyword]
         return f"“{keyword}”正在{platform_name}受到关注，相关讨论可能涉及新闻进展、公众反馈和后续影响。"
 
     @staticmethod
@@ -441,7 +418,7 @@ class TianApiService:
         raw_item: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         platform = platform if platform in {"weibo", "baidu"} else "weibo"
-        platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
+        platform_name = TianApiService._hot_search_title(platform)
         related_news = related_news or []
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
         hot_text = f"，当前热度为 {hot}" if hot else ""
@@ -578,14 +555,14 @@ class TianApiService:
 
     @staticmethod
     async def get_hot_search(platform: str = "weibo") -> Dict[str, Any]:
-        """微博热搜榜 / 百度热搜。"""
+        """微博热搜榜 / 百度热搜榜。"""
         endpoint_map = {
             "weibo": "/weibohot/index",
             "baidu": "/baiduhot/index",
         }
         platform = platform if platform in endpoint_map else "weibo"
         if not settings.TIANAPI_KEY:
-            return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._fallback_hot_search(platform)}
+            return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._empty_hot_search(platform)}
         result = await TianApiService._request(
             endpoint_map[platform],
             cache_key=make_cache_key("hot_search", platform=platform),
@@ -595,4 +572,4 @@ class TianApiService:
             data = TianApiService._normalize_hot_search_result(platform, result)
             if data["items"]:
                 return {"code": 200, "msg": "success", "data": data}
-        return {"code": 200, "msg": result.get("msg") or "热搜接口暂不可用", "fallback": True, "data": TianApiService._fallback_hot_search(platform)}
+        return {"code": 200, "msg": result.get("msg") or "热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search(platform)}

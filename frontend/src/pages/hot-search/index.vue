@@ -72,7 +72,7 @@ type PlatformId = 'weibo' | 'baidu'
 
 const platformTabs: Array<{ id: PlatformId; title: string; icon: string; desc: string }> = [
   { id: 'weibo', title: '微博热搜榜', icon: '🔥', desc: '查看微博实时热门话题' },
-  { id: 'baidu', title: '百度热搜', icon: '🔎', desc: '查看百度搜索热点排行' }
+  { id: 'baidu', title: '百度热搜榜', icon: '🔎', desc: '查看百度搜索热点排行' }
 ]
 
 const activePlatform = ref<PlatformId>('weibo')

@@ -94,7 +94,7 @@ const loading = ref(false)
 const error = ref('')
 const detail = ref<HotSearchDetailData | null>(null)
 
-const platformName = computed(() => platform.value === 'baidu' ? '百度热搜' : '微博热搜榜')
+const platformName = computed(() => platform.value === 'baidu' ? '百度热搜榜' : '微博热搜榜')
 const relatedNews = computed(() => detail.value?.relatedNews || [])
 
 const normalizeNewsUrl = (url?: string): string => {

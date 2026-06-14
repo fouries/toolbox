@@ -143,7 +143,7 @@ const tools = ref<ToolItem[]>([
   { id: 'gold-price', name: '黄金行情', desc: '黄金价格与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true },
   { id: 'daily-brief', name: '每日简报', desc: '每天快速了解重要新闻和热点摘要', icon: '🗞️', color: '#4f46e5', category: 'market', path: '/pages/daily-brief/index', implemented: true },
   { id: 'weibo-hot', name: '微博热搜榜', desc: '查看微博实时热门话题排行', icon: '🔥', color: '#ef4444', category: 'market', path: '/pages/hot-search/index?platform=weibo', implemented: true },
-  { id: 'baidu-hot', name: '百度热搜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'market', path: '/pages/hot-search/index?platform=baidu', implemented: true },
+  { id: 'baidu-hot', name: '百度热搜榜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'market', path: '/pages/hot-search/index?platform=baidu', implemented: true },
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true }
 ])
 

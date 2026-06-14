@@ -25,7 +25,7 @@ const home = fs.readFileSync(homePath, 'utf8')
 for (const [id, name, route] of [
   ['daily-brief', '每日简报', '/pages/daily-brief/index'],
   ['weibo-hot', '微博热搜榜', '/pages/hot-search/index?platform=weibo'],
-  ['baidu-hot', '百度热搜', '/pages/hot-search/index?platform=baidu'],
+  ['baidu-hot', '百度热搜榜', '/pages/hot-search/index?platform=baidu'],
 ]) {
   assert.match(home, new RegExp(`id:\\s*'${id}'[\\s\\S]*name:\\s*'${name}'[\\s\\S]*path:\\s*'${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'[\\s\\S]*implemented:\\s*true`), `home should enable ${name} tool card`)
 }
@@ -48,7 +48,8 @@ assert.match(briefPage, /v-for="item in briefItems"/, 'daily brief page should r
 assert.match(briefPage, /刷新简报/, 'daily brief page should provide a refresh action')
 
 const hotSearchPage = fs.readFileSync(hotSearchPagePath, 'utf8')
-assert.match(hotSearchPage, /微博热搜榜|百度热搜/, 'hot search page should support weibo and baidu labels')
+assert.match(hotSearchPage, /微博热搜榜|百度热搜榜/, 'hot search page should support weibo and baidu labels')
+assert.doesNotMatch(hotSearchPage, /title: '百度热搜'[^榜]/, 'baidu tab should be labelled 百度热搜榜')
 assert.match(hotSearchPage, /getHotSearch/, 'hot search page should fetch hot search API')
 assert.match(hotSearchPage, /platformTabs/, 'hot search page should provide platform tabs')
 assert.match(hotSearchPage, /v-for="item in hotItems"/, 'hot search page should render hot item list')
@@ -83,6 +84,9 @@ assert.match(backendTianApi, /"\/bulletin\/index"/, 'daily brief should use Tian
 assert.match(backendTianApi, /get_hot_search/, 'TianApi service should implement hot search fetcher')
 assert.match(backendTianApi, /"weibo":\s*"\/weibohot\/index"/, 'weibo hot search should use TianAPI /weibohot/index endpoint')
 assert.match(backendTianApi, /"baidu":\s*"\/baiduhot\/index"/, 'baidu hot search should use TianAPI /baiduhot/index endpoint')
+assert.match(backendTianApi, /百度热搜榜/, 'backend should label baidu hot search as 百度热搜榜')
+assert.doesNotMatch(backendTianApi, /\("今日热点"/, 'baidu hot search should not expose category fallback topics')
+assert.match(backendTianApi, /_empty_hot_search/, 'backend should return an empty list instead of fake baidu topics when upstream fails')
 assert.match(backendTianApi, /rawHotItem/, 'hot search detail should include the raw hot-search API item in the response')
 
 console.log('daily brief and hot search features are valid')

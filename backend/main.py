@@ -103,7 +103,7 @@ async def daily_brief():
 
 @app.get("/api/hot-search", summary="热搜榜", tags=["天行数据"])
 async def hot_search(platform: str = "weibo"):
-    """查询微博热搜榜或百度热搜。"""
+    """查询微博热搜榜或百度热搜榜。"""
     result = await TianApiService.get_hot_search(platform)
     return result
 

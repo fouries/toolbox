@@ -151,6 +151,7 @@ def test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items():
     assert weibo['data']['items'][0]['hot'] == '123456'
     assert weibo['data']['items'][0]['url'].startswith('https://s.weibo.com/weibo')
     assert baidu['data']['platform'] == 'baidu'
+    assert baidu['data']['title'] == '百度热搜榜'
     assert baidu['data']['items'][0]['title'] == '百度话题'
     assert baidu['data']['items'][0]['description'] == '话题摘要'
     assert baidu['data']['items'][0]['url'] == 'https://m.baidu.com/s?word=test'
@@ -214,15 +215,31 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     text = result['data']['summary'] + result['data']['content']
     assert result['code'] == 200
     assert '百度接口返回的真实摘要正文' in text
-    assert result['data']['sections'][0]['title'] == '百度热搜返回信息'
+    assert result['data']['sections'][0]['title'] == '百度热搜榜返回信息'
     assert '热度：987654' in result['data']['sections'][0]['body']
     assert result['data']['rawHotItem']['word'] == '百度真实热搜'
 
 
-def test_baidu_fallback_hot_detail_does_not_show_unavailable_message():
-    fallback = TianApiService._fallback_hot_search('baidu')
-    assert fallback['items']
-    assert all('接口暂不可用' not in item['description'] for item in fallback['items'])
+def test_baidu_hot_search_does_not_replace_failed_upstream_with_category_topics():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/baiduhot/index', None): {"code": 150, "msg": "热搜接口暂不可用"},
+    }
+
+    result = run(TianApiService.get_hot_search('baidu'))
+
+    assert result['code'] == 200
+    assert result['fallback'] is True
+    assert result['data']['title'] == '百度热搜榜'
+    assert result['data']['items'] == []
+    assert all(topic not in str(result['data']) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
+
+
+def test_baidu_empty_hot_search_does_not_show_unavailable_message():
+    fallback = TianApiService._empty_hot_search('baidu')
+    assert fallback['title'] == '百度热搜榜'
+    assert fallback['items'] == []
+    assert all(topic not in str(fallback) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
 
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
@@ -231,21 +248,20 @@ def test_baidu_fallback_hot_detail_does_not_show_unavailable_message():
         ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
     }
 
-    for item in fallback['items'][:4]:
-        result = run(TianApiService.get_hot_search_detail(
-            platform='baidu',
-            keyword=item['title'],
-            hot=item['hot'],
-            description='热搜接口暂不可用，展示备用热点分类。',
-            url=item['url'],
-            raw='{"word":"今日热点","hotScore":"--","desc":"热搜接口暂不可用，展示备用热点分类。"}',
-        ))
-        text = result['data']['summary'] + result['data']['content']
-        assert result['code'] == 200
-        assert item['title'] in text
-        assert '热搜接口暂不可用' not in text
-        assert '接口暂不可用' not in text
-        assert result['data']['sections']
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='百度新闻标题',
+        hot='12345',
+        description='百度接口返回的新闻摘要',
+        url='https://m.baidu.com/s?word=real',
+        raw='{"word":"百度新闻标题","hotScore":"12345","desc":"百度接口返回的新闻摘要"}',
+    ))
+    text = result['data']['summary'] + result['data']['content']
+    assert result['code'] == 200
+    assert '百度新闻标题' in text
+    assert '百度接口返回的新闻摘要' in text
+    assert '热搜接口暂不可用' not in text
+    assert '接口暂不可用' not in text
 
 
 if __name__ == '__main__':
@@ -259,7 +275,8 @@ if __name__ == '__main__':
         test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
-        test_baidu_fallback_hot_detail_does_not_show_unavailable_message,
+        test_baidu_hot_search_does_not_replace_failed_upstream_with_category_topics,
+        test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)
         test()
