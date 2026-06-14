@@ -325,6 +325,7 @@ onMounted(() => {
 }
 
 .tool-search-wrap {
+  display: none;
   margin: 0;
 }
 

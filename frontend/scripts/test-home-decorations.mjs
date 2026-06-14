@@ -20,10 +20,11 @@ assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.tool-item\s*\{[\s\
 
 assert.ok(searchIndex !== -1 && quickIndex !== -1 && categoryIndex !== -1, 'home page should render search, popular tools, and categories')
 assert.ok(searchIndex < quickIndex && quickIndex < categoryIndex, 'search bar should sit above popular tools, and popular tools should sit above categories')
-assert.match(source, /<button\s+class="search-submit"\s+@click="submitSearch">搜索<\/button>/, 'search bar should include a search button on the right')
-assert.match(source, /const\s+submitSearch\s*=\s*\(\)\s*=>\s*\{[\s\S]*searchText\.value\s*=\s*searchText\.value\.trim\(\)/, 'search button should normalize the current search text')
-assert.match(source, /\.tool-search\s*\{[\s\S]*gap:\s*12rpx;/, 'search input and button should have compact spacing')
-assert.match(source, /\.search-submit\s*\{[\s\S]*flex-shrink:\s*0;[\s\S]*height:\s*56rpx;/, 'search button should stay fixed on the right side of the search bar')
+assert.match(source, /<button\s+class="search-submit"\s+@click="submitSearch">搜索<\/button>/, 'search bar should keep the search button markup for future restoration')
+assert.match(source, /const\s+submitSearch\s*=\s*\(\)\s*=>\s*\{[\s\S]*searchText\.value\s*=\s*searchText\.value\.trim\(\)/, 'hidden search button should keep its search behavior for future restoration')
+assert.match(source, /\.tool-search-wrap\s*\{[\s\S]*display:\s*none;/, 'search bar should be hidden while keeping the markup and behavior in place')
+assert.match(source, /\.tool-search\s*\{[\s\S]*gap:\s*12rpx;/, 'hidden search input and button should keep compact spacing styles')
+assert.match(source, /\.search-submit\s*\{[\s\S]*flex-shrink:\s*0;[\s\S]*height:\s*56rpx;/, 'hidden search button should keep its fixed right-side styles for future restoration')
 
 assert.match(source, /<scroll-view\s+class="quick-tool-scroll"\s+scroll-x="true"\s+show-scrollbar="false">[\s\S]*<view class="quick-tool-list">/, 'popular tools should render in a one-row horizontal scroll view')
 assert.match(source, /getPopularTools\(10\)/, 'home page should request up to 10 popular tool rankings from backend')
