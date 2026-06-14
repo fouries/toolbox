@@ -8,21 +8,23 @@
             <text class="quick-panel-title-icon">🔥</text>
           </view>
 
-          <view class="quick-tool-list">
-            <view
-              class="quick-tool-card"
-              @click="goToTool(tool)"
-              v-for="tool in popularTools"
-              :key="tool.id"
-            >
-              <view class="quick-tool-icon" :style="{ background: tool.color }">
-                <text class="quick-icon-text">{{ tool.icon }}</text>
-              </view>
-              <view class="quick-tool-info">
-                <text class="quick-tool-name">{{ tool.name }}</text>
+          <scroll-view class="quick-tool-scroll" scroll-x="true" show-scrollbar="false">
+            <view class="quick-tool-list">
+              <view
+                class="quick-tool-card"
+                @click="goToTool(tool)"
+                v-for="tool in popularTools"
+                :key="tool.id"
+              >
+                <view class="quick-tool-icon" :style="{ background: tool.color }">
+                  <text class="quick-icon-text">{{ tool.icon }}</text>
+                </view>
+                <view class="quick-tool-info">
+                  <text class="quick-tool-name">{{ tool.name }}</text>
+                </view>
               </view>
             </view>
-          </view>
+          </scroll-view>
         </view>
 
         <view class="main-panel">
@@ -150,7 +152,7 @@ const popularTools = computed(() => {
       return tools.value.findIndex(tool => tool.id === a.id) - tools.value.findIndex(tool => tool.id === b.id)
     })
 
-  return rankedTools.slice(0, 4)
+  return rankedTools.slice(0, 10)
 })
 
 const filteredTools = computed(() => {
@@ -187,7 +189,7 @@ const applyPopularity = (rankings: ToolPopularityItem[]) => {
 
 const loadPopularTools = async () => {
   try {
-    const result = await getPopularTools(8)
+    const result = await getPopularTools(10)
     const rankings = (result.data || result.newslist || []) as ToolPopularityItem[]
     applyPopularity(rankings)
   } catch (error) {
@@ -514,9 +516,15 @@ onMounted(() => {
   line-height: 1;
 }
 
+.quick-tool-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .quick-tool-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 8rpx;
 }
 
@@ -525,6 +533,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex: 0 0 112rpx;
   min-width: 0;
   min-height: 88rpx;
   gap: 6rpx;
@@ -756,11 +765,11 @@ onMounted(() => {
   }
 
   .quick-tool-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
   }
 
   .quick-tool-card {
+    flex-basis: 92px;
     min-height: 60px;
     padding: 8px 6px;
     border-radius: 12px;
