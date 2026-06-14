@@ -31,10 +31,14 @@
               muted: !day.isCurrentMonth,
               today: day.isToday,
               selected: selectedDay.dateText === day.dateText,
-              festival: Boolean(day.festival || day.solarTerm)
+              festival: Boolean(day.festival || day.solarTerm),
+              'rest-day': day.holiday?.isOffDay,
+              'adjusted-workday': day.holiday?.isWorkday
             }"
             @tap="selectDay(day)"
           >
+            <text class="holiday-rest-badge" v-if="day.holiday?.isOffDay">{{ day.holiday.label }}</text>
+            <text class="holiday-work-badge" v-else-if="day.holiday?.isWorkday">{{ day.holiday.label }}</text>
             <text class="solar-day">{{ day.day }}</text>
             <text class="lunar-day">{{ day.lunarText }}</text>
           </view>
@@ -89,9 +93,11 @@
           </view>
         </view>
 
-        <view class="festival-line" v-if="selectedDay.festival || selectedDay.solarTerm">
+        <view class="festival-line" v-if="selectedDay.festival || selectedDay.solarTerm || selectedDay.holiday">
           <text class="festival-tag" v-if="selectedDay.festival">{{ selectedDay.festival }}</text>
           <text class="festival-tag term" v-if="selectedDay.solarTerm">{{ selectedDay.solarTerm }}</text>
+          <text class="festival-tag holiday-off" v-if="selectedDay.holiday?.isOffDay">法定休息日 · {{ selectedDay.holiday.name }}</text>
+          <text class="festival-tag holiday-work" v-if="selectedDay.holiday?.isWorkday">调休上班 · {{ selectedDay.holiday.name }}</text>
         </view>
 
         <view class="almanac-grid">
@@ -282,6 +288,7 @@ const goSolarTerms = () => {
 }
 
 .day-cell {
+  position: relative;
   min-height: 90rpx;
   border-radius: 18rpx;
   background: #fffaf5;
@@ -311,6 +318,45 @@ const goSolarTerms = () => {
 
 .day-cell.festival:not(.selected) {
   background: #fff7ed;
+}
+
+.day-cell.rest-day:not(.selected) {
+  background: linear-gradient(180deg, #fff1f2 0%, #fff7ed 100%);
+  border-color: #fb7185;
+}
+
+.day-cell.adjusted-workday:not(.selected) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.holiday-rest-badge,
+.holiday-work-badge {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  min-width: 30rpx;
+  height: 30rpx;
+  padding: 0 6rpx;
+  border-radius: 999rpx;
+  color: #fff;
+  font-size: 18rpx;
+  line-height: 30rpx;
+  text-align: center;
+  font-weight: 700;
+}
+
+.holiday-rest-badge {
+  background: #e11d48;
+}
+
+.holiday-work-badge {
+  background: #475569;
+}
+
+.day-cell.selected .holiday-rest-badge,
+.day-cell.selected .holiday-work-badge {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .solar-day {
@@ -492,6 +538,16 @@ const goSolarTerms = () => {
 .festival-tag.term {
   background: #ecfdf5;
   color: #047857;
+}
+
+.festival-tag.holiday-off {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.festival-tag.holiday-work {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .almanac-grid {

@@ -62,6 +62,12 @@ assert.match(page, /selectedDay\.lunarText/, 'selected day should show lunar dat
 assert.match(page, /selectedDay\.suit/, 'selected day should show 宜 items')
 assert.match(page, /selectedDay\.avoid/, 'selected day should show 忌 items')
 assert.match(page, /selectedDay\.solarTerm/, 'selected day should show solar terms when available')
+assert.match(page, /day\.holiday\?\.isOffDay/, 'month grid should mark official rest days')
+assert.match(page, /class="holiday-rest-badge"/, 'calendar day cells should show a rest-day badge')
+assert.match(page, /selectedDay\.holiday\?\.isOffDay/, 'selected day details should show official rest-day information')
+assert.match(page, /selectedDay\.holiday\?\.isWorkday/, 'selected day details should distinguish adjusted workdays')
+assert.match(page, /\.day-cell\.rest-day/, 'official rest days should have a visible calendar-cell style')
+assert.match(page, /\.holiday-rest-badge/, 'official rest day badge should have a visible style')
 assert.match(page, /goPrevMonth/, 'calendar page should allow navigating to previous month')
 assert.match(page, /goNextMonth/, 'calendar page should allow navigating to next month')
 assert.match(page, /goToday/, 'calendar page should provide a return-to-today action')
@@ -95,6 +101,11 @@ assert.match(lunarUtil, /export\s+function\s+buildMonthDays/, 'lunar utility sho
 assert.match(lunarUtil, /const\s+solarTerms\s*=/, 'lunar utility should include solar term lookup')
 assert.match(lunarUtil, /const\s+suitPool\s*=/, 'lunar utility should generate daily 宜 items')
 assert.match(lunarUtil, /const\s+avoidPool\s*=/, 'lunar utility should generate daily 忌 items')
+assert.match(lunarUtil, /export\s+interface\s+HolidayInfo/, 'lunar utility should expose official holiday metadata')
+assert.match(lunarUtil, /const\s+officialHolidayMap\s*=/, 'lunar utility should include official holiday rest/workday lookup')
+assert.match(lunarUtil, /2026-02-15[\s\S]*春节[\s\S]*isOffDay:\s*true/, '2026 Spring Festival official rest days should be included')
+assert.match(lunarUtil, /2026-02-14[\s\S]*春节调休上班[\s\S]*isWorkday:\s*true/, '2026 adjusted Spring Festival workdays should be included')
+assert.match(lunarUtil, /holiday:\s*getHolidayInfo\(dayDate\)/, 'calendar day model should include official holiday info')
 
 assert.match(
   pkg.scripts.test,

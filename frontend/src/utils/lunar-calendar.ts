@@ -8,6 +8,13 @@ export interface SolarTermItem {
   desc: string
 }
 
+export interface HolidayInfo {
+  name: string
+  label: string
+  isOffDay?: boolean
+  isWorkday?: boolean
+}
+
 export interface CalendarDay {
   date: Date
   dateText: string
@@ -24,6 +31,7 @@ export interface CalendarDay {
   zodiac: string
   solarTerm: string
   festival: string
+  holiday?: HolidayInfo
   suit: string[]
   avoid: string[]
 }
@@ -106,6 +114,48 @@ const lunarFestivals: Record<string, string> = {
 
 const suitPool = ['祭祀', '祈福', '求嗣', '出行', '开市', '交易', '纳财', '嫁娶', '订盟', '动土', '安床', '入宅', '修造', '会友', '沐浴', '扫舍']
 const avoidPool = ['破土', '安葬', '开仓', '词讼', '远行', '搬迁', '嫁娶', '开市', '动土', '修造', '探病', '纳畜', '栽种', '置产', '赴任', '签约']
+
+const officialHolidayMap = {
+  '2026-01-01': { name: '元旦', label: '休', isOffDay: true },
+  '2026-01-02': { name: '元旦', label: '休', isOffDay: true },
+  '2026-01-03': { name: '元旦', label: '休', isOffDay: true },
+  '2026-01-04': { name: '元旦调休上班', label: '班', isWorkday: true },
+  '2026-02-14': { name: '春节调休上班', label: '班', isWorkday: true },
+  '2026-02-15': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-16': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-17': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-18': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-19': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-20': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-21': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-22': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-23': { name: '春节', label: '休', isOffDay: true },
+  '2026-02-28': { name: '春节调休上班', label: '班', isWorkday: true },
+  '2026-04-04': { name: '清明节', label: '休', isOffDay: true },
+  '2026-04-05': { name: '清明节', label: '休', isOffDay: true },
+  '2026-04-06': { name: '清明节', label: '休', isOffDay: true },
+  '2026-05-01': { name: '劳动节', label: '休', isOffDay: true },
+  '2026-05-02': { name: '劳动节', label: '休', isOffDay: true },
+  '2026-05-03': { name: '劳动节', label: '休', isOffDay: true },
+  '2026-05-04': { name: '劳动节', label: '休', isOffDay: true },
+  '2026-05-05': { name: '劳动节', label: '休', isOffDay: true },
+  '2026-05-09': { name: '劳动节调休上班', label: '班', isWorkday: true },
+  '2026-06-19': { name: '端午节', label: '休', isOffDay: true },
+  '2026-06-20': { name: '端午节', label: '休', isOffDay: true },
+  '2026-06-21': { name: '端午节', label: '休', isOffDay: true },
+  '2026-09-20': { name: '国庆节调休上班', label: '班', isWorkday: true },
+  '2026-09-25': { name: '中秋节', label: '休', isOffDay: true },
+  '2026-09-26': { name: '中秋节', label: '休', isOffDay: true },
+  '2026-09-27': { name: '中秋节', label: '休', isOffDay: true },
+  '2026-10-01': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-02': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-03': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-04': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-05': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-06': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-07': { name: '国庆节', label: '休', isOffDay: true },
+  '2026-10-10': { name: '国庆节调休上班', label: '班', isWorkday: true }
+}
 
 function pad(num: number): string {
   return String(num).padStart(2, '0')
@@ -195,6 +245,9 @@ export function formatDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+function getHolidayInfo(date: Date): HolidayInfo | undefined {
+  return officialHolidayMap[formatDate(date) as keyof typeof officialHolidayMap]
+}
 
 export function getSolarTermsForYear(year: number): SolarTermItem[] {
   return solarTermDefinitions.map((item, index) => {
@@ -240,6 +293,7 @@ export function getCalendarDay(date: Date, currentMonth = date.getMonth()): Cale
     zodiac: zodiacAnimals[(lunar.lunarYear - 4) % 12],
     solarTerm,
     festival,
+    holiday: getHolidayInfo(dayDate),
     suit: pickDailyItems(suitPool, seed, 5),
     avoid: pickDailyItems(avoidPool, seed + 17, 5)
   }
