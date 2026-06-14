@@ -35,6 +35,10 @@
           </view>
         </view>
 
+        <view class="hot-image-section card" v-if="hotImage">
+          <image class="hot-image" :src="hotImage" mode="widthFix"></image>
+        </view>
+
         <view class="content-card card" v-if="detail?.sections?.length">
           <text class="content-title">热搜内容</text>
           <view class="content-section" v-for="section in detail.sections" :key="section.title">
@@ -89,6 +93,7 @@ const keyword = ref('')
 const hot = ref('')
 const description = ref('')
 const sourceUrl = ref('')
+const hotImage = ref('')
 const rawHotData = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -172,6 +177,7 @@ onLoad((options: any) => {
   hot.value = decodeURIComponent(options?.hot || '')
   description.value = decodeURIComponent(options?.description || '')
   sourceUrl.value = decodeURIComponent(options?.url || '')
+  hotImage.value = decodeURIComponent(options?.image || '')
   rawHotData.value = decodeURIComponent(options?.raw || '')
   loadDetail()
 })
@@ -205,7 +211,8 @@ onLoad((options: any) => {
 }
 
 .keyword-card,
-.content-card {
+.content-card,
+.hot-image-section {
   margin-bottom: 22rpx;
 }
 
@@ -300,6 +307,13 @@ onLoad((options: any) => {
   font-size: 30rpx;
   font-weight: 820;
   margin-bottom: 18rpx;
+}
+
+.hot-image {
+  display: block;
+  width: 100%;
+  border-radius: 20rpx;
+  background: #ffedd5;
 }
 
 .content-section + .content-section {

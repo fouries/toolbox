@@ -42,9 +42,6 @@
           <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
-            <view class="hot-body" v-if="shouldShowHotImage(item)">
-              <image class="hot-image" :src="item.image" mode="aspectFill"></image>
-            </view>
             <text class="hot-desc" v-if="shouldShowHotDescription && item.description">{{ item.description }}</text>
             <view class="hot-meta">
               <text v-if="item.hot">热度：{{ item.hot }}</text>
@@ -88,7 +85,6 @@ const currentConfig = computed(() => platformTabs.find(item => item.id === activ
 const updateTimeText = computed(() => updateTime.value ? `更新时间：${updateTime.value}` : '实时热搜')
 const shouldShowHotDescription = computed(() => activePlatform.value !== 'baidu')
 const displayedHotItems = computed(() => activePlatform.value === 'baidu' ? hotItems.value.slice(0, 50) : hotItems.value)
-const shouldShowHotImage = (item: HotSearchItem) => activePlatform.value === 'baidu' && !!item.image
 
 const fetchHotSearch = async () => {
   loading.value = true
@@ -124,6 +120,7 @@ const openHotDetail = (item: HotSearchItem) => {
     `hot=${encodeURIComponent(item.hot || '')}`,
     `description=${encodeURIComponent(item.description || '')}`,
     `url=${encodeURIComponent(item.url || '')}`,
+    `image=${encodeURIComponent(item.image || '')}`,
     `raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
   ].join('&')
   uni.navigateTo({ url: `/pages/hot-search-detail/index?${params}` })
@@ -284,19 +281,6 @@ onLoad((options: any) => {
 .hot-rank.top {
   background: linear-gradient(135deg, #ef4444, #f97316);
   color: #fff;
-}
-
-.hot-body {
-  margin-top: 14rpx;
-  display: block;
-}
-
-.hot-image {
-  width: 100%;
-  height: 240rpx;
-  border-radius: 18rpx;
-  background: #ffedd5;
-  object-fit: cover;
 }
 
 .hot-main {
