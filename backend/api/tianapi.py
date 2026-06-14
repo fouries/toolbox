@@ -349,6 +349,107 @@ class TianApiService:
         )
 
     @staticmethod
+    def _score_related_news(keyword: str, item: Dict[str, Any]) -> int:
+        text = f"{item.get('title') or ''} {item.get('description') or ''} {item.get('source') or ''}".lower()
+        keyword_text = keyword.lower().strip()
+        if not keyword_text:
+            return 0
+        score = 0
+        if keyword_text in text:
+            score += 10
+        for token in re.split(r"[\s,，。；;：:、#]+", keyword_text):
+            token = token.strip()
+            if token and token in text:
+                score += 2
+        return score
+
+    @staticmethod
+    def _normalize_related_news(item: Dict[str, Any]) -> Dict[str, str]:
+        return {
+            "title": str(item.get("title") or ""),
+            "description": str(item.get("description") or item.get("digest") or ""),
+            "source": str(item.get("source") or item.get("from") or ""),
+            "ctime": str(item.get("ctime") or item.get("time") or ""),
+            "url": str(item.get("url") or item.get("link") or ""),
+            "picUrl": str(item.get("picUrl") or item.get("picurl") or ""),
+        }
+
+    @staticmethod
+    def _build_hot_search_detail(
+        platform: str,
+        keyword: str,
+        hot: str = "",
+        description: str = "",
+        url: str = "",
+        related_news: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        platform = platform if platform in {"weibo", "baidu"} else "weibo"
+        platform_name = "微博热搜榜" if platform == "weibo" else "百度热搜"
+        related_news = related_news or []
+        title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
+        hot_text = f"，当前热度为 {hot}" if hot else ""
+        desc_text = description or f"“{keyword}”正在{platform_name}受到关注。"
+        summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
+        news_titles = "；".join(item.get("title", "") for item in related_news[:3] if item.get("title"))
+        sections = [
+            {"title": "热点概览", "body": summary},
+            {"title": "为什么值得关注", "body": f"该话题来自{platform_name}，通常反映用户短时间内集中搜索、讨论或转发的公共关注点。"},
+            {"title": "相关资讯", "body": news_titles or "暂未匹配到强相关资讯，可稍后刷新或复制原链接查看平台搜索结果。"},
+            {"title": "查看建议", "body": "小程序端无法直接打开微博、百度等第三方搜索页，已优先展示站内聚合内容，并保留复制原链接兜底。"},
+        ]
+        content = "\n".join(section["body"] for section in sections if section["body"])
+        return {
+            "platform": platform,
+            "keyword": keyword,
+            "title": title,
+            "hot": hot,
+            "description": description,
+            "sourceUrl": url,
+            "summary": summary,
+            "content": content,
+            "sections": sections,
+            "relatedNews": related_news,
+            "updatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+
+    @staticmethod
+    async def get_hot_search_detail(
+        platform: str = "weibo",
+        keyword: str = "",
+        hot: str = "",
+        description: str = "",
+        url: str = "",
+    ) -> Dict[str, Any]:
+        """热搜详情：按热搜词聚合站内资讯并生成小程序可展示正文。"""
+        keyword = str(keyword or "").strip()
+        platform = platform if platform in {"weibo", "baidu"} else "weibo"
+        all_news: List[Dict[str, Any]] = []
+        for category in ("internet", "esports", "auto"):
+            result = await TianApiService.get_info_news(category)
+            if result.get("code") == 200 and isinstance(result.get("newslist"), list):
+                all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
+
+        scored = []
+        for item in all_news:
+            normalized = TianApiService._normalize_related_news(item)
+            if not normalized["title"]:
+                continue
+            scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
+
+        matched = [item for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True) if score > 0]
+        if not matched:
+            matched = [item for _score, item in scored[:8]]
+        data = TianApiService._build_hot_search_detail(
+            platform=platform,
+            keyword=keyword,
+            hot=str(hot or ""),
+            description=str(description or ""),
+            url=str(url or ""),
+            related_news=matched[:8],
+        )
+        return {"code": 200, "msg": "success", "data": data}
+
+    @staticmethod
     async def get_gold_price() -> Dict[str, Any]:
         """黄金行情查询。"""
         cache_key = make_cache_key("gold", kinds="au9999,au9995,agTplusD")

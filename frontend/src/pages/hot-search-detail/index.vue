@@ -6,54 +6,70 @@
         <text class="subtitle">{{ platformTitle }}</text>
       </view>
 
-      <view class="keyword-card card">
-        <view class="keyword-top">
-          <text class="keyword-label">热搜关键词</text>
-          <text class="platform-tag">{{ platformName }}</text>
-        </view>
-        <text class="keyword-title">{{ keyword || '未知热搜' }}</text>
-        <text class="keyword-desc" v-if="description">{{ description }}</text>
-        <view class="keyword-meta">
-          <text v-if="hot">热度：{{ hot }}</text>
-          <text>{{ sourceUrl ? '可复制原热搜链接' : '可复制关键词' }}</text>
-        </view>
-        <view class="action-row">
-          <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
-        </view>
-      </view>
-
-      <view class="section-header">
-        <text class="section-title">相关资讯</text>
-        <button class="refresh-btn" @tap="fetchRelatedNews" :disabled="loading">{{ loading ? '加载中...' : '刷新' }}</button>
-      </view>
-
       <view class="loading" v-if="loading">
         <text class="loading-icon">⏳</text>
-        <text class="loading-text">正在加载相关资讯...</text>
+        <text class="loading-text">正在生成热搜内容...</text>
       </view>
 
       <view class="error-box card" v-else-if="error">
         <text class="error-text">{{ error }}</text>
-        <button class="retry-btn" @tap="fetchRelatedNews">重新加载</button>
+        <button class="retry-btn" @tap="loadDetail">重新加载</button>
+        <button class="copy-btn secondary" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
       </view>
 
-      <view class="news-list" v-else>
-        <view class="news-card card" v-for="item in relatedNews" :key="item.title" @tap="openNewsDetail(item)">
-          <view class="news-main">
-            <text class="news-title">{{ item.title }}</text>
-            <text class="news-desc" v-if="item.description">{{ item.description }}</text>
-            <view class="news-meta">
-              <text>{{ item.source || '资讯' }}</text>
-              <text v-if="item.ctime">{{ item.ctime }}</text>
-            </view>
+      <view v-else>
+        <view class="keyword-card card">
+          <view class="keyword-top">
+            <text class="keyword-label">热搜关键词</text>
+            <text class="platform-tag">{{ platformName }}</text>
           </view>
-          <text class="news-arrow">›</text>
+          <text class="keyword-title">{{ detail?.keyword || keyword || '未知热搜' }}</text>
+          <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
+          <view class="keyword-meta">
+            <text v-if="detail?.hot || hot">热度：{{ detail?.hot || hot }}</text>
+            <text v-if="detail?.updatedAt">更新：{{ detail.updatedAt }}</text>
+            <text>{{ sourceUrl ? '可复制原热搜链接' : '可复制关键词' }}</text>
+          </view>
+          <view class="action-row">
+            <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
+          </view>
         </view>
-      </view>
 
-      <view class="note-card card">
-        <text class="note-title">说明</text>
-        <text class="note-text">小程序不能直接打开微博、百度等第三方搜索页，本页用原生页面展示热搜信息和相关资讯；需要查看原搜索结果时可复制原链接。</text>
+        <view class="content-card card" v-if="detail?.sections?.length">
+          <text class="content-title">热搜内容</text>
+          <view class="content-section" v-for="section in detail.sections" :key="section.title">
+            <text class="section-subtitle">{{ section.title }}</text>
+            <text class="section-body">{{ section.body }}</text>
+          </view>
+        </view>
+
+        <view class="section-header">
+          <text class="section-title">相关资讯</text>
+          <button class="refresh-btn" @tap="loadDetail" :disabled="loading">刷新</button>
+        </view>
+
+        <view class="news-list" v-if="relatedNews.length">
+          <view class="news-card card" v-for="item in relatedNews" :key="item.title" @tap="openNewsDetail(item)">
+            <view class="news-main">
+              <text class="news-title">{{ item.title }}</text>
+              <text class="news-desc" v-if="item.description">{{ item.description }}</text>
+              <view class="news-meta">
+                <text>{{ item.source || '资讯' }}</text>
+                <text v-if="item.ctime">{{ item.ctime }}</text>
+              </view>
+            </view>
+            <text class="news-arrow">›</text>
+          </view>
+        </view>
+
+        <view class="empty-card card" v-else>
+          <text class="empty-text">暂未匹配到相关资讯，可稍后刷新或复制原链接查看。</text>
+        </view>
+
+        <view class="note-card card">
+          <text class="note-title">说明</text>
+          <text class="note-text">小程序不能直接打开微博、百度等第三方搜索页，本页由后端按热搜词聚合站内资讯并生成摘要；需要查看原搜索结果时可复制原链接。</text>
+        </view>
       </view>
     </view>
   </view>
@@ -63,7 +79,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getInfoNews, type NewsItem } from '@/api'
+import { getHotSearchDetail, type HotSearchDetailData, type NewsItem } from '@/api'
 
 const { themeClass } = useTheme()
 
@@ -75,9 +91,10 @@ const description = ref('')
 const sourceUrl = ref('')
 const loading = ref(false)
 const error = ref('')
-const relatedNews = ref<NewsItem[]>([])
+const detail = ref<HotSearchDetailData | null>(null)
 
 const platformName = computed(() => platform.value === 'baidu' ? '百度热搜' : '微博热搜榜')
+const relatedNews = computed(() => detail.value?.relatedNews || [])
 
 const normalizeNewsUrl = (url?: string): string => {
   if (!url) return ''
@@ -99,22 +116,32 @@ const copyHotLink = () => {
   })
 }
 
-const fetchRelatedNews = async () => {
+const loadDetail = async () => {
+  if (!keyword.value) {
+    error.value = '缺少热搜关键词'
+    return
+  }
   loading.value = true
   error.value = ''
   try {
-    const res: any = await getInfoNews('internet')
-    if (res.code === 200 && Array.isArray(res.newslist)) {
-      const key = keyword.value.trim()
-      const matched = key
-        ? res.newslist.filter((item: NewsItem) => `${item.title || ''} ${item.description || ''}`.includes(key))
-        : []
-      relatedNews.value = matched.length ? matched : res.newslist.slice(0, 8)
-      if (!relatedNews.value.length) error.value = '暂无相关资讯'
+    const res = await getHotSearchDetail({
+      platform: platform.value,
+      keyword: keyword.value,
+      hot: hot.value,
+      description: description.value,
+      url: sourceUrl.value
+    })
+    if (res.code === 200 && res.data) {
+      detail.value = res.data
+      sourceUrl.value = res.data.sourceUrl || sourceUrl.value
+      hot.value = res.data.hot || hot.value
+      description.value = res.data.description || description.value
     } else {
-      error.value = res.msg || '相关资讯加载失败'
+      detail.value = null
+      error.value = res.msg || '热搜内容加载失败'
     }
   } catch (err: any) {
+    detail.value = null
     error.value = err.message || '网络错误'
   } finally {
     loading.value = false
@@ -143,7 +170,7 @@ onLoad((options: any) => {
   hot.value = decodeURIComponent(options?.hot || '')
   description.value = decodeURIComponent(options?.description || '')
   sourceUrl.value = decodeURIComponent(options?.url || '')
-  fetchRelatedNews()
+  loadDetail()
 })
 </script>
 
@@ -164,15 +191,18 @@ onLoad((options: any) => {
 }
 
 .keyword-card,
+.content-card,
 .news-card,
 .note-card,
+.empty-card,
 .error-box {
   background: rgba(255, 255, 255, 0.96);
   border: 1rpx solid rgba(249, 115, 22, 0.14);
   box-shadow: 0 14rpx 38rpx rgba(194, 65, 12, 0.08);
 }
 
-.keyword-card {
+.keyword-card,
+.content-card {
   margin-bottom: 22rpx;
 }
 
@@ -194,7 +224,11 @@ onLoad((options: any) => {
 .error-text,
 .news-title,
 .news-desc,
-.section-title {
+.section-title,
+.content-title,
+.section-subtitle,
+.section-body,
+.empty-text {
   display: block;
 }
 
@@ -223,9 +257,9 @@ onLoad((options: any) => {
 
 .keyword-desc {
   margin-top: 12rpx;
-  color: #64748b;
-  font-size: 25rpx;
-  line-height: 1.65;
+  color: #475569;
+  font-size: 26rpx;
+  line-height: 1.7;
 }
 
 .keyword-meta {
@@ -251,6 +285,37 @@ onLoad((options: any) => {
   color: #fff;
   font-size: 25rpx;
   font-weight: 700;
+}
+
+.copy-btn.secondary {
+  margin-top: 18rpx;
+  background: #fb923c;
+}
+
+.content-title {
+  color: #7c2d12;
+  font-size: 30rpx;
+  font-weight: 820;
+  margin-bottom: 18rpx;
+}
+
+.content-section + .content-section {
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #ffedd5;
+}
+
+.section-subtitle {
+  color: #c2410c;
+  font-size: 27rpx;
+  font-weight: 760;
+}
+
+.section-body {
+  margin-top: 8rpx;
+  color: #475569;
+  font-size: 25rpx;
+  line-height: 1.75;
 }
 
 .section-header {
@@ -325,14 +390,21 @@ onLoad((options: any) => {
   font-size: 46rpx;
 }
 
-.error-box {
+.error-box,
+.empty-card {
   text-align: center;
 }
 
-.error-text {
+.error-text,
+.empty-text {
   color: #ef4444;
   font-size: 26rpx;
   margin-bottom: 24rpx;
+}
+
+.empty-text {
+  color: #64748b;
+  margin-bottom: 0;
 }
 
 .note-card {
@@ -358,8 +430,10 @@ onLoad((options: any) => {
   }
 
   .keyword-card,
+  .content-card,
   .news-card,
   .note-card,
+  .empty-card,
   .error-box {
     padding: 28px;
   }

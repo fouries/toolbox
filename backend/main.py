@@ -107,6 +107,12 @@ async def hot_search(platform: str = "weibo"):
     result = await TianApiService.get_hot_search(platform)
     return result
 
+@app.get("/api/hot-search/detail", summary="热搜详情", tags=["天行数据"])
+async def hot_search_detail(platform: str = "weibo", keyword: str = "", hot: str = "", description: str = "", url: str = ""):
+    """按热搜关键词聚合站内资讯，生成小程序原生详情内容。"""
+    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url)
+    return result
+
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
 async def reverse_location(latitude: float, longitude: float):
     """根据经纬度解析省、市、区，用于天气和油价定位。"""

@@ -86,6 +86,25 @@ export interface HotSearchData {
   items: HotSearchItem[]
 }
 
+export interface HotSearchDetailSection {
+  title: string
+  body: string
+}
+
+export interface HotSearchDetailData {
+  platform: string
+  keyword: string
+  title: string
+  hot?: string
+  description?: string
+  sourceUrl?: string
+  summary: string
+  content: string
+  sections: HotSearchDetailSection[]
+  relatedNews: NewsItem[]
+  updatedAt?: string
+}
+
 export interface GoldPriceItem {
   name?: string
   type?: string
@@ -206,6 +225,17 @@ export const getDailyBrief = () => {
 
 export const getHotSearch = (platform: string = 'weibo') => {
   return request<HotSearchData>(`/api/hot-search?platform=${encodeURIComponent(platform)}`)
+}
+
+export const getHotSearchDetail = (params: {
+  platform?: string
+  keyword: string
+  hot?: string
+  description?: string
+  url?: string
+}) => {
+  const query = buildQueryString(params as Record<string, unknown>)
+  return request<HotSearchDetailData>(`/api/hot-search/detail?${query}`, { timeout: 20000 })
 }
 
 export const getGoldPrice = () => {

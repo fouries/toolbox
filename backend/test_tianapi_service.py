@@ -155,6 +155,36 @@ def test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items():
     assert baidu['data']['items'][0]['url'] == 'https://m.baidu.com/s?word=test'
 
 
+def test_hot_search_detail_builds_content_from_keyword_and_related_news():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": [
+            {"title": "无关科技新闻", "description": "普通资讯", "source": "科技", "url": "https://example.com/tech"},
+            {"title": "微博话题 引发关注", "description": "网友正在讨论微博话题的最新进展", "source": "互联网", "url": "https://example.com/topic"},
+        ]}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='weibo',
+        keyword='微博话题',
+        hot='123456',
+        description='话题摘要',
+        url='https://s.weibo.com/weibo?q=test',
+    ))
+
+    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/internet/index', '/esports/index', '/auto/index']
+    assert result['code'] == 200
+    assert result['data']['platform'] == 'weibo'
+    assert result['data']['keyword'] == '微博话题'
+    assert result['data']['sourceUrl'] == 'https://s.weibo.com/weibo?q=test'
+    assert '微博话题' in result['data']['summary']
+    assert '微博话题' in result['data']['content']
+    assert result['data']['sections']
+    assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
+
+
 if __name__ == '__main__':
     setup_module(None)
     for test in [
@@ -164,6 +194,7 @@ if __name__ == '__main__':
         test_crude_endpoint_queries_wti_and_blt_and_normalizes_market_fields,
         test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines,
         test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
+        test_hot_search_detail_builds_content_from_keyword_and_related_news,
     ]:
         setup_module(None)
         test()
