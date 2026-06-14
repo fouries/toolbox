@@ -15,6 +15,7 @@ class DummyCache:
 class DummyHttpClient:
     calls = []
     responses = {}
+    text_responses = {}
 
     def __init__(self, *args, **kwargs):
         pass
@@ -25,11 +26,21 @@ class DummyHttpClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         return None
 
-    async def get(self, url, params=None):
+    async def get(self, url, params=None, headers=None):
         self.__class__.calls.append((url, params or {}))
         path = url.replace('https://apis.tianapi.com', '')
         key = (path, (params or {}).get('code'))
         return self.__class__.responses.get(key) or self.__class__.responses.get((path, None)) or {"code": 404, "msg": "missing mock"}
+
+    async def get_text(self, url, params=None, headers=None):
+        self.__class__.calls.append((url, params or {}))
+        path = url.replace('https://apis.tianapi.com', '')
+        key = (path, (params or {}).get('code'))
+        if key in self.__class__.text_responses:
+            return self.__class__.text_responses[key]
+        if (path, None) in self.__class__.text_responses:
+            return self.__class__.text_responses[(path, None)]
+        return ""
 
 
 def run(coro):
@@ -44,6 +55,7 @@ def setup_module(module):
     setattr(tianapi.settings, 'TIANAPI_KEY', 'test-' + 'key')
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {}
 
 
 def test_news_endpoints_use_real_paths_and_normalize_nested_newslist():
@@ -193,6 +205,41 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
 
 
+def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+    DummyHttpClient.text_responses = {
+        ('https://www.sogou.com/sogou', None): '''
+        <div class="vrwrap">
+          <h3 class="vr-title"><a href="/link?url=abc">世界杯真正的预言家相关新闻</a></h3>
+          <div class="fz-mid space-txt"><span>2026年6月13日-</span>这是一条围绕世界杯真正的预言家的新闻摘要，介绍预测结果和赛后讨论。</div>
+          <div class="citeurl"><span>搜狐 - www.sohu.com</span><span class="cite-date">- 2026-6-13</span></div>
+        </div>
+        '''
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='weibo',
+        keyword='世界杯出现了真正的预言家',
+        hot='1039923',
+        description='',
+        url='https://s.weibo.com/weibo?q=test',
+    ))
+
+    paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
+    assert paths[:3] == ['/internet/index', '/esports/index', '/auto/index']
+    assert 'https://www.sogou.com/sogou' in paths
+    assert result['code'] == 200
+    assert result['data']['relatedNews'][0]['title'] == '世界杯真正的预言家相关新闻'
+    assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['summary']
+    assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['content']
+    assert '该话题来自微博热搜榜' not in result['data']['content']
+
+
 def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
@@ -303,6 +350,7 @@ if __name__ == '__main__':
         test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines,
         test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
+        test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,

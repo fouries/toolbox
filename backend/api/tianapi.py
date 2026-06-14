@@ -1,8 +1,9 @@
 import json
 import re
+import html
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urljoin
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
@@ -345,6 +346,79 @@ class TianApiService:
         )
 
     @staticmethod
+    def _strip_html_tags(value: str) -> str:
+        value = re.sub(r"<script[\s\S]*?</script>", " ", str(value or ""), flags=re.IGNORECASE)
+        value = re.sub(r"<style[\s\S]*?</style>", " ", value, flags=re.IGNORECASE)
+        value = re.sub(r"<!--.*?-->", "", value, flags=re.DOTALL)
+        value = re.sub(r"<[^>]+>", " ", value)
+        value = html.unescape(value)
+        return re.sub(r"\s+", " ", value).strip()
+
+    @staticmethod
+    def _clean_search_title(value: str) -> str:
+        value = re.sub(r"<!--/?red_(?:beg|end)-->", "", str(value or ""))
+        return TianApiService._strip_html_tags(value)
+
+    @staticmethod
+    def _clean_search_description(value: str) -> str:
+        value = re.sub(r"<!--/?red_(?:beg|end)-->", "", str(value or ""))
+        value = re.sub(r"^\s*\d{4}年\d{1,2}月\d{1,2}日\s*[-—－]?\s*", "", value)
+        return TianApiService._strip_html_tags(value)
+
+    @staticmethod
+    def _parse_sogou_news_results(text: str, keyword: str, limit: int = 8) -> List[Dict[str, str]]:
+        results: List[Dict[str, str]] = []
+        seen_titles = set()
+        blocks = re.findall(r"<div[^>]+class=[\"'][^\"']*(?:vrwrap|result)[^\"']*[\"'][^>]*>[\s\S]*?(?=<div[^>]+class=[\"'][^\"']*(?:vrwrap|result)[^\"']*[\"']|</body>|$)", text or "", flags=re.IGNORECASE)
+        if not blocks:
+            blocks = re.findall(r"<h3[\s\S]*?</h3>[\s\S]{0,1200}", text or "", flags=re.IGNORECASE)
+        for block in blocks:
+            title_match = re.search(r"<h3[^>]*>[\s\S]*?<a[^>]*href=[\"']([^\"']+)[\"'][^>]*>([\s\S]*?)</a>", block, flags=re.IGNORECASE)
+            if not title_match:
+                continue
+            title = TianApiService._clean_search_title(title_match.group(2))
+            if not title or title in seen_titles or "推荐您搜索" in title:
+                continue
+            desc_match = re.search(r"<div[^>]+class=[\"'][^\"']*(?:space-txt|str-text-info|ft|fz-mid)[^\"']*[\"'][^>]*>([\s\S]*?)</div>", block, flags=re.IGNORECASE)
+            description = TianApiService._clean_search_description(desc_match.group(1)) if desc_match else ""
+            if not description and keyword not in title:
+                continue
+            source_match = re.search(r"<div[^>]+class=[\"'][^\"']*citeurl[^\"']*[\"'][^>]*>([\s\S]*?)</div>", block, flags=re.IGNORECASE)
+            source = TianApiService._strip_html_tags(source_match.group(1)) if source_match else "搜狗搜索"
+            href = html.unescape(title_match.group(1))
+            url = urljoin("https://www.sogou.com/", href)
+            results.append({
+                "title": title,
+                "description": description,
+                "source": source,
+                "ctime": "",
+                "url": url,
+            })
+            seen_titles.add(title)
+            if len(results) >= limit:
+                break
+        return results
+
+    @staticmethod
+    async def _fetch_keyword_news(keyword: str, limit: int = 8) -> List[Dict[str, str]]:
+        keyword = str(keyword or "").strip()
+        if not keyword:
+            return []
+        try:
+            async with HttpClient(timeout=15) as client:
+                text = await client.get_text(
+                    "https://www.sogou.com/sogou",
+                    params={"query": keyword, "ie": "utf8"},
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    },
+                )
+        except Exception:
+            return []
+        return TianApiService._parse_sogou_news_results(text, keyword, limit=limit)
+
+    @staticmethod
     def _score_related_news(keyword: str, item: Dict[str, Any]) -> int:
         text = f"{item.get('title') or ''} {item.get('description') or ''} {item.get('source') or ''}".lower()
         keyword_text = keyword.lower().strip()
@@ -485,6 +559,8 @@ class TianApiService:
             scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
         matched = [item for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True) if score > 0]
+        if not matched:
+            matched = await TianApiService._fetch_keyword_news(keyword, limit=8)
         if not matched:
             matched = [item for _score, item in scored[:8]]
         data = TianApiService._build_hot_search_detail(
