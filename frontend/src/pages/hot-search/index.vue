@@ -38,11 +38,11 @@
       </view>
 
       <view class="hot-list" v-else>
-        <view class="hot-card card" v-for="item in hotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
+        <view class="hot-card card" v-for="item in displayedHotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
           <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
-            <text class="hot-desc" v-if="item.description">{{ item.description }}</text>
+            <text class="hot-desc" v-if="shouldShowHotDescription && item.description">{{ item.description }}</text>
             <view class="hot-meta">
               <text v-if="item.hot">热度：{{ item.hot }}</text>
               <text>{{ item.url ? '点击查看详情' : '点击查看相关资讯' }}</text>
@@ -83,6 +83,8 @@ const updateTime = ref('')
 
 const currentConfig = computed(() => platformTabs.find(item => item.id === activePlatform.value) || platformTabs[0])
 const updateTimeText = computed(() => updateTime.value ? `更新时间：${updateTime.value}` : '实时热搜')
+const shouldShowHotDescription = computed(() => activePlatform.value !== 'baidu')
+const displayedHotItems = computed(() => activePlatform.value === 'baidu' ? hotItems.value.slice(0, 50) : hotItems.value)
 
 const fetchHotSearch = async () => {
   loading.value = true
