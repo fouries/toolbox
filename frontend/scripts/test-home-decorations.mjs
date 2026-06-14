@@ -5,6 +5,10 @@ import path from 'node:path'
 const homePath = path.resolve('src/pages/index/index.vue')
 const source = fs.readFileSync(homePath, 'utf8')
 const quickToolListBlock = source.match(/\.quick-tool-list\s*\{[^}]*\}/)?.[0] || ''
+const templateBlock = source.match(/<template>[\s\S]*<\/template>/)?.[0] || ''
+const searchIndex = templateBlock.indexOf('class="tool-search-wrap"')
+const quickIndex = templateBlock.indexOf('class="quick-panel"')
+const categoryIndex = templateBlock.indexOf('class="category-scroll"')
 
 assert.doesNotMatch(source, /hero-bg-dot|dot-one|dot-two/, 'home page should not render colored corner decoration dots')
 
@@ -13,6 +17,13 @@ assert.match(source, /\.tool-item\s*\{[\s\S]*min-height:\s*156rpx;/, 'mobile too
 assert.match(source, /\.tool-item\s*\{[\s\S]*align-items:\s*flex-start;/, 'tool cards should use a clean left-aligned content layout')
 assert.match(source, /\.tool-icon\s*\{[\s\S]*width:\s*72rpx;[\s\S]*height:\s*72rpx;/, 'tool icons should be scaled down for compact cards')
 assert.match(source, /@media\s*\(min-width:\s*768px\)[\s\S]*\.tool-item\s*\{[\s\S]*min-height:\s*136px;/, 'desktop tool cards should also be compact')
+
+assert.ok(searchIndex !== -1 && quickIndex !== -1 && categoryIndex !== -1, 'home page should render search, popular tools, and categories')
+assert.ok(searchIndex < quickIndex && quickIndex < categoryIndex, 'search bar should sit above popular tools, and popular tools should sit above categories')
+assert.match(source, /<button\s+class="search-submit"\s+@click="submitSearch">搜索<\/button>/, 'search bar should include a search button on the right')
+assert.match(source, /const\s+submitSearch\s*=\s*\(\)\s*=>\s*\{[\s\S]*searchText\.value\s*=\s*searchText\.value\.trim\(\)/, 'search button should normalize the current search text')
+assert.match(source, /\.tool-search\s*\{[\s\S]*gap:\s*12rpx;/, 'search input and button should have compact spacing')
+assert.match(source, /\.search-submit\s*\{[\s\S]*flex-shrink:\s*0;[\s\S]*height:\s*56rpx;/, 'search button should stay fixed on the right side of the search bar')
 
 assert.match(source, /<scroll-view\s+class="quick-tool-scroll"\s+scroll-x="true"\s+show-scrollbar="false">[\s\S]*<view class="quick-tool-list">/, 'popular tools should render in a one-row horizontal scroll view')
 assert.match(source, /getPopularTools\(10\)/, 'home page should request up to 10 popular tool rankings from backend')

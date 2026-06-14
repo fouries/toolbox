@@ -2,6 +2,21 @@
   <view :class="['container', themeClass]">
     <view class="page-shell home-shell">
       <view class="hero-section">
+        <view class="tool-search-wrap">
+          <view class="search-box tool-search">
+            <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
+            <input
+              class="search-input"
+              placeholder="搜索"
+              confirm-type="search"
+              v-model="searchText"
+              @confirm="submitSearch"
+            />
+            <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
+            <button class="search-submit" @click="submitSearch">搜索</button>
+          </view>
+        </view>
+
         <view class="quick-panel">
           <view class="quick-panel-title">
             <text class="quick-panel-title-text">热门工具</text>
@@ -28,19 +43,6 @@
         </view>
 
         <view class="main-panel">
-          <view class="tool-search-wrap">
-            <view class="search-box tool-search">
-              <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
-              <input
-                class="search-input"
-                placeholder="搜索"
-                confirm-type="search"
-                v-model="searchText"
-              />
-              <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
-            </view>
-          </view>
-
           <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
             <view class="category-list">
               <view
@@ -177,6 +179,10 @@ const filteredTools = computed(() => {
 const clearSearch = () => {
   searchText.value = ''
   activeCategory.value = 'all'
+}
+
+const submitSearch = () => {
+  searchText.value = searchText.value.trim()
 }
 
 const applyPopularity = (rankings: ToolPopularityItem[]) => {
@@ -319,13 +325,31 @@ onMounted(() => {
 }
 
 .tool-search-wrap {
-  margin: -2rpx 0 22rpx;
+  margin: 0;
 }
 
 .tool-search {
+  gap: 12rpx;
   background: linear-gradient(135deg, var(--theme-primary-soft, #eef5ff) 0%, var(--theme-surface, #ffffff) 100%);
   border-color: var(--theme-border, rgba(226, 232, 240, 0.9));
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 24rpx rgba(20, 35, 90, 0.05);
+}
+
+.search-submit {
+  flex-shrink: 0;
+  height: 56rpx;
+  line-height: 56rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: var(--theme-primary, #1677ff);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.search-submit::after {
+  border: 0;
 }
 
 .theme-night .tool-search {
@@ -751,10 +775,17 @@ onMounted(() => {
   .meta-icon-text { font-size: 13px; }
   .meta-label { font-size: 13px; }
   .search-box { padding: 14px 20px; }
-  .tool-search-wrap { margin: 0 0 24px; }
-  .tool-search { max-width: 640px; }
+  .tool-search-wrap { margin: 0; }
+  .tool-search { max-width: none; }
   .search-input { font-size: 16px; }
+  .search-submit {
+    height: 34px;
+    line-height: 34px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
   .quick-panel {
+    grid-column: 1 / -1;
     padding: 28px;
     border-radius: 24px;
   }
