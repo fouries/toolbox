@@ -28,6 +28,9 @@
             <image class="hot-image" :src="hotImage" mode="widthFix"></image>
           </view>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
+          <view class="detail-content-inline" v-if="detailContentLines.length">
+            <text class="detail-content-line" v-for="line in detailContentLines" :key="line">{{ line }}</text>
+          </view>
           <view class="keyword-meta">
             <text v-if="detail?.hot || hot">热度：{{ detail?.hot || hot }}</text>
             <text v-if="detail?.updatedAt">更新：{{ detail.updatedAt }}</text>
@@ -92,6 +95,18 @@ const detail = ref<HotSearchDetailData | null>(null)
 
 const platformName = computed(() => platform.value === 'baidu' ? '百度热搜榜' : '微博热搜榜')
 const relatedNews = computed(() => detail.value?.relatedNews || [])
+const detailContentLines = computed(() => {
+  const sectionLines = (detail.value?.sections || [])
+    .filter(section => section.title !== `${platformName.value}返回信息`)
+    .flatMap(section => [section.body])
+    .map(line => String(line || '').trim())
+    .filter(Boolean)
+  const summary = String(detail.value?.summary || description.value || '').trim()
+  const uniqueLines = Array.from(new Set(sectionLines))
+    .filter(line => line !== detail.value?.summary)
+  if (uniqueLines.length) return uniqueLines
+  return summary ? [summary] : []
+})
 
 const normalizeNewsUrl = (url?: string): string => {
   if (!url) return ''
@@ -217,6 +232,7 @@ onLoad((options: any) => {
 .keyword-label,
 .keyword-title,
 .keyword-desc,
+.detail-content-line,
 .note-title,
 .note-text,
 .loading-icon,
@@ -292,13 +308,6 @@ onLoad((options: any) => {
   background: #fb923c;
 }
 
-.content-title {
-  color: #7c2d12;
-  font-size: 30rpx;
-  font-weight: 820;
-  margin-bottom: 18rpx;
-}
-
 .hot-image-section {
   margin-top: 16rpx;
 }
@@ -310,23 +319,20 @@ onLoad((options: any) => {
   background: #ffedd5;
 }
 
-.content-section + .content-section {
-  margin-top: 20rpx;
+.detail-content-inline {
+  margin-top: 18rpx;
   padding-top: 18rpx;
   border-top: 1rpx solid #ffedd5;
 }
 
-.section-subtitle {
-  color: #c2410c;
-  font-size: 27rpx;
-  font-weight: 760;
-}
-
-.section-body {
-  margin-top: 8rpx;
+.detail-content-line {
   color: #475569;
   font-size: 25rpx;
   line-height: 1.75;
+}
+
+.detail-content-line + .detail-content-line {
+  margin-top: 10rpx;
 }
 
 .section-header {
