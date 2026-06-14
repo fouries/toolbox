@@ -49,8 +49,44 @@ assert.match(
 
 assert.match(
   source,
-  /实时油价/,
-  'realtime oil price card should be labelled clearly'
+  /实时油价参考/,
+  'realtime oil price card should be labelled as reference data'
+)
+
+assert.match(
+  source,
+  /每日更新，接口缓存约\s*1\s*小时/,
+  'realtime oil price card should explain data timeliness'
+)
+
+assert.match(
+  source,
+  /const\s+oilUpdateText\s*=\s*\(\)\s*=>/,
+  'oil price page should provide an update-time fallback when API omits time'
+)
+
+assert.match(
+  source,
+  /接口未返回具体时间（每日更新）/,
+  'oil price page should show a clear update-time fallback when API omits time'
+)
+
+assert.match(
+  source,
+  /const\s+formatCrudeName\s*=\s*\(item:\s*CrudeOilItem\)\s*=>/,
+  'oil price page should format crude oil names explicitly'
+)
+
+assert.match(
+  source,
+  /WTI Crude Oil|Brent Crude Oil/,
+  'crude oil names should be displayed in English'
+)
+
+assert.doesNotMatch(
+  source,
+  /item\.name \|\| item\.type \|\| '原油'/,
+  'crude oil card should not display upstream Chinese crude names directly'
 )
 
 assert.match(

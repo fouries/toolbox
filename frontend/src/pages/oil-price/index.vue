@@ -48,14 +48,14 @@
       <view class="realtime-oil-card" v-if="oilData && !loading">
         <view class="realtime-card-top">
           <view>
-            <text class="realtime-title">实时油价</text>
-            <text class="realtime-subtitle">{{ selectedProvince }} 当前汽柴油参考价</text>
+            <text class="realtime-title">实时油价参考</text>
+            <text class="realtime-subtitle">{{ selectedProvince }} 汽柴油参考价 · 每日更新，接口缓存约 1 小时</text>
           </view>
           <text class="oil-province-label">单位：元/升</text>
         </view>
 
-        <view class="update-time" v-if="oilData[0]?.time">
-          <text>更新时间: {{ oilData[0].time }}</text>
+        <view class="update-time">
+          <text>更新时间: {{ oilUpdateText() }}</text>
         </view>
 
         <view class="oil-grid">
@@ -89,7 +89,7 @@
         </view>
         <view class="crude-grid">
           <view class="crude-item" v-for="item in crudeOilData" :key="item.name || item.type">
-            <text class="crude-name">{{ item.name || item.type || '原油' }}</text>
+            <text class="crude-name">{{ formatCrudeName(item) }}</text>
             <text class="crude-price">{{ formatCrudePrice(item) }}</text>
             <text class="crude-meta">{{ item.updown || item.time || '行情参考' }}</text>
           </view>
@@ -104,8 +104,8 @@
       <view class="note card">
         <text class="note-title">💡 说明</text>
         <text class="note-text">• 油价单位：元/升</text>
-        <text class="note-text">• 原油价格展示 WTI、Brent 等国际原油期货行情参考</text>
-        <text class="note-text">• 数据每日凌晨更新</text>
+        <text class="note-text">• 实时油价参考来自成品油接口，通常每日更新，本服务缓存约 1 小时</text>
+        <text class="note-text">• 原油价格展示 WTI Crude Oil、Brent Crude Oil 等国际原油期货行情参考</text>
         <text class="note-text">• 实际价格以加油站为准</text>
       </view>
     </view>
@@ -208,6 +208,17 @@ const fetchOilPrice = async () => {
   } catch (e) {
     crudeOilData.value = []
   }
+}
+
+const oilUpdateText = () => {
+  return oilData.value[0]?.time || '接口未返回具体时间（每日更新）'
+}
+
+const formatCrudeName = (item: CrudeOilItem) => {
+  const raw = `${item.type || ''} ${item.name || ''}`.toLowerCase()
+  if (raw.includes('wti')) return 'WTI Crude Oil'
+  if (raw.includes('brent') || raw.includes('blt') || raw.includes('布伦特')) return 'Brent Crude Oil'
+  return item.type ? `${String(item.type).toUpperCase()} Crude Oil` : 'Crude Oil'
 }
 
 const formatCrudePrice = (item: CrudeOilItem) => {
