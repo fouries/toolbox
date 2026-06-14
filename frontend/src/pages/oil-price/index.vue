@@ -105,7 +105,7 @@
         <text class="note-title">💡 说明</text>
         <text class="note-text">• 油价单位：元/升</text>
         <text class="note-text">• 实时油价参考来自成品油接口，通常每日更新，本服务缓存约 1 小时</text>
-        <text class="note-text">• 原油价格展示 WTI Crude Oil、Brent Crude Oil 等国际原油期货行情参考</text>
+        <text class="note-text">• 原油价格展示 WTI 原油、Brent 原油等国际原油期货行情参考</text>
         <text class="note-text">• 实际价格以加油站为准</text>
       </view>
     </view>
@@ -216,9 +216,9 @@ const oilUpdateText = () => {
 
 const formatCrudeName = (item: CrudeOilItem) => {
   const raw = `${item.type || ''} ${item.name || ''}`.toLowerCase()
-  if (raw.includes('wti')) return 'WTI Crude Oil'
-  if (raw.includes('brent') || raw.includes('blt') || raw.includes('布伦特')) return 'Brent Crude Oil'
-  return item.type ? `${String(item.type).toUpperCase()} Crude Oil` : 'Crude Oil'
+  if (raw.includes('wti')) return 'WTI 原油'
+  if (raw.includes('brent') || raw.includes('blt') || raw.includes('布伦特')) return 'Brent 原油'
+  return item.type ? `${String(item.type).toUpperCase()} 原油` : '原油'
 }
 
 const formatCrudePrice = (item: CrudeOilItem) => {

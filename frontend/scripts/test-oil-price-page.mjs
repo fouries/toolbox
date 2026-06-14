@@ -79,8 +79,14 @@ assert.match(
 
 assert.match(
   source,
-  /WTI Crude Oil|Brent Crude Oil/,
-  'crude oil names should be displayed in English'
+  /return 'WTI 原油'/,
+  'WTI crude oil item should display as WTI 原油'
+)
+
+assert.match(
+  source,
+  /return 'Brent 原油'/,
+  'Brent crude oil item should display as Brent 原油'
 )
 
 assert.doesNotMatch(
