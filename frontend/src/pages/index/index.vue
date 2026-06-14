@@ -20,8 +20,8 @@
               </view>
               <view class="quick-tool-info">
                 <text class="quick-tool-name">{{ tool.name }}</text>
+                <text class="quick-tool-desc">{{ tool.desc }}</text>
               </view>
-              <text class="quick-arrow">›</text>
             </view>
           </view>
         </view>
@@ -523,12 +523,13 @@ onMounted(() => {
 
 .quick-tool-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
   min-width: 0;
-  min-height: 76rpx;
+  min-height: 148rpx;
   gap: 8rpx;
-  padding: 10rpx 10rpx;
+  padding: 14rpx 14rpx 12rpx;
   border-radius: 18rpx;
   background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
@@ -552,10 +553,11 @@ onMounted(() => {
 }
 
 .quick-tool-info {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 4rpx;
 }
 
 .quick-tool-name {
@@ -565,11 +567,14 @@ onMounted(() => {
   font-weight: 800;
 }
 
-.quick-arrow {
-  flex-shrink: 0;
-  color: var(--theme-text-muted, #9aa6b8);
-  font-size: 26rpx;
-  line-height: 1;
+.quick-tool-desc {
+  font-size: 20rpx;
+  line-height: 1.32;
+  color: var(--theme-text-secondary, #7a869a);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .main-panel {
@@ -766,8 +771,8 @@ onMounted(() => {
   }
 
   .quick-tool-card {
-    min-height: 52px;
-    padding: 8px 10px;
+    min-height: 96px;
+    padding: 10px 12px;
     border-radius: 14px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
@@ -781,7 +786,7 @@ onMounted(() => {
 
   .quick-icon-text { font-size: 16px; }
   .quick-tool-name { font-size: 13px; }
-  .quick-arrow { font-size: 18px; }
+  .quick-tool-desc { font-size: 12px; }
 
   .quick-tool-card:hover {
     transform: translateY(-2px);
