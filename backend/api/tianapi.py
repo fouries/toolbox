@@ -555,6 +555,13 @@ class TianApiService:
         return {"code": 200, "msg": result.get("msg") or "每日简报接口暂不可用", "fallback": True, "data": TianApiService._fallback_daily_brief()}
 
     @staticmethod
+    def _proxied_baidu_image_url(image_url: str) -> str:
+        image_url = str(image_url or "").strip()
+        if not image_url:
+            return ""
+        return f"https://quan1234.com/api/image-proxy?url={quote(image_url, safe='')}"
+
+    @staticmethod
     def _normalize_baidu_top_api_result(result: Dict[str, Any]) -> Dict[str, Any]:
         data = result.get("data") if isinstance(result.get("data"), dict) else {}
         cards = data.get("cards") if isinstance(data.get("cards"), list) else []
@@ -582,6 +589,7 @@ class TianApiService:
                 continue
             hot = str(item.get("hotScore") or item.get("hot_value") or item.get("hot") or item.get("newHotName") or item.get("labelTagName") or "")
             description = str(item.get("desc") or item.get("description") or "")
+            image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or ""))
             url = str(item.get("url") or item.get("appUrl") or item.get("rawUrl") or item.get("mobilUrl") or "")
             if not url:
                 url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news"
@@ -590,6 +598,7 @@ class TianApiService:
                 "title": title,
                 "hot": hot,
                 "description": description,
+                "image": image,
                 "url": url,
                 "raw": dict(item),
             })

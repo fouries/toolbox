@@ -40,6 +40,7 @@
       <view class="hot-list" v-else>
         <view class="hot-card card" v-for="item in displayedHotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
           <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
+          <image class="hot-image" v-if="shouldShowHotImage(item)" :src="item.image" mode="aspectFill"></image>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
             <text class="hot-desc" v-if="shouldShowHotDescription && item.description">{{ item.description }}</text>
@@ -85,6 +86,7 @@ const currentConfig = computed(() => platformTabs.find(item => item.id === activ
 const updateTimeText = computed(() => updateTime.value ? `更新时间：${updateTime.value}` : '实时热搜')
 const shouldShowHotDescription = computed(() => activePlatform.value !== 'baidu')
 const displayedHotItems = computed(() => activePlatform.value === 'baidu' ? hotItems.value.slice(0, 50) : hotItems.value)
+const shouldShowHotImage = (item: HotSearchItem) => activePlatform.value === 'baidu' && !!item.image
 
 const fetchHotSearch = async () => {
   loading.value = true
@@ -280,6 +282,15 @@ onLoad((options: any) => {
 .hot-rank.top {
   background: linear-gradient(135deg, #ef4444, #f97316);
   color: #fff;
+}
+
+.hot-image {
+  width: 132rpx;
+  height: 92rpx;
+  flex: 0 0 132rpx;
+  border-radius: 16rpx;
+  background: #ffedd5;
+  object-fit: cover;
 }
 
 .hot-main {

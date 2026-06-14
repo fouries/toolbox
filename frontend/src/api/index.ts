@@ -76,6 +76,7 @@ export interface HotSearchItem {
   title: string
   hot?: string
   description?: string
+  image?: string
   url?: string
   raw?: Record<string, unknown>
 }

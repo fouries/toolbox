@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 import asyncio
+import httpx
 
 from config import get_settings
 from utils.cache import cache
@@ -112,6 +114,21 @@ async def hot_search_detail(platform: str = "weibo", keyword: str = "", hot: str
     """按热搜关键词聚合站内资讯，生成小程序原生详情内容。"""
     result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url, raw)
     return result
+
+@app.get("/api/image-proxy", summary="图片代理", tags=["本地工具"])
+async def image_proxy(url: str):
+    """代理百度热搜图片，便于小程序通过本站 HTTPS 域名加载缩略图。"""
+    parsed = urlparse(url)
+    allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com")
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):
+        raise HTTPException(status_code=400, detail="Unsupported image host")
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        response.raise_for_status()
+    content_type = response.headers.get("content-type", "image/jpeg")
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="URL is not an image")
+    return Response(content=response.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
 
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
 async def reverse_location(latitude: float, longitude: float):

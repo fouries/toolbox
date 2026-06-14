@@ -235,6 +235,7 @@ def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
                         "query": "百度官方热搜",
                         "hotScore": "7807881",
                         "desc": "来自百度官方热搜榜的摘要",
+                        "img": "https://fyb-2.cdn.bcebos.com/hotboard_image/demo-image",
                         "url": "https://www.baidu.com/s?wd=official&sa=fyb_news",
                     }]
                 }]
@@ -253,6 +254,7 @@ def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     assert result['data']['items'][0]['title'] == '百度官方热搜'
     assert result['data']['items'][0]['hot'] == '7807881'
     assert result['data']['items'][0]['description'] == '来自百度官方热搜榜的摘要'
+    assert result['data']['items'][0]['image'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Ffyb-2.cdn.bcebos.com%2Fhotboard_image%2Fdemo-image'
     assert result['data']['items'][0]['url'] == 'https://www.baidu.com/s?wd=official&sa=fyb_news'
     assert result['data']['items'][0]['raw']['word'] == '百度官方热搜'
     assert all(topic not in str(result['data']) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
