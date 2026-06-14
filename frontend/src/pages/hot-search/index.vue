@@ -40,9 +40,11 @@
       <view class="hot-list" v-else>
         <view class="hot-card card" v-for="item in displayedHotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
           <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
-          <image class="hot-image" v-if="shouldShowHotImage(item)" :src="item.image" mode="aspectFill"></image>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
+            <view class="hot-body" v-if="shouldShowHotImage(item)">
+              <image class="hot-image" :src="item.image" mode="aspectFill"></image>
+            </view>
             <text class="hot-desc" v-if="shouldShowHotDescription && item.description">{{ item.description }}</text>
             <view class="hot-meta">
               <text v-if="item.hot">热度：{{ item.hot }}</text>
@@ -261,7 +263,7 @@ onLoad((options: any) => {
 
 .hot-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 18rpx;
 }
 
@@ -284,11 +286,15 @@ onLoad((options: any) => {
   color: #fff;
 }
 
+.hot-body {
+  margin-top: 14rpx;
+  display: block;
+}
+
 .hot-image {
-  width: 132rpx;
-  height: 92rpx;
-  flex: 0 0 132rpx;
-  border-radius: 16rpx;
+  width: 100%;
+  height: 240rpx;
+  border-radius: 18rpx;
   background: #ffedd5;
   object-fit: cover;
 }
