@@ -85,6 +85,12 @@ async def news_detail(url: str):
     result = await NewsDetailService.fetch_detail(url)
     return result
 
+@app.get("/api/news/local/{local_id}", summary="本地资讯详情", tags=["天行数据"])
+async def local_news_detail(local_id: str):
+    """读取已下载到服务器本地的资讯正文快照。"""
+    result = NewsDetailService.read_local_detail(local_id)
+    return result
+
 @app.get("/api/gold-price", summary="黄金行情", tags=["天行数据"])
 async def gold_price():
     """查询黄金行情"""

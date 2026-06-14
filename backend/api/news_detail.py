@@ -1,8 +1,10 @@
 import hashlib
 import html
+import json
 import re
 from datetime import datetime
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -69,6 +71,16 @@ class NewsDetailService:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) "
         "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
     )
+    LOCAL_DETAIL_DIR = Path(__file__).resolve().parents[1] / "data" / "news_detail"
+    LOCAL_DETAIL_ROUTE = "/api/news/local"
+
+    @staticmethod
+    def _local_id(url: str) -> str:
+        return hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
+
+    @staticmethod
+    def _local_url(local_id: str) -> str:
+        return f"{NewsDetailService.LOCAL_DETAIL_ROUTE}/{local_id}"
 
     @staticmethod
     def _cache_key(url: str) -> str:
@@ -169,6 +181,7 @@ class NewsDetailService:
         description = NewsDetailService._extract_meta(html_text, "description")
         if len(content) < 20 and description:
             content = description
+        local_id = NewsDetailService._local_id(url)
         return {
             "title": title,
             "source": NewsDetailService._extract_source(html_text, url),
@@ -176,8 +189,35 @@ class NewsDetailService:
             "description": _normalize_space(description),
             "content": content,
             "sourceUrl": url,
+            "localId": local_id,
+            "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
+
+    @staticmethod
+    def _local_path(local_id: str) -> Path:
+        safe_id = re.sub(r"[^a-f0-9]", "", str(local_id or ""))[:64]
+        return NewsDetailService.LOCAL_DETAIL_DIR / f"{safe_id}.json"
+
+    @staticmethod
+    def _write_local_detail(detail: Dict[str, Any]) -> None:
+        local_id = str(detail.get("localId") or "")
+        if not local_id:
+            return
+        NewsDetailService.LOCAL_DETAIL_DIR.mkdir(parents=True, exist_ok=True)
+        path = NewsDetailService._local_path(local_id)
+        path.write_text(json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    @staticmethod
+    def read_local_detail(local_id: str) -> Dict[str, Any]:
+        path = NewsDetailService._local_path(local_id)
+        if not path.exists():
+            return {"code": 404, "msg": "本地新闻资源不存在或已过期"}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {"code": 500, "msg": "本地新闻资源读取失败"}
+        return {"code": 200, "msg": "success", "data": {**data, "fromLocal": True}}
 
     @staticmethod
     async def fetch_detail(url: str) -> Dict[str, Any]:
@@ -202,6 +242,7 @@ class NewsDetailService:
             detail = NewsDetailService._build_detail(url, html_text)
             if not detail["content"]:
                 return {"code": 502, "msg": "未能提取新闻正文，请复制原文链接到浏览器打开"}
+            NewsDetailService._write_local_detail(detail)
             await cache.set(cache_key, detail, settings.CACHE_TTL_DEFAULT * 12)
             return {"code": 200, "msg": "success", "data": detail}
         except Exception:

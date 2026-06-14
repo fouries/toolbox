@@ -41,6 +41,7 @@ import { useTheme } from '@/utils/theme'
 const { themeClass } = useTheme()
 
 const sourceUrl = ref('')
+const localUrl = ref('')
 const detail = ref<NewsDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -60,14 +61,14 @@ const copyOriginalUrl = () => {
 }
 
 const loadDetail = async () => {
-  if (!sourceUrl.value) {
+  if (!sourceUrl.value && !localUrl.value) {
     error.value = '缺少新闻链接'
     return
   }
   loading.value = true
   error.value = ''
   try {
-    const res = await getNewsDetail(sourceUrl.value)
+    const res = await getNewsDetail(sourceUrl.value, localUrl.value)
     if (res.code === 200 && res.data) {
       detail.value = res.data
     } else {
@@ -84,6 +85,7 @@ const loadDetail = async () => {
 
 onLoad((options: any) => {
   sourceUrl.value = decodeURIComponent(options?.url || '')
+  localUrl.value = decodeURIComponent(options?.localUrl || '')
   loadDetail()
 })
 </script>

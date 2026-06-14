@@ -44,6 +44,7 @@ export interface NewsItem {
   ctime?: string
   source?: string
   url?: string
+  localUrl?: string
   picUrl?: string
 }
 
@@ -53,9 +54,12 @@ export interface NewsDetail {
   publishTime?: string
   description?: string
   content: string
+  localUrl?: string
+  localId?: string
   sourceUrl: string
   cachedAt?: string
   fromCache?: boolean
+  fromLocal?: boolean
 }
 
 export interface DailyBriefItem {
@@ -218,8 +222,9 @@ export const getInfoNews = (category: string = 'internet') => {
   return request<NewsItem[]>(`/api/news?category=${encodeURIComponent(category)}`)
 }
 
-export const getNewsDetail = (url: string) => {
-  return request<NewsDetail>(`/api/news/detail?url=${encodeURIComponent(url)}`, { timeout: 20000 })
+export const getNewsDetail = (url: string, localUrl?: string) => {
+  const target = localUrl || `/api/news/detail?url=${encodeURIComponent(url)}`
+  return request<NewsDetail>(target, { timeout: 20000 })
 }
 
 export const getDailyBrief = () => {

@@ -85,7 +85,8 @@ assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page 
 assert.doesNotMatch(hotSearchDetailPage, /<view class="content-card card"/, 'hot search detail page should remove the 热搜内容 second card')
 assert.doesNotMatch(hotSearchDetailPage, /<text class="content-title">热搜内容<\/text>/, 'hot search detail page should not show 热搜内容 heading')
 assert.doesNotMatch(hotSearchDetailPage, /v-for="section in detail\.sections"/, 'hot search detail page should not render backend hot-search sections')
-assert.match(hotSearchDetailPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}/, 'related news should use native news detail route')
+assert.match(hotSearchDetailPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}&localUrl=\$\{encodeURIComponent\(item\.localUrl \|\| ''\)\}/, 'related news should pass backend local resource URL to native news detail route')
+assert.match(hotSearchDetailPage, /const\s+localRoute\s*=\s*item\.localUrl/, 'related hot news should prefer downloaded local resource route when available')
 
 const backendMain = fs.readFileSync(backendMainPath, 'utf8')
 const backendTianApi = fs.readFileSync(backendTianApiPath, 'utf8')

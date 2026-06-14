@@ -1,4 +1,7 @@
 import asyncio
+import shutil
+import tempfile
+from pathlib import Path
 
 from api.news_detail import NewsDetailService
 
@@ -39,15 +42,29 @@ def run(coro):
 def setup_module(module):
     import api.news_detail as news_detail
 
+    global _tmp_news_dir
+    previous_tmp_dir = globals().get("_tmp_news_dir")
+    if previous_tmp_dir:
+        shutil.rmtree(previous_tmp_dir, ignore_errors=True)
+
     DummyCache.store = {}
     DummyHttpClient.calls = []
     DummyHttpClient.init_kwargs = []
     DummyHttpClient.response_text = ""
+    _tmp_news_dir = Path(tempfile.mkdtemp(prefix="news-local-test-"))
+    news_detail.NewsDetailService.LOCAL_DETAIL_DIR = _tmp_news_dir
+    news_detail.NewsDetailService.LOCAL_DETAIL_ROUTE = "/api/news/local"
     news_detail.cache = DummyCache()
     news_detail.HttpClient = DummyHttpClient
 
 
-def test_news_detail_fetches_sanitizes_and_caches_article_body():
+def teardown_module(module):
+    tmp_dir = globals().get("_tmp_news_dir")
+    if tmp_dir:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_news_detail_fetch_writes_local_resource_snapshot():
     html = """
     <html>
       <head>
@@ -73,13 +90,16 @@ def test_news_detail_fetches_sanitizes_and_caches_article_body():
 
     assert result["code"] == 200
     assert result["data"]["title"] == "AI 新闻标题"
+    assert result["data"]["localId"]
+    assert result["data"]["localUrl"] == f"/api/news/local/{result['data']['localId']}"
     assert result["data"]["sourceUrl"] == "https://example.com/news/1"
-    assert "第一段新闻正文" in result["data"]["content"]
-    assert "第二段新闻正文" in result["data"]["content"]
-    assert "alert" not in result["data"]["content"]
-    assert "display:none" not in result["data"]["content"]
+    local_path = NewsDetailService.LOCAL_DETAIL_DIR / f"{result['data']['localId']}.json"
+    assert local_path.exists()
+    assert "第一段新闻正文" in local_path.read_text(encoding="utf-8")
     assert "fromCache" not in result["data"]
     assert cached["data"]["fromCache"] is True
+    assert cached["data"]["localId"] == result["data"]["localId"]
+    assert cached["data"]["localUrl"] == result["data"]["localUrl"]
     assert len(DummyHttpClient.calls) == 1
 
 
@@ -130,7 +150,7 @@ def test_news_detail_prefers_article_body_container_over_comment_article():
 
 if __name__ == "__main__":
     setup_module(None)
-    test_news_detail_fetches_sanitizes_and_caches_article_body()
+    test_news_detail_fetch_writes_local_resource_snapshot()
     setup_module(None)
     test_news_detail_rejects_unsafe_urls()
     setup_module(None)

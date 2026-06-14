@@ -38,6 +38,9 @@ Thumbs.db
 *.log
 logs/
 
+# 运行时数据
+backend/data/news_detail/
+
 # ==============
 # 打包文件
 # ==============

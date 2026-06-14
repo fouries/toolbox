@@ -4,6 +4,20 @@ import json
 from api.tianapi import TianApiService
 
 
+class DummyNewsDetailService:
+    calls = []
+
+    @staticmethod
+    def _is_safe_url(url):
+        return str(url or '').startswith('http')
+
+    @staticmethod
+    async def fetch_detail(url):
+        DummyNewsDetailService.calls.append(url)
+        local_id = str(abs(hash(url)))[:8]
+        return {"code": 200, "data": {"localId": local_id, "localUrl": f"/api/news/local/{local_id}", "description": "本地化后的新闻正文摘要"}}
+
+
 class DummyCache:
     async def get(self, key):
         return None
@@ -52,7 +66,9 @@ def setup_module(module):
 
     tianapi.cache = DummyCache()
     tianapi.HttpClient = DummyHttpClient
+    tianapi.NewsDetailService = DummyNewsDetailService
     setattr(tianapi.settings, 'TIANAPI_KEY', 'test-' + 'key')
+    DummyNewsDetailService.calls = []
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
     DummyHttpClient.text_responses = {}
@@ -203,6 +219,8 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['sections']
     assert result['data']['sections'][0]['title'] == '相关新闻内容'
     assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
+    assert result['data']['relatedNews'][0]['localUrl'].startswith('/api/news/local/')
+    assert DummyNewsDetailService.calls == ['https://example.com/topic']
 
 
 def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match():
@@ -235,6 +253,8 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
     assert 'https://www.sogou.com/sogou' in paths
     assert result['code'] == 200
     assert result['data']['relatedNews'][0]['title'] == '世界杯真正的预言家相关新闻'
+    assert result['data']['relatedNews'][0]['localUrl'].startswith('/api/news/local/')
+    assert DummyNewsDetailService.calls == ['https://www.sogou.com/link?url=abc']
     assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['summary']
     assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['content']
     assert '该话题来自微博热搜榜' not in result['data']['content']

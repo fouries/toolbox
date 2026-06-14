@@ -163,13 +163,15 @@ const loadDetail = async () => {
 
 const openNewsDetail = (item: NewsItem) => {
   const safeUrl = normalizeNewsUrl(item.url)
-  if (!isSafeNewsUrl(safeUrl)) {
+  const localRoute = item.localUrl
+  if (!localRoute && !isSafeNewsUrl(safeUrl)) {
     uni.showToast({ title: '该资讯暂无可打开链接', icon: 'none' })
     return
   }
   uni.navigateTo({
-    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}`,
+    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&localUrl=${encodeURIComponent(item.localUrl || '')}`,
     fail: () => {
+      if (!safeUrl) return
       uni.setClipboardData({ data: safeUrl })
       uni.showToast({ title: '链接已复制，请到浏览器打开', icon: 'none' })
     }

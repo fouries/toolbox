@@ -7,6 +7,7 @@ from urllib.parse import quote, urljoin
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
+from api.news_detail import NewsDetailService
 
 settings = get_settings()
 
@@ -483,6 +484,21 @@ class TianApiService:
         return {"title": f"{platform_name}返回信息", "body": "\n".join(parts)}
 
     @staticmethod
+    async def _materialize_related_news(items: List[Dict[str, str]], limit: int = 3) -> List[Dict[str, str]]:
+        materialized: List[Dict[str, str]] = []
+        for item in items:
+            normalized = dict(item)
+            url = str(normalized.get("url") or "")
+            if len(materialized) < limit and url and NewsDetailService._is_safe_url(url):
+                detail_result = await NewsDetailService.fetch_detail(url)
+                if detail_result.get("code") == 200 and isinstance(detail_result.get("data"), dict):
+                    detail = detail_result["data"]
+                    normalized["localUrl"] = str(detail.get("localUrl") or "")
+                    normalized["localId"] = str(detail.get("localId") or "")
+            materialized.append(normalized)
+        return materialized
+
+    @staticmethod
     def _build_hot_search_detail(
         platform: str,
         keyword: str,
@@ -563,6 +579,7 @@ class TianApiService:
             matched = await TianApiService._fetch_keyword_news(keyword, limit=8)
         if not matched:
             matched = [item for _score, item in scored[:8]]
+        matched = await TianApiService._materialize_related_news(matched[:8])
         data = TianApiService._build_hot_search_detail(
             platform=platform,
             keyword=keyword,
