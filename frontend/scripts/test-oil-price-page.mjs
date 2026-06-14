@@ -97,6 +97,30 @@ assert.doesNotMatch(
 
 assert.match(
   source,
+  /const\s+crudeOilUpdateText\s*=\s*\(\)\s*=>/,
+  'crude oil card should provide a dedicated update-time display helper'
+)
+
+assert.match(
+  source,
+  /国际原油更新时间[:：]\s*\{\{\s*crudeOilUpdateText\(\)\s*\}\}/,
+  'crude oil card should display international crude oil update time explicitly'
+)
+
+assert.match(
+  source,
+  /接口未返回具体时间（行情参考）/,
+  'crude oil card should show a clear update-time fallback when API omits time'
+)
+
+assert.match(
+  source,
+  /item\.updown\s*\|\|\s*'行情参考'/,
+  'crude oil item meta should keep change info separate from update time'
+)
+
+assert.match(
+  source,
   /class="location-row"/,
   'current location and refresh-location button should share a compact row'
 )

@@ -87,11 +87,14 @@
           <text class="oil-province-name">国际原油价格</text>
           <text class="oil-province-label">WTI / Brent 原油期货</text>
         </view>
+        <view class="update-time crude-update-time">
+          <text>国际原油更新时间: {{ crudeOilUpdateText() }}</text>
+        </view>
         <view class="crude-grid">
           <view class="crude-item" v-for="item in crudeOilData" :key="item.name || item.type">
             <text class="crude-name">{{ formatCrudeName(item) }}</text>
             <text class="crude-price">{{ formatCrudePrice(item) }}</text>
-            <text class="crude-meta">{{ item.updown || item.time || '行情参考' }}</text>
+            <text class="crude-meta">{{ item.updown || '行情参考' }}</text>
           </view>
         </view>
       </view>
@@ -212,6 +215,10 @@ const fetchOilPrice = async () => {
 
 const oilUpdateText = () => {
   return oilData.value[0]?.time || '接口未返回具体时间（每日更新）'
+}
+
+const crudeOilUpdateText = () => {
+  return crudeOilData.value.find(item => item.time)?.time || '接口未返回具体时间（行情参考）'
 }
 
 const formatCrudeName = (item: CrudeOilItem) => {
@@ -371,6 +378,11 @@ onMounted(() => {
   font-size: 24rpx;
   color: #999;
   margin-bottom: 24rpx;
+}
+
+.crude-update-time {
+  margin-top: -12rpx;
+  text-align: left;
 }
 
 .realtime-card-top {
