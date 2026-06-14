@@ -20,7 +20,6 @@
               </view>
               <view class="quick-tool-info">
                 <text class="quick-tool-name">{{ tool.name }}</text>
-                <text class="quick-tool-desc">{{ tool.desc }}</text>
               </view>
             </view>
           </view>
@@ -527,9 +526,9 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: flex-start;
   min-width: 0;
-  min-height: 148rpx;
+  min-height: 104rpx;
   gap: 8rpx;
-  padding: 14rpx 14rpx 12rpx;
+  padding: 14rpx;
   border-radius: 18rpx;
   background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
@@ -557,7 +556,6 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
 }
 
 .quick-tool-name {
@@ -565,16 +563,6 @@ onMounted(() => {
   line-height: 1.2;
   color: var(--theme-text, #243044);
   font-weight: 800;
-}
-
-.quick-tool-desc {
-  font-size: 20rpx;
-  line-height: 1.32;
-  color: var(--theme-text-secondary, #7a869a);
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .main-panel {
@@ -771,7 +759,7 @@ onMounted(() => {
   }
 
   .quick-tool-card {
-    min-height: 96px;
+    min-height: 72px;
     padding: 10px 12px;
     border-radius: 14px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -786,7 +774,6 @@ onMounted(() => {
 
   .quick-icon-text { font-size: 16px; }
   .quick-tool-name { font-size: 13px; }
-  .quick-tool-desc { font-size: 12px; }
 
   .quick-tool-card:hover {
     transform: translateY(-2px);
