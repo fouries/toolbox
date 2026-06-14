@@ -88,7 +88,7 @@
           <text class="oil-province-label">WTI / Brent 原油期货</text>
         </view>
         <view class="update-time crude-update-time">
-          <text>国际原油更新时间: {{ crudeOilUpdateText() }}</text>
+          <text>更新时间: {{ crudeOilUpdateText() }}</text>
         </view>
         <view class="crude-grid">
           <view class="crude-item" v-for="item in crudeOilData" :key="item.name || item.type">

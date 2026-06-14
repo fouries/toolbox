@@ -103,8 +103,14 @@ assert.match(
 
 assert.match(
   source,
-  /国际原油更新时间[:：]\s*\{\{\s*crudeOilUpdateText\(\)\s*\}\}/,
-  'crude oil card should display international crude oil update time explicitly'
+  /<text>更新时间[:：]\s*\{\{\s*crudeOilUpdateText\(\)\s*\}\}<\/text>/,
+  'crude oil card should display update time with the concise 更新时间 label'
+)
+
+assert.doesNotMatch(
+  source,
+  /国际原油更新时间/,
+  'crude oil update-time label should not repeat 国际原油'
 )
 
 assert.match(
