@@ -45,14 +45,17 @@
         <text class="loading-text">加载中...</text>
       </view>
 
-      <view class="oil-data" v-if="oilData && !loading">
-        <view class="update-time" v-if="oilData[0]?.time">
-          <text>更新时间: {{ oilData[0].time }}</text>
+      <view class="realtime-oil-card" v-if="oilData && !loading">
+        <view class="realtime-card-top">
+          <view>
+            <text class="realtime-title">实时油价</text>
+            <text class="realtime-subtitle">{{ selectedProvince }} 当前汽柴油参考价</text>
+          </view>
+          <text class="oil-province-label">单位：元/升</text>
         </view>
 
-        <view class="oil-card-header">
-          <text class="oil-province-name">{{ selectedProvince }}</text>
-          <text class="oil-province-label">单位：元/升</text>
+        <view class="update-time" v-if="oilData[0]?.time">
+          <text>更新时间: {{ oilData[0].time }}</text>
         </view>
 
         <view class="oil-grid">
@@ -344,7 +347,7 @@ onMounted(() => {
   color: #999;
 }
 
-.oil-data,
+.realtime-oil-card,
 .crude-oil-card {
   background: #fff;
   border-radius: var(--radius-md);
@@ -357,6 +360,31 @@ onMounted(() => {
   font-size: 24rpx;
   color: #999;
   margin-bottom: 24rpx;
+}
+
+.realtime-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 18rpx;
+}
+
+.realtime-title,
+.realtime-subtitle {
+  display: block;
+}
+
+.realtime-title {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #172033;
+}
+
+.realtime-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #667085;
 }
 
 .oil-card-header {

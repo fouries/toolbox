@@ -41,10 +41,16 @@ assert.match(
   'province picker should be labelled as a manual province selector'
 )
 
-assert.doesNotMatch(
+assert.match(
   source,
-  /class="location-card"/,
-  'current-region oil price card should be removed for a cleaner layout'
+  /class="realtime-oil-card"/,
+  'oil price page should render a realtime oil price card'
+)
+
+assert.match(
+  source,
+  /实时油价/,
+  'realtime oil price card should be labelled clearly'
 )
 
 assert.match(
@@ -70,4 +76,4 @@ assert.match(
   'refresh-location button should keep locating and refresh labels'
 )
 
-console.log('oil price page location initialization and compact layout are valid')
+console.log('oil price page realtime card, location initialization, and compact layout are valid')
