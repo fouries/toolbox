@@ -68,6 +68,8 @@ assert.match(page, /selectedDay\.holiday\?\.isOffDay/, 'selected day details sho
 assert.match(page, /selectedDay\.holiday\?\.isWorkday/, 'selected day details should distinguish adjusted workdays')
 assert.match(page, /\.day-cell\.rest-day/, 'official rest days should have a visible calendar-cell style')
 assert.match(page, /\.holiday-rest-badge/, 'official rest day badge should have a visible style')
+assert.match(page, /\.holiday-rest-badge,[\s\S]*top:\s*4rpx;[\s\S]*right:\s*4rpx;[\s\S]*min-width:\s*22rpx;[\s\S]*height:\s*22rpx;[\s\S]*font-size:\s*14rpx;[\s\S]*line-height:\s*22rpx;/, 'rest/workday badge should be small and tucked into the corner so it does not cover the date')
+assert.match(page, /\.solar-day\s*\{[\s\S]*position:\s*relative;[\s\S]*z-index:\s*1;/, 'solar date should remain above tiny holiday badges')
 assert.match(page, /goPrevMonth/, 'calendar page should allow navigating to previous month')
 assert.match(page, /goNextMonth/, 'calendar page should allow navigating to next month')
 assert.match(page, /goToday/, 'calendar page should provide a return-to-today action')

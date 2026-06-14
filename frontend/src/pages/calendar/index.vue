@@ -333,15 +333,15 @@ const goSolarTerms = () => {
 .holiday-rest-badge,
 .holiday-work-badge {
   position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  min-width: 30rpx;
-  height: 30rpx;
-  padding: 0 6rpx;
+  top: 4rpx;
+  right: 4rpx;
+  min-width: 22rpx;
+  height: 22rpx;
+  padding: 0 4rpx;
   border-radius: 999rpx;
   color: #fff;
-  font-size: 18rpx;
-  line-height: 30rpx;
+  font-size: 14rpx;
+  line-height: 22rpx;
   text-align: center;
   font-weight: 700;
 }
@@ -360,6 +360,8 @@ const goSolarTerms = () => {
 }
 
 .solar-day {
+  position: relative;
+  z-index: 1;
   font-size: 30rpx;
   font-weight: 700;
   color: #3b2415;
