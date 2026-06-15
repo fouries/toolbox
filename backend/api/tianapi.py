@@ -422,6 +422,24 @@ class TianApiService:
         return TianApiService._parse_sogou_news_results(text, keyword, limit=limit)
 
     @staticmethod
+    def _longest_common_substring_length(left: str, right: str) -> int:
+        left = str(left or "")
+        right = str(right or "")
+        if not left or not right:
+            return 0
+        previous = [0] * (len(right) + 1)
+        best = 0
+        for left_char in left:
+            current = [0]
+            for index, right_char in enumerate(right, start=1):
+                value = previous[index - 1] + 1 if left_char == right_char else 0
+                current.append(value)
+                if value > best:
+                    best = value
+            previous = current
+        return best
+
+    @staticmethod
     def _score_related_news(keyword: str, item: Dict[str, Any]) -> int:
         text = f"{item.get('title') or ''} {item.get('description') or ''} {item.get('source') or ''}".lower()
         keyword_text = keyword.lower().strip()
@@ -430,6 +448,10 @@ class TianApiService:
         score = 0
         if keyword_text in text:
             score += 10
+        else:
+            common_length = TianApiService._longest_common_substring_length(keyword_text, text)
+            if common_length >= 4:
+                score += min(common_length, 8)
         for token in re.split(r"[\s,，。；;：:、#]+", keyword_text):
             token = token.strip()
             if token and token in text:
@@ -449,7 +471,8 @@ class TianApiService:
 
     @staticmethod
     def _clean_hot_description(description: str) -> str:
-        description = str(description or "").strip()
+        description = html.unescape(str(description or "")).strip()
+        description = re.sub(r"\s*查看更多\s*>?\s*$", "", description).strip()
         unavailable_markers = ("热搜接口暂不可用", "接口暂不可用", "展示备用热点分类")
         if not description or any(marker in description for marker in unavailable_markers):
             return ""
@@ -515,8 +538,10 @@ class TianApiService:
         related_news = related_news or []
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
         hot_text = f"，当前热度为 {hot}" if hot else ""
-        desc_text = TianApiService._clean_hot_description(description) or TianApiService._fallback_hot_detail_description(platform_name, keyword)
         raw_item = raw_item or {}
+        raw_desc = str(raw_item.get("brief") or raw_item.get("desc") or raw_item.get("description") or "")
+        hot_desc = TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(raw_desc)
+        desc_text = hot_desc or TianApiService._fallback_hot_detail_description(platform_name, keyword)
         raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
         news_content_lines = []
         for item in related_news[:5]:
@@ -533,7 +558,9 @@ class TianApiService:
             summary = news_content_lines[0]
             sections = [{"title": "相关新闻内容", "body": news_content}]
         else:
-            summary = f"{keyword} 正在{platform_name}受到关注{hot_text}。{desc_text}" if keyword else desc_text
+            summary = f"{keyword}：{desc_text}" if keyword and desc_text else desc_text
+            if hot and keyword and hot not in summary:
+                summary = f"{summary}（热度：{hot}）"
             sections = [raw_section]
         content = "\n".join(section["body"] for section in sections if section["body"])
         return {
@@ -576,10 +603,15 @@ class TianApiService:
                 continue
             scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
-        matched = [item for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True) if score > 0]
+        min_relevance_score = 8 if platform == "baidu" and TianApiService._clean_hot_description(description) else 1
+        matched = [
+            item
+            for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
+            if score >= min_relevance_score
+        ]
         if not matched:
             matched = await TianApiService._fetch_keyword_news(keyword, limit=8)
-        if not matched:
+        if not matched and not TianApiService._clean_hot_description(description):
             matched = [item for _score, item in scored[:8]]
         matched = await TianApiService._materialize_related_news(matched[:8])
         data = TianApiService._build_hot_search_detail(

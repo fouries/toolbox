@@ -353,6 +353,36 @@ def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     assert all(topic not in str(result['data']) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
 
 
+def test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": [
+            {"title": "滴滴为什么选择做一件反效率的事", "description": "和当前热搜无关的科技新闻", "source": "科技", "url": "https://example.com/didi"},
+        ]}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+    DummyHttpClient.text_responses = {
+        ('https://www.sogou.com/sogou', None): '',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='荷兰2比2日本',
+        hot='12345',
+        description='北京时间6月15日，2026年美加墨世界杯进行F组首轮角逐，荷兰队对阵日本队。',
+        url='https://www.baidu.com/s?wd=test',
+        raw='{"keyword":"荷兰2比2日本","brief":"北京时间6月15日，2026年美加墨世界杯进行F组首轮角逐，荷兰队对阵日本队。"}',
+    ))
+
+    assert result['code'] == 200
+    assert result['data']['keyword'] == '荷兰2比2日本'
+    assert '荷兰2比2日本' in result['data']['summary']
+    assert '世界杯进行F组首轮角逐' in result['data']['summary']
+    assert '滴滴为什么选择做一件反效率的事' not in result['data']['summary']
+    assert result['data']['relatedNews'] == []
+
+
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
     fallback = TianApiService._empty_hot_search('baidu')
     assert fallback['title'] == '百度热搜榜'
@@ -396,6 +426,7 @@ if __name__ == '__main__':
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
         test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
+        test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)
