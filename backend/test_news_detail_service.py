@@ -144,13 +144,55 @@ def test_news_detail_prefers_list_image_over_site_placeholder_meta_image():
       </body>
     </html>
     """
-    preferred_image = "https://nimg.ws.126.net/?url=http%3A%2F%2Fdingyue.ws.126.net%2F2026%2F0615%2Fa4ed1540j00tgnmp2001zd0009c005uc.jpg&thumbnail=200y140&quality=100&type=jpg"
+    preferred_image = "https://example.com/news-images/dumate-cover.jpg"
 
-    detail = NewsDetailService._build_detail("https://www.163.com/dy/article/KVFARB850534A4SC.html", html, preferred_image=preferred_image)
+    detail = NewsDetailService._build_detail("https://example.com/news/dumate", html, preferred_image=preferred_image)
 
     assert detail["originalImage"] == preferred_image
     assert "weixinfixed" not in detail["originalImage"]
     assert "image-proxy" in detail["image"]
+
+
+def test_news_detail_uses_verified_netease_article_image_before_untrusted_list_thumbnail():
+    html = """
+    <html>
+      <body>
+        <article>
+          <h1>TikTok欧洲高管团队来访</h1>
+          <time>2026-06-15 12:20</time>
+          <p>这是一篇网易互联网资讯正文，内容足够用于详情页展示。</p>
+          <img data-src="http://dingyue.ws.126.net/2026/0615/real-article-cover.jpg" src="https://static.ws.126.net/163/frontend/images/2022/empty.png">
+        </article>
+      </body>
+    </html>
+    """
+    preferred_image = "https://nimg.ws.126.net/?url=http%3A%2F%2Fdingyue.ws.126.net%2F2026%2F0615%2Fwrong-list-cover.jpg&thumbnail=200y140&type=jpg"
+
+    detail = NewsDetailService._build_detail("https://www.163.com/dy/article/KVFCI1T50550WHYR.html", html, preferred_image=preferred_image)
+
+    assert detail["originalImage"] == "http://dingyue.ws.126.net/2026/0615/real-article-cover.jpg"
+    assert "wrong-list-cover" not in detail["originalImage"]
+
+
+def test_news_detail_hides_unverified_netease_list_thumbnail_when_article_has_no_matching_image():
+    html = """
+    <html>
+      <body>
+        <article>
+          <h1>百度搭子DuMate核心引擎升级</h1>
+          <time>2026-06-15 11:51</time>
+          <p>这是一篇网易互联网资讯正文，内容足够用于详情页展示。</p>
+          <img data-src="http://cms-bucket.ws.126.net/2019/08/28/old-generic.jpeg" src="https://static.ws.126.net/163/frontend/images/2022/empty.png">
+        </article>
+      </body>
+    </html>
+    """
+    preferred_image = "https://nimg.ws.126.net/?url=http%3A%2F%2Fdingyue.ws.126.net%2F2026%2F0615%2Fmaybe-wrong-list-cover.jpg&thumbnail=200y140&type=jpg"
+
+    detail = NewsDetailService._build_detail("https://www.163.com/dy/article/KVFARB850534A4SC.html", html, preferred_image=preferred_image)
+
+    assert "originalImage" not in detail
+    assert "image" not in detail
 
 
 def test_news_detail_accepts_protocol_relative_list_image():
@@ -281,6 +323,10 @@ if __name__ == "__main__":
     test_news_detail_extracts_original_article_image_and_proxies_it()
     setup_module(None)
     test_news_detail_prefers_list_image_over_site_placeholder_meta_image()
+    setup_module(None)
+    test_news_detail_uses_verified_netease_article_image_before_untrusted_list_thumbnail()
+    setup_module(None)
+    test_news_detail_hides_unverified_netease_list_thumbnail_when_article_has_no_matching_image()
     setup_module(None)
     test_news_detail_accepts_protocol_relative_list_image()
     setup_module(None)

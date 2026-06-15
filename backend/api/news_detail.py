@@ -188,9 +188,55 @@ class NewsDetailService:
         ))
 
     @staticmethod
+    def _is_netease_article_url(page_url: str) -> bool:
+        return (urlparse(page_url).hostname or "").lower().endswith("163.com")
+
+    @staticmethod
+    def _image_matches_article_date(html_text: str, image_url: str) -> bool:
+        publish_time = NewsDetailService._extract_publish_time(html_text)
+        date_match = re.search(r"(20\d{2})[-年/]?(\d{1,2})[-月/]?(\d{1,2})", publish_time or "")
+        if not date_match:
+            return True
+        year = date_match.group(1)
+        month = int(date_match.group(2))
+        day = int(date_match.group(3))
+        expected = {
+            f"{year}/{month:02d}{day:02d}",
+            f"{year}/{month:02d}/{day:02d}",
+            f"{year}%2f{month:02d}{day:02d}",
+            f"{year}%2f{month:02d}%2f{day:02d}",
+        }
+        lower_url = str(image_url or "").lower()
+        url_date = re.search(r"20\d{2}(?:/|%2f)(?:\d{4}|\d{2}(?:/|%2f)\d{2})", lower_url)
+        if not url_date:
+            return True
+        return any(token in lower_url for token in expected)
+
+    @staticmethod
+    def _is_usable_article_image(html_text: str, page_url: str, image_url: str) -> bool:
+        if not image_url or NewsDetailService._is_placeholder_image(image_url):
+            return False
+        if NewsDetailService._is_netease_article_url(page_url) and not NewsDetailService._image_matches_article_date(html_text, image_url):
+            return False
+        return True
+
+    @staticmethod
+    def _is_preferred_image_trusted(page_url: str, image_url: str) -> bool:
+        image_url = str(image_url or "").lower()
+        # 网易聚合列表偶尔把不同文章配成同一张 nimg 缩略图；如果原文页没有可验证图片，宁可不展示，也不要错配。
+        if NewsDetailService._is_netease_article_url(page_url) and "nimg.ws.126.net" in image_url:
+            return False
+        return True
+
+    @staticmethod
     def _extract_image(html_text: str, page_url: str, preferred_image: str = "") -> str:
         preferred_image = NewsDetailService._normalize_image_url(preferred_image, page_url)
-        if preferred_image and NewsDetailService.is_safe_image_url(preferred_image) and not NewsDetailService._is_placeholder_image(preferred_image):
+        if (
+            preferred_image
+            and NewsDetailService.is_safe_image_url(preferred_image)
+            and not NewsDetailService._is_placeholder_image(preferred_image)
+            and NewsDetailService._is_preferred_image_trusted(page_url, preferred_image)
+        ):
             return preferred_image
         source_html = NewsDetailService._extract_main_content_html(html_text)
         for match in re.finditer(r'<img([^>]+)>', source_html, re.IGNORECASE):
@@ -202,13 +248,13 @@ class NewsDetailService:
                 if not attr_match:
                     continue
                 image_url = NewsDetailService._normalize_image_url(attr_match.group(1), page_url)
-                if image_url and not NewsDetailService._is_placeholder_image(image_url):
+                if NewsDetailService._is_usable_article_image(html_text, page_url, image_url):
                     return image_url
         for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
             value = NewsDetailService._extract_meta(html_text, meta_name)
             if value:
                 image_url = NewsDetailService._normalize_image_url(value, page_url)
-                if not NewsDetailService._is_placeholder_image(image_url):
+                if NewsDetailService._is_usable_article_image(html_text, page_url, image_url):
                     return image_url
         return ""
 
@@ -278,7 +324,7 @@ class NewsDetailService:
             "localId": local_id,
             "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "detailVersion": 3,
+            "detailVersion": 4,
         }
         if original_image:
             detail["originalImage"] = original_image
@@ -320,7 +366,7 @@ class NewsDetailService:
         has_preferred_image = bool(NewsDetailService._normalize_image_url(preferred_image, url))
         normalized_preferred_image = NewsDetailService._normalize_image_url(preferred_image, url)
         cached = await cache.get(cache_key)
-        if cached and cached.get("detailVersion") == 3 and (not has_preferred_image or cached.get("originalImage") == normalized_preferred_image):
+        if cached and cached.get("detailVersion") == 4 and (not has_preferred_image or cached.get("originalImage") == normalized_preferred_image):
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:
