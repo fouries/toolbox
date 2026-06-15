@@ -153,6 +153,41 @@ def test_news_detail_prefers_list_image_over_site_placeholder_meta_image():
     assert "image-proxy" in detail["image"]
 
 
+def test_news_detail_accepts_protocol_relative_list_image():
+    html = """
+    <html><body><article><h1>电竞新闻</h1><p>电竞新闻正文内容足够用于详情页展示。</p></article></body></html>
+    """
+
+    detail = NewsDetailService._build_detail(
+        "https://dj.sina.com.cn/article/demo.shtml",
+        html,
+        preferred_image="//n.sinaimg.cn/games/transform/639/w400h239/20260612/game-cover.png",
+    )
+
+    assert detail["originalImage"] == "https://n.sinaimg.cn/games/transform/639/w400h239/20260612/game-cover.png"
+    assert "image-proxy" in detail["image"]
+
+
+def test_news_detail_keeps_valid_news_default_list_image():
+    html = """
+    <html>
+      <body>
+        <article>
+          <h1>汽车新闻</h1>
+          <p>汽车新闻正文内容足够用于详情页展示。</p>
+          <img src="http://i0.chexun.net/images/2026/0614/65010/news_0_0_REAL.jpg">
+        </article>
+      </body>
+    </html>
+    """
+    preferred_image = "http://i3.chexun.net/images/2026/0614/65010/news_default_6C2B7FA343524ED8108AFCFDED8C0737.jpg"
+
+    detail = NewsDetailService._build_detail("http://news.chexun.com/2026-06-14/demo.html", html, preferred_image=preferred_image)
+
+    assert detail["originalImage"] == preferred_image
+    assert "news_0_0_REAL" not in detail["originalImage"]
+
+
 def test_news_detail_ignores_author_avatar_when_extracting_body_image():
     html = """
     <html>
@@ -231,6 +266,10 @@ if __name__ == "__main__":
     test_news_detail_extracts_original_article_image_and_proxies_it()
     setup_module(None)
     test_news_detail_prefers_list_image_over_site_placeholder_meta_image()
+    setup_module(None)
+    test_news_detail_accepts_protocol_relative_list_image()
+    setup_module(None)
+    test_news_detail_keeps_valid_news_default_list_image()
     setup_module(None)
     test_news_detail_ignores_author_avatar_when_extracting_body_image()
     setup_module(None)

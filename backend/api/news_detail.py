@@ -157,13 +157,24 @@ class NewsDetailService:
         return f"https://quan1234.com/api/news/image-proxy?url={quote(image_url, safe='')}"
 
     @staticmethod
+    def _normalize_image_url(image_url: str, page_url: str = "") -> str:
+        image_url = html.unescape(str(image_url or "")).strip()
+        if not image_url:
+            return ""
+        if image_url.startswith("//"):
+            return f"https:{image_url}"
+        return urljoin(page_url, image_url)
+
+    @staticmethod
     def _is_placeholder_image(image_url: str) -> bool:
         value = str(image_url or "").lower()
         return any(marker in value for marker in (
             "weixinfixed",
             "empty.png",
-            "default",
-            "logo",
+            "placeholder",
+            "default_logo",
+            "logo_",
+            "/logo",
             "avatar",
             "s-avatar",
             "certification",
@@ -171,9 +182,9 @@ class NewsDetailService:
 
     @staticmethod
     def _extract_image(html_text: str, page_url: str, preferred_image: str = "") -> str:
-        preferred_image = str(preferred_image or "").strip()
+        preferred_image = NewsDetailService._normalize_image_url(preferred_image, page_url)
         if preferred_image and NewsDetailService.is_safe_image_url(preferred_image) and not NewsDetailService._is_placeholder_image(preferred_image):
-            return urljoin(page_url, html.unescape(preferred_image))
+            return preferred_image
         source_html = NewsDetailService._extract_main_content_html(html_text)
         for match in re.finditer(r'<img([^>]+)>', source_html, re.IGNORECASE):
             attrs = match.group(1)
@@ -183,13 +194,13 @@ class NewsDetailService:
                 attr_match = re.search(rf'{attr_name}=["\']([^"\']+)["\']', attrs, re.IGNORECASE)
                 if not attr_match:
                     continue
-                image_url = urljoin(page_url, html.unescape(attr_match.group(1)).strip())
+                image_url = NewsDetailService._normalize_image_url(attr_match.group(1), page_url)
                 if image_url and not NewsDetailService._is_placeholder_image(image_url):
                     return image_url
         for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
             value = NewsDetailService._extract_meta(html_text, meta_name)
             if value:
-                image_url = urljoin(page_url, html.unescape(value).strip())
+                image_url = NewsDetailService._normalize_image_url(value, page_url)
                 if not NewsDetailService._is_placeholder_image(image_url):
                     return image_url
         return ""
@@ -299,9 +310,10 @@ class NewsDetailService:
             return {"code": 400, "msg": "无效或不安全的新闻链接"}
 
         cache_key = NewsDetailService._cache_key(url)
-        has_preferred_image = bool(str(preferred_image or "").strip())
+        has_preferred_image = bool(NewsDetailService._normalize_image_url(preferred_image, url))
+        normalized_preferred_image = NewsDetailService._normalize_image_url(preferred_image, url)
         cached = await cache.get(cache_key)
-        if cached and cached.get("detailVersion") == 3 and (not has_preferred_image or cached.get("originalImage") == preferred_image):
+        if cached and cached.get("detailVersion") == 3 and (not has_preferred_image or cached.get("originalImage") == normalized_preferred_image):
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:
