@@ -166,7 +166,7 @@ def test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines():
 def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
-        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要", "trend": "沸"}]}},
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要", "trend": "沸", "picUrl": "https://example.com/hot.png", "url": "https://example.com/hot"}]}},
     }
 
     weibo_removed = run(TianApiService.get_hot_search('weibo'))
@@ -180,7 +180,8 @@ def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     assert baidu['data']['items'][0]['title'] == '百度话题'
     assert baidu['data']['items'][0]['hot'] == '9999'
     assert baidu['data']['items'][0]['description'] == '话题摘要'
-    assert baidu['data']['items'][0]['url'].startswith('https://m.baidu.com/s?word=')
+    assert baidu['data']['items'][0]['image'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Fexample.com%2Fhot.png'
+    assert baidu['data']['items'][0]['url'] == 'https://example.com/hot'
     assert baidu['data']['items'][0]['raw']['keyword'] == '百度话题'
     assert baidu['data']['items'][0]['raw']['index'] == '9999'
 
@@ -289,6 +290,29 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     assert result['data']['rawHotItem']['word'] == '百度真实热搜'
 
 
+def test_baidu_hot_search_merges_official_images_when_nethot_lacks_media():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要"}]}},
+        ('https://top.baidu.com/api/board', None): {
+            "success": True,
+            "data": {
+                "cards": [{"content": [{"word": "百度话题", "hotScore": "8888", "desc": "官方摘要", "img": "https://fyb-2.cdn.bcebos.com/hotboard_image/demo-image", "url": "https://www.baidu.com/s?wd=official&sa=fyb_news"}]}]
+            }
+        },
+    }
+
+    result = run(TianApiService.get_hot_search('baidu'))
+
+    paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
+    assert paths == ['/nethot/index', 'https://top.baidu.com/api/board']
+    item = result['data']['items'][0]
+    assert item['title'] == '百度话题'
+    assert item['description'] == '话题摘要'
+    assert item['image'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Ffyb-2.cdn.bcebos.com%2Fhotboard_image%2Fdemo-image'
+    assert item['url'] == 'https://www.baidu.com/s?wd=official&sa=fyb_news'
+
+
 def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
@@ -370,6 +394,7 @@ if __name__ == '__main__':
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
+        test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:

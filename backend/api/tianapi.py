@@ -165,6 +165,7 @@ class TianApiService:
         hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("index") or item.get("num") or item.get("hot") or "")
         description = str(item.get("desc") or item.get("brief") or item.get("description") or "")
         url = str(item.get("url") or item.get("mobilUrl") or "")
+        image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or item.get("avatar") or item.get("cover") or ""))
         if not url and platform == "weibo" and title:
             word = str(item.get("word_scheme") or title)
             url = f"https://s.weibo.com/weibo?q={quote(word)}&t=31&band_rank=12&Refer=top"
@@ -175,6 +176,7 @@ class TianApiService:
             "title": title,
             "hot": hot,
             "description": description,
+            "image": image,
             "url": url,
             "raw": dict(item),
         }
@@ -690,7 +692,7 @@ class TianApiService:
                 continue
             hot = str(item.get("hotScore") or item.get("hot_value") or item.get("hot") or item.get("newHotName") or item.get("labelTagName") or "")
             description = str(item.get("desc") or item.get("description") or "")
-            image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or ""))
+            image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or item.get("avatar") or item.get("cover") or ""))
             url = str(item.get("url") or item.get("appUrl") or item.get("rawUrl") or item.get("mobilUrl") or "")
             if not url:
                 url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news"
@@ -711,14 +713,46 @@ class TianApiService:
         }
 
     @staticmethod
-    async def _get_baidu_top_search() -> Dict[str, Any]:
+    def _merge_baidu_official_media(primary: Dict[str, Any], official: Dict[str, Any]) -> Dict[str, Any]:
+        """用百度官方热榜补全天行 /nethot 缺失的图片和原链接。"""
+        primary_items = primary.get("items") if isinstance(primary.get("items"), list) else []
+        official_items = official.get("items") if isinstance(official.get("items"), list) else []
+        if not primary_items or not official_items:
+            return primary
+        official_by_title = {str(item.get("title") or "").strip(): item for item in official_items if isinstance(item, dict)}
+        for index, item in enumerate(primary_items):
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            official_item = official_by_title.get(title)
+            if official_item is None and index < len(official_items):
+                candidate = official_items[index]
+                official_item = candidate if isinstance(candidate, dict) else None
+            if not official_item:
+                continue
+            if not item.get("image") and official_item.get("image"):
+                item["image"] = official_item["image"]
+            default_search_url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news" if title else ""
+            if official_item.get("url") and (not item.get("url") or item.get("url") == default_search_url):
+                item["url"] = official_item["url"]
+            if not item.get("description") and official_item.get("description"):
+                item["description"] = official_item["description"]
+        return primary
+
+    @staticmethod
+    async def _get_baidu_top_search_data() -> Dict[str, Any]:
         async with HttpClient(timeout=15) as client:
             result = await client.get(BAIDU_TOP_API, params={"platform": "pc", "tab": "realtime"})
         if result.get("success") is True:
-            data = TianApiService._normalize_baidu_top_api_result(result)
-            if data["items"]:
-                return {"code": 200, "msg": "success", "data": data}
-        return {"code": 200, "msg": result.get("msg") or result.get("error") or "百度热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search("baidu")}
+            return TianApiService._normalize_baidu_top_api_result(result)
+        return {"platform": "baidu", "title": TianApiService._hot_search_title("baidu"), "updateTime": datetime.now().strftime("%Y-%m-%d %H:%M"), "items": []}
+
+    @staticmethod
+    async def _get_baidu_top_search() -> Dict[str, Any]:
+        data = await TianApiService._get_baidu_top_search_data()
+        if data["items"]:
+            return {"code": 200, "msg": "success", "data": data}
+        return {"code": 200, "msg": "百度热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search("baidu")}
 
     @staticmethod
     async def get_hot_search(platform: str = "baidu") -> Dict[str, Any]:
@@ -737,6 +771,16 @@ class TianApiService:
         if result.get("code") == 200:
             data = TianApiService._normalize_hot_search_result(platform, result)
             if data["items"]:
+                if platform == "baidu":
+                    needs_official_media = any(
+                        isinstance(item, dict) and (
+                            not item.get("image") or str(item.get("url") or "").startswith("https://m.baidu.com/s?word=")
+                        )
+                        for item in data["items"]
+                    )
+                    if needs_official_media:
+                        official = await TianApiService._get_baidu_top_search_data()
+                        data = TianApiService._merge_baidu_official_media(data, official)
                 return {"code": 200, "msg": "success", "data": data}
         if platform == "baidu":
             return await TianApiService._get_baidu_top_search()
