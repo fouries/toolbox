@@ -749,7 +749,7 @@ class TianApiService:
 
     @staticmethod
     def _merge_baidu_official_media(primary: Dict[str, Any], official: Dict[str, Any]) -> Dict[str, Any]:
-        """用百度官方热榜补全天行 /nethot 缺失的图片和原链接。"""
+        """用百度官方热榜补全天行 /nethot 缺失的图片和原链接，仅标题严格匹配时使用。"""
         primary_items = primary.get("items") if isinstance(primary.get("items"), list) else []
         official_items = official.get("items") if isinstance(official.get("items"), list) else []
         if not primary_items or not official_items:
@@ -760,9 +760,6 @@ class TianApiService:
                 continue
             title = str(item.get("title") or "").strip()
             official_item = official_by_title.get(title)
-            if official_item is None and index < len(official_items):
-                candidate = official_items[index]
-                official_item = candidate if isinstance(candidate, dict) else None
             if not official_item:
                 continue
             if not item.get("image") and official_item.get("image"):

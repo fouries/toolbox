@@ -61,7 +61,8 @@ class _ReadableHtmlParser(HTMLParser):
             return
         if self._heading_tag:
             self._heading_parts.append(data)
-        self.parts.append(data)
+        else:
+            self.parts.append(data)
 
 
 class NewsDetailService:
