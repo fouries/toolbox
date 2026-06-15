@@ -53,6 +53,8 @@ export interface NewsDetail {
   source?: string
   publishTime?: string
   description?: string
+  image?: string
+  originalImage?: string
   content: string
   localUrl?: string
   localId?: string

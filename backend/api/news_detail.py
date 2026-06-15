@@ -6,7 +6,7 @@ from datetime import datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urljoin, urlparse
 
 from config import get_settings
 from utils.cache import cache
@@ -150,6 +150,47 @@ class NewsDetailService:
         return _normalize_space(match.group(0)) if match else ""
 
     @staticmethod
+    def _proxied_image_url(image_url: str) -> str:
+        image_url = str(image_url or "").strip()
+        if not image_url:
+            return ""
+        return f"https://quan1234.com/api/news/image-proxy?url={quote(image_url, safe='')}"
+
+    @staticmethod
+    def _extract_image(html_text: str, page_url: str) -> str:
+        for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
+            value = NewsDetailService._extract_meta(html_text, meta_name)
+            if value:
+                return urljoin(page_url, html.unescape(value).strip())
+        source_html = NewsDetailService._extract_main_content_html(html_text)
+        match = re.search(r'<img[^>]+(?:data-src|data-original|src)=["\']([^"\']+)["\']', source_html, re.IGNORECASE)
+        if match:
+            return urljoin(page_url, html.unescape(match.group(1)).strip())
+        return ""
+
+    @staticmethod
+    def is_safe_image_url(url: str) -> bool:
+        return NewsDetailService._is_safe_url(url)
+
+    @staticmethod
+    async def fetch_image(url: str) -> Dict[str, Any]:
+        url = (url or "").strip()
+        if not NewsDetailService.is_safe_image_url(url):
+            return {"code": 400, "msg": "无效或不安全的图片链接"}
+        try:
+            async with HttpClient(timeout=10, follow_redirects=True) as client:
+                if client._client is None:
+                    return {"code": 502, "msg": "图片读取失败"}
+                response = await client._client.get(url, headers={"User-Agent": NewsDetailService.USER_AGENT})
+                response.raise_for_status()
+            content_type = response.headers.get("content-type", "image/jpeg")
+            if not content_type.startswith("image/"):
+                return {"code": 400, "msg": "URL 不是图片"}
+            return {"code": 200, "content": response.content, "content_type": content_type}
+        except Exception:
+            return {"code": 502, "msg": "图片读取失败"}
+
+    @staticmethod
     def _extract_main_content_html(html_text: str) -> str:
         container_patterns = [
             r'<div[^>]+id=["\']artibody["\'][^>]*>(.*?)(?:<div[^>]+class=["\'][^"\']*article_share|<article\b[^>]*class=["\'][^"\']*comment|</section>)',
@@ -181,8 +222,9 @@ class NewsDetailService:
         description = NewsDetailService._extract_meta(html_text, "description")
         if len(content) < 20 and description:
             content = description
+        original_image = NewsDetailService._extract_image(html_text, url)
         local_id = NewsDetailService._local_id(url)
-        return {
+        detail = {
             "title": title,
             "source": NewsDetailService._extract_source(html_text, url),
             "publishTime": NewsDetailService._extract_publish_time(html_text),
@@ -192,7 +234,12 @@ class NewsDetailService:
             "localId": local_id,
             "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "detailVersion": 2,
         }
+        if original_image:
+            detail["originalImage"] = original_image
+            detail["image"] = NewsDetailService._proxied_image_url(original_image)
+        return detail
 
     @staticmethod
     def _local_path(local_id: str) -> Path:
@@ -227,7 +274,7 @@ class NewsDetailService:
 
         cache_key = NewsDetailService._cache_key(url)
         cached = await cache.get(cache_key)
-        if cached:
+        if cached and cached.get("detailVersion") == 2:
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:

@@ -20,6 +20,7 @@
           <text v-if="detail.publishTime">{{ detail.publishTime }}</text>
           <text v-if="detail.fromCache">已缓存</text>
         </view>
+        <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image"></image>
         <text class="article-desc" v-if="detail.description">{{ detail.description }}</text>
         <view class="article-content" v-if="detail.content">
           <text class="article-paragraph" v-for="(paragraph, index) in paragraphs" :key="index">{{ paragraph }}</text>
@@ -121,6 +122,7 @@ onLoad((options: any) => {
 .loading-text,
 .article-title,
 .article-desc,
+.article-image,
 .article-paragraph,
 .error-title,
 .error-text {
@@ -150,6 +152,13 @@ onLoad((options: any) => {
   margin-top: 18rpx;
   color: #94a3b8;
   font-size: 23rpx;
+}
+
+.article-image {
+  width: 100%;
+  margin-top: 24rpx;
+  border-radius: 22rpx;
+  background: #eff6ff;
 }
 
 .article-desc {

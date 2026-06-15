@@ -103,6 +103,33 @@ def test_news_detail_fetch_writes_local_resource_snapshot():
     assert len(DummyHttpClient.calls) == 1
 
 
+def test_news_detail_extracts_original_article_image_and_proxies_it():
+    html = """
+    <html>
+      <head>
+        <meta property="og:image" content="/images/article-cover.jpg">
+      </head>
+      <body>
+        <article>
+          <h1>带图新闻标题</h1>
+          <p>这是一篇带有原文图片的新闻正文，内容足够用于详情页展示。</p>
+        </article>
+      </body>
+    </html>
+    """
+    DummyCache.store = {}
+    DummyHttpClient.calls = []
+    DummyHttpClient.response_text = html
+
+    result = run(NewsDetailService.fetch_detail("https://example.com/news/with-image"))
+
+    assert result["code"] == 200
+    assert result["data"]["originalImage"] == "https://example.com/images/article-cover.jpg"
+    assert result["data"]["image"] == "https://quan1234.com/api/news/image-proxy?url=https%3A%2F%2Fexample.com%2Fimages%2Farticle-cover.jpg"
+    local_path = NewsDetailService.LOCAL_DETAIL_DIR / f"{result['data']['localId']}.json"
+    assert '"image"' in local_path.read_text(encoding="utf-8")
+
+
 def test_news_detail_rejects_unsafe_urls():
     result = run(NewsDetailService.fetch_detail("javascript:alert(1)"))
 
@@ -151,6 +178,8 @@ def test_news_detail_prefers_article_body_container_over_comment_article():
 if __name__ == "__main__":
     setup_module(None)
     test_news_detail_fetch_writes_local_resource_snapshot()
+    setup_module(None)
+    test_news_detail_extracts_original_article_image_and_proxies_it()
     setup_module(None)
     test_news_detail_rejects_unsafe_urls()
     setup_module(None)

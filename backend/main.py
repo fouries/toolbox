@@ -85,6 +85,15 @@ async def news_detail(url: str):
     result = await NewsDetailService.fetch_detail(url)
     return result
 
+@app.get("/api/news/image-proxy", summary="资讯图片代理", tags=["天行数据"])
+async def news_image_proxy(url: str):
+    """代理资讯原文图片，便于小程序通过本站 HTTPS 域名展示。"""
+    result = await NewsDetailService.fetch_image(url)
+    if result.get("code") != 200:
+        raise HTTPException(status_code=400 if result.get("code") == 400 else 502, detail=result.get("msg", "图片读取失败"))
+    content = result.get("content") or b""
+    return Response(content=content, media_type=str(result.get("content_type") or "image/jpeg"), headers={"Cache-Control": "public, max-age=86400"})
+
 @app.get("/api/news/local/{local_id}", summary="本地资讯详情", tags=["天行数据"])
 async def local_news_detail(local_id: str):
     """读取已下载到服务器本地的资讯正文快照。"""
