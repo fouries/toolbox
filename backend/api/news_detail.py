@@ -157,15 +157,41 @@ class NewsDetailService:
         return f"https://quan1234.com/api/news/image-proxy?url={quote(image_url, safe='')}"
 
     @staticmethod
-    def _extract_image(html_text: str, page_url: str) -> str:
+    def _is_placeholder_image(image_url: str) -> bool:
+        value = str(image_url or "").lower()
+        return any(marker in value for marker in (
+            "weixinfixed",
+            "empty.png",
+            "default",
+            "logo",
+            "avatar",
+            "s-avatar",
+            "certification",
+        ))
+
+    @staticmethod
+    def _extract_image(html_text: str, page_url: str, preferred_image: str = "") -> str:
+        preferred_image = str(preferred_image or "").strip()
+        if preferred_image and NewsDetailService.is_safe_image_url(preferred_image) and not NewsDetailService._is_placeholder_image(preferred_image):
+            return urljoin(page_url, html.unescape(preferred_image))
+        source_html = NewsDetailService._extract_main_content_html(html_text)
+        for match in re.finditer(r'<img([^>]+)>', source_html, re.IGNORECASE):
+            attrs = match.group(1)
+            if re.search(r'class=["\'][^"\']*(?:avatar|author|certification|comment|logo)[^"\']*["\']', attrs, re.IGNORECASE):
+                continue
+            for attr_name in ("data-src", "data-original", "data-url", "src"):
+                attr_match = re.search(rf'{attr_name}=["\']([^"\']+)["\']', attrs, re.IGNORECASE)
+                if not attr_match:
+                    continue
+                image_url = urljoin(page_url, html.unescape(attr_match.group(1)).strip())
+                if image_url and not NewsDetailService._is_placeholder_image(image_url):
+                    return image_url
         for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
             value = NewsDetailService._extract_meta(html_text, meta_name)
             if value:
-                return urljoin(page_url, html.unescape(value).strip())
-        source_html = NewsDetailService._extract_main_content_html(html_text)
-        match = re.search(r'<img[^>]+(?:data-src|data-original|src)=["\']([^"\']+)["\']', source_html, re.IGNORECASE)
-        if match:
-            return urljoin(page_url, html.unescape(match.group(1)).strip())
+                image_url = urljoin(page_url, html.unescape(value).strip())
+                if not NewsDetailService._is_placeholder_image(image_url):
+                    return image_url
         return ""
 
     @staticmethod
@@ -214,7 +240,7 @@ class NewsDetailService:
         return content[:12000]
 
     @staticmethod
-    def _build_detail(url: str, html_text: str) -> Dict[str, Any]:
+    def _build_detail(url: str, html_text: str, preferred_image: str = "") -> Dict[str, Any]:
         parser = _ReadableHtmlParser()
         parser.feed(html_text)
         title = NewsDetailService._extract_title(html_text, parser.headings)
@@ -222,7 +248,7 @@ class NewsDetailService:
         description = NewsDetailService._extract_meta(html_text, "description")
         if len(content) < 20 and description:
             content = description
-        original_image = NewsDetailService._extract_image(html_text, url)
+        original_image = NewsDetailService._extract_image(html_text, url, preferred_image)
         local_id = NewsDetailService._local_id(url)
         detail = {
             "title": title,
@@ -234,7 +260,7 @@ class NewsDetailService:
             "localId": local_id,
             "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "detailVersion": 2,
+            "detailVersion": 3,
         }
         if original_image:
             detail["originalImage"] = original_image
@@ -267,14 +293,15 @@ class NewsDetailService:
         return {"code": 200, "msg": "success", "data": {**data, "fromLocal": True}}
 
     @staticmethod
-    async def fetch_detail(url: str) -> Dict[str, Any]:
+    async def fetch_detail(url: str, preferred_image: str = "") -> Dict[str, Any]:
         url = (url or "").strip()
         if not NewsDetailService._is_safe_url(url):
             return {"code": 400, "msg": "无效或不安全的新闻链接"}
 
         cache_key = NewsDetailService._cache_key(url)
+        has_preferred_image = bool(str(preferred_image or "").strip())
         cached = await cache.get(cache_key)
-        if cached and cached.get("detailVersion") == 2:
+        if cached and cached.get("detailVersion") == 3 and (not has_preferred_image or cached.get("originalImage") == preferred_image):
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:
@@ -286,7 +313,7 @@ class NewsDetailService:
                         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     },
                 )
-            detail = NewsDetailService._build_detail(url, html_text)
+            detail = NewsDetailService._build_detail(url, html_text, preferred_image=preferred_image)
             if not detail["content"]:
                 return {"code": 502, "msg": "未能提取新闻正文，请复制原文链接到浏览器打开"}
             NewsDetailService._write_local_detail(detail)

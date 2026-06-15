@@ -80,9 +80,9 @@ async def news(category: str = "internet"):
     return result
 
 @app.get("/api/news/detail", summary="资讯详情", tags=["天行数据"])
-async def news_detail(url: str):
+async def news_detail(url: str, image: str = ""):
     """抓取并缓存资讯正文，供小程序原生详情页展示。"""
-    result = await NewsDetailService.fetch_detail(url)
+    result = await NewsDetailService.fetch_detail(url, preferred_image=image)
     return result
 
 @app.get("/api/news/image-proxy", summary="资讯图片代理", tags=["天行数据"])

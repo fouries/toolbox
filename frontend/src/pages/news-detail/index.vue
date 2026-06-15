@@ -43,6 +43,7 @@ const { themeClass } = useTheme()
 
 const sourceUrl = ref('')
 const localUrl = ref('')
+const preferredImage = ref('')
 const detail = ref<NewsDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -69,7 +70,7 @@ const loadDetail = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await getNewsDetail(sourceUrl.value, localUrl.value)
+    const res = await getNewsDetail(sourceUrl.value, localUrl.value, preferredImage.value)
     if (res.code === 200 && res.data) {
       detail.value = res.data
     } else {
@@ -87,6 +88,7 @@ const loadDetail = async () => {
 onLoad((options: any) => {
   sourceUrl.value = decodeURIComponent(options?.url || '')
   localUrl.value = decodeURIComponent(options?.localUrl || '')
+  preferredImage.value = decodeURIComponent(options?.image || '')
   loadDetail()
 })
 </script>

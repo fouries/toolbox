@@ -130,6 +130,55 @@ def test_news_detail_extracts_original_article_image_and_proxies_it():
     assert '"image"' in local_path.read_text(encoding="utf-8")
 
 
+def test_news_detail_prefers_list_image_over_site_placeholder_meta_image():
+    html = """
+    <html>
+      <head>
+        <meta property="og:image" content="https://static.ws.126.net/f2e/wap/common/images/weixinfixed1200low.jpg">
+      </head>
+      <body>
+        <article>
+          <h1>百度搭子DuMate核心引擎升级</h1>
+          <p>6月15日，百度搭子DuMate完成核心引擎升级，正文内容足够用于详情页展示。</p>
+        </article>
+      </body>
+    </html>
+    """
+    preferred_image = "https://nimg.ws.126.net/?url=http%3A%2F%2Fdingyue.ws.126.net%2F2026%2F0615%2Fa4ed1540j00tgnmp2001zd0009c005uc.jpg&thumbnail=200y140&quality=100&type=jpg"
+
+    detail = NewsDetailService._build_detail("https://www.163.com/dy/article/KVFARB850534A4SC.html", html, preferred_image=preferred_image)
+
+    assert detail["originalImage"] == preferred_image
+    assert "weixinfixed" not in detail["originalImage"]
+    assert "image-proxy" in detail["image"]
+
+
+def test_news_detail_ignores_author_avatar_when_extracting_body_image():
+    html = """
+    <html>
+      <head>
+        <meta property="og:image" content="https://static.ws.126.net/f2e/wap/common/images/weixinfixed1200low.jpg">
+      </head>
+      <body>
+        <article>
+          <h1>带正文图新闻标题</h1>
+          <section class="article-info">
+            <img class="s-avatar image-lazy" data-src="https://example.com/avatar.jpg" alt="作者头像">
+          </section>
+          <p>新闻正文第一段，内容足够用于详情页展示。</p>
+          <p><img src="https://example.com/placeholder.png" data-src="https://example.com/body-real.jpg" alt="正文配图"></p>
+        </article>
+      </body>
+    </html>
+    """
+
+    detail = NewsDetailService._build_detail("https://example.com/news/body-image", html)
+
+    assert detail["originalImage"] == "https://example.com/body-real.jpg"
+    assert "avatar" not in detail["originalImage"]
+    assert "weixinfixed" not in detail["originalImage"]
+
+
 def test_news_detail_rejects_unsafe_urls():
     result = run(NewsDetailService.fetch_detail("javascript:alert(1)"))
 
@@ -180,6 +229,10 @@ if __name__ == "__main__":
     test_news_detail_fetch_writes_local_resource_snapshot()
     setup_module(None)
     test_news_detail_extracts_original_article_image_and_proxies_it()
+    setup_module(None)
+    test_news_detail_prefers_list_image_over_site_placeholder_meta_image()
+    setup_module(None)
+    test_news_detail_ignores_author_avatar_when_extracting_body_image()
     setup_module(None)
     test_news_detail_rejects_unsafe_urls()
     setup_module(None)

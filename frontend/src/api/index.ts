@@ -224,8 +224,8 @@ export const getInfoNews = (category: string = 'internet') => {
   return request<NewsItem[]>(`/api/news?category=${encodeURIComponent(category)}`)
 }
 
-export const getNewsDetail = (url: string, localUrl?: string) => {
-  const target = localUrl || `/api/news/detail?url=${encodeURIComponent(url)}`
+export const getNewsDetail = (url: string, localUrl?: string, image?: string) => {
+  const target = localUrl || `/api/news/detail?url=${encodeURIComponent(url)}${image ? `&image=${encodeURIComponent(image)}` : ''}`
   return request<NewsDetail>(target, { timeout: 20000 })
 }
 
