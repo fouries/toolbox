@@ -19,9 +19,9 @@
       <view v-else>
         <view class="keyword-card card">
           <text class="keyword-label">热搜关键词</text>
-          <text class="keyword-title">{{ detail?.keyword || keyword || '未知热搜' }}</text>
-          <view class="hot-image-section" v-if="hotImage">
-            <image class="hot-image" :src="hotImage" mode="widthFix"></image>
+          <text class="keyword-title">{{ hotKeyword }}</text>
+          <view class="hot-image-section" v-if="displayImage">
+            <image class="hot-image" :src="displayImage" mode="widthFix"></image>
           </view>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="action-row">
@@ -35,7 +35,6 @@
             <view class="news-item" v-for="(item, index) in relatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
               <view class="news-main">
                 <text class="news-item-title">{{ item.title }}</text>
-                <text class="news-item-desc" v-if="item.description">{{ item.description }}</text>
                 <view class="news-meta">
                   <text v-if="item.source">{{ item.source }}</text>
                   <text v-if="item.ctime">{{ item.ctime }}</text>
@@ -71,6 +70,42 @@ const detail = ref<HotSearchDetailData | null>(null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
 
+const decodeValue = (value: unknown) => {
+  if (typeof value !== 'string') return ''
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+const parseRawHotData = () => {
+  if (!rawHotData.value) return null
+  try {
+    const parsed = JSON.parse(rawHotData.value)
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null
+  } catch {
+    return null
+  }
+}
+
+const pickText = (record: Record<string, unknown> | null, keys: string[]) => {
+  if (!record) return ''
+  for (const key of keys) {
+    const value = record[key]
+    if (value !== undefined && value !== null && String(value).trim()) {
+      return String(value).trim()
+    }
+  }
+  return ''
+}
+
+const extractKeywordFromRaw = () => pickText(parseRawHotData(), ['keyword', 'word', 'hotword', 'title', 'query'])
+const extractImageFromRaw = () => pickText(parseRawHotData(), ['image', 'img', 'pic', 'picUrl', 'avatar', 'cover'])
+
+const hotKeyword = computed(() => detail.value?.keyword || keyword.value || extractKeywordFromRaw() || '未知热搜')
+const displayImage = computed(() => hotImage.value || extractImageFromRaw())
+
 const copyHotLink = () => {
   const data = sourceUrl.value || keyword.value
   if (!data) return
@@ -88,10 +123,11 @@ const openNewsDetail = (item: NewsItem) => {
 }
 
 const loadDetail = async () => {
-  if (!keyword.value) {
+  if (!hotKeyword.value || hotKeyword.value === '未知热搜') {
     error.value = '缺少热搜关键词'
     return
   }
+  keyword.value = hotKeyword.value
   loading.value = true
   error.value = ''
   try {
@@ -121,12 +157,18 @@ const loadDetail = async () => {
 }
 
 onLoad((options: any) => {
-  keyword.value = decodeURIComponent(options?.keyword || '')
-  hot.value = decodeURIComponent(options?.hot || '')
-  description.value = decodeURIComponent(options?.description || '')
-  sourceUrl.value = decodeURIComponent(options?.url || '')
-  hotImage.value = decodeURIComponent(options?.image || '')
-  rawHotData.value = decodeURIComponent(options?.raw || '')
+  keyword.value = decodeValue(options?.keyword || options?.title)
+  hot.value = decodeValue(options?.hot)
+  description.value = decodeValue(options?.description)
+  sourceUrl.value = decodeValue(options?.url)
+  hotImage.value = decodeValue(options?.image)
+  rawHotData.value = decodeValue(options?.raw)
+  if (!keyword.value) {
+    keyword.value = extractKeywordFromRaw()
+  }
+  if (!hotImage.value) {
+    hotImage.value = extractImageFromRaw()
+  }
   loadDetail()
 })
 </script>
@@ -164,7 +206,6 @@ onLoad((options: any) => {
 .keyword-desc,
 .news-title,
 .news-item-title,
-.news-item-desc,
 .loading-icon,
 .loading-text,
 .error-text {
@@ -251,13 +292,6 @@ onLoad((options: any) => {
   font-size: 28rpx;
   font-weight: 760;
   line-height: 1.45;
-}
-
-.news-item-desc {
-  margin-top: 8rpx;
-  color: #64748b;
-  font-size: 24rpx;
-  line-height: 1.55;
 }
 
 .news-meta {
