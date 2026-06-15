@@ -86,6 +86,9 @@ assert.match(infoNewsPage, /\/pages\/news-detail\/index\?url=\$\{encodeURICompon
 assert.match(infoNewsPage, /normalizeNewsUrl/, 'info news cards should normalize protocol-relative esports URLs before navigation')
 assert.match(infoNewsPage, /url\.startsWith\('\/\/'\)[\s\S]*`https:\$\{url\}`/, 'protocol-relative esports URLs should be converted to https URLs')
 assert.match(infoNewsPage, /onLoad/, 'info news page should read category from route query')
+assert.doesNotMatch(infoNewsPage, /<text class="news-desc"/, 'info news list should show titles only, not article body text')
+assert.doesNotMatch(infoNewsPage, /item\.description/, 'info news list should not render news descriptions for esports or auto')
+assert.doesNotMatch(infoNewsPage, /\.news-desc/, 'info news page should not keep description styling when rows are title-only')
 
 const newsDetailPage = fs.readFileSync(newsDetailPagePath, 'utf8')
 assert.match(newsDetailPage, /getNewsDetail/, 'news detail page should fetch cached article detail')

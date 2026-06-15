@@ -33,7 +33,6 @@
         <view class="news-card card" v-for="item in newsList" :key="item.title" @tap="openNews(item)">
           <view class="news-main">
             <text class="news-title">{{ item.title }}</text>
-            <text class="news-desc" v-if="item.description">{{ item.description }}</text>
             <view class="news-meta">
               <text>{{ item.source || currentConfig.title }}</text>
               <text v-if="item.ctime">{{ item.ctime }}</text>
@@ -174,7 +173,6 @@ onLoad((options: any) => {
 .tab-icon,
 .tab-name,
 .news-title,
-.news-desc,
 .note-title,
 .note-text,
 .loading-icon,
@@ -232,13 +230,6 @@ onLoad((options: any) => {
   font-size: 30rpx;
   font-weight: 760;
   line-height: 1.45;
-}
-
-.news-desc {
-  margin-top: 10rpx;
-  color: #64748b;
-  font-size: 24rpx;
-  line-height: 1.65;
 }
 
 .news-meta {
