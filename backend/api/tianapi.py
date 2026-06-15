@@ -162,8 +162,8 @@ class TianApiService:
     @staticmethod
     def _normalize_hot_item(item: Dict[str, Any], rank: int, platform: str) -> Dict[str, Any]:
         title = str(item.get("hotword") or item.get("word") or item.get("note") or item.get("title") or item.get("keyword") or "")
-        hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("num") or item.get("hot") or "")
-        description = str(item.get("desc") or item.get("description") or "")
+        hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("index") or item.get("num") or item.get("hot") or "")
+        description = str(item.get("desc") or item.get("brief") or item.get("description") or "")
         url = str(item.get("url") or item.get("mobilUrl") or "")
         if not url and platform == "weibo" and title:
             word = str(item.get("word_scheme") or title)
@@ -508,7 +508,7 @@ class TianApiService:
         related_news: Optional[List[Dict[str, Any]]] = None,
         raw_item: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        platform = platform if platform in {"weibo", "baidu"} else "weibo"
+        platform = platform if platform in {"weibo", "baidu"} else "baidu"
         platform_name = TianApiService._hot_search_title(platform)
         related_news = related_news or []
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
@@ -551,16 +551,16 @@ class TianApiService:
 
     @staticmethod
     async def get_hot_search_detail(
-        platform: str = "weibo",
+        platform: str = "baidu",
         keyword: str = "",
         hot: str = "",
         description: str = "",
         url: str = "",
         raw: str = "",
     ) -> Dict[str, Any]:
-        """热搜详情：按热搜词聚合站内资讯并生成小程序可展示正文。"""
+        """百度热搜详情：生成关键词、图片和摘要所需的结构化内容。"""
         keyword = str(keyword or "").strip()
-        platform = platform if platform in {"weibo", "baidu"} else "weibo"
+        platform = "baidu"
         all_news: List[Dict[str, Any]] = []
         for category in ("internet", "esports", "auto"):
             result = await TianApiService.get_info_news(category)
@@ -721,13 +721,12 @@ class TianApiService:
         return {"code": 200, "msg": result.get("msg") or result.get("error") or "百度热搜接口暂不可用", "fallback": True, "data": TianApiService._empty_hot_search("baidu")}
 
     @staticmethod
-    async def get_hot_search(platform: str = "weibo") -> Dict[str, Any]:
-        """微博热搜榜 / 百度热搜榜。"""
+    async def get_hot_search(platform: str = "baidu") -> Dict[str, Any]:
+        """百度热搜榜。"""
         endpoint_map = {
-            "weibo": "/weibohot/index",
-            "baidu": "/baiduhot/index",
+            "baidu": "/nethot/index",
         }
-        platform = platform if platform in endpoint_map else "weibo"
+        platform = platform if platform in endpoint_map else "baidu"
         if not settings.TIANAPI_KEY:
             return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._empty_hot_search(platform)}
         result = await TianApiService._request(

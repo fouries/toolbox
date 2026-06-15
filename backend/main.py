@@ -109,16 +109,16 @@ async def daily_brief():
     result = await TianApiService.get_daily_brief()
     return result
 
-@app.get("/api/hot-search", summary="热搜榜", tags=["天行数据"])
-async def hot_search(platform: str = "weibo"):
-    """查询微博热搜榜或百度热搜榜。"""
+@app.get("/api/hot-search", summary="百度热搜榜", tags=["天行数据"])
+async def hot_search(platform: str = "baidu"):
+    """查询百度热搜榜。微博热搜入口已下线，传入其他 platform 时自动返回百度热搜。"""
     result = await TianApiService.get_hot_search(platform)
     return result
 
-@app.get("/api/hot-search/detail", summary="热搜详情", tags=["天行数据"])
-async def hot_search_detail(platform: str = "weibo", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
-    """按热搜关键词聚合站内资讯，生成小程序原生详情内容。"""
-    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url, raw)
+@app.get("/api/hot-search/detail", summary="百度热搜详情", tags=["天行数据"])
+async def hot_search_detail(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
+    """生成百度热搜详情：关键词、图片和摘要。"""
+    result = await TianApiService.get_hot_search_detail("baidu", keyword, hot, description, url, raw)
     return result
 
 @app.get("/api/image-proxy", summary="图片代理", tags=["本地工具"])

@@ -163,28 +163,26 @@ def test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines():
     assert result['data']['items'][1]['title'] == '财经动态'
 
 
-def test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items():
+def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
-        ('/weibohot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"hotword": "微博话题", "hotwordnum": "123456", "word_scheme": "微博话题"}]}},
-        ('/baiduhot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"word": "百度话题", "hotScore": "9999", "desc": "话题摘要", "url": "https://m.baidu.com/s?word=test"}]}},
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要", "trend": "沸"}]}},
     }
 
-    weibo = run(TianApiService.get_hot_search('weibo'))
+    weibo_removed = run(TianApiService.get_hot_search('weibo'))
     baidu = run(TianApiService.get_hot_search('baidu'))
 
-    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/weibohot/index', '/baiduhot/index']
-    assert weibo['data']['platform'] == 'weibo'
-    assert weibo['data']['items'][0]['title'] == '微博话题'
-    assert weibo['data']['items'][0]['hot'] == '123456'
-    assert weibo['data']['items'][0]['url'].startswith('https://s.weibo.com/weibo')
+    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/nethot/index', '/nethot/index']
+    assert weibo_removed['data']['platform'] == 'baidu'
+    assert weibo_removed['data']['title'] == '百度热搜榜'
     assert baidu['data']['platform'] == 'baidu'
     assert baidu['data']['title'] == '百度热搜榜'
     assert baidu['data']['items'][0]['title'] == '百度话题'
+    assert baidu['data']['items'][0]['hot'] == '9999'
     assert baidu['data']['items'][0]['description'] == '话题摘要'
-    assert baidu['data']['items'][0]['url'] == 'https://m.baidu.com/s?word=test'
-    assert baidu['data']['items'][0]['raw']['word'] == '百度话题'
-    assert baidu['data']['items'][0]['raw']['hotScore'] == '9999'
+    assert baidu['data']['items'][0]['url'].startswith('https://m.baidu.com/s?word=')
+    assert baidu['data']['items'][0]['raw']['keyword'] == '百度话题'
+    assert baidu['data']['items'][0]['raw']['index'] == '9999'
 
 
 def test_hot_search_detail_builds_content_from_keyword_and_related_news():
@@ -208,7 +206,7 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
 
     assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/internet/index', '/esports/index', '/auto/index']
     assert result['code'] == 200
-    assert result['data']['platform'] == 'weibo'
+    assert result['data']['platform'] == 'baidu'
     assert result['data']['keyword'] == '微博话题'
     assert result['data']['sourceUrl'] == 'https://s.weibo.com/weibo?q=test'
     assert '微博话题 引发关注' in result['data']['summary']
@@ -294,7 +292,7 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
 def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
-        ('/baiduhot/index', None): {"code": 150, "msg": "热搜接口暂不可用"},
+        ('/nethot/index', None): {"code": 150, "msg": "热搜接口暂不可用"},
         ('https://top.baidu.com/api/board', None): {
             "success": True,
             "data": {
@@ -317,7 +315,7 @@ def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     result = run(TianApiService.get_hot_search('baidu'))
 
     paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
-    assert paths == ['/baiduhot/index', 'https://top.baidu.com/api/board']
+    assert paths == ['/nethot/index', 'https://top.baidu.com/api/board']
     assert result['code'] == 200
     assert result.get('fallback') is not True
     assert result['data']['title'] == '百度热搜榜'
@@ -368,7 +366,7 @@ if __name__ == '__main__':
         test_gold_fallback_is_not_renormalized_when_api_key_is_missing,
         test_crude_endpoint_queries_wti_and_blt_and_normalizes_market_fields,
         test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines,
-        test_hot_search_endpoint_uses_weibo_and_baidu_paths_and_normalizes_items,
+        test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
