@@ -233,7 +233,7 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
         ('https://www.sogou.com/sogou', None): '''
         <div class="vrwrap">
           <h3 class="vr-title"><a href="/link?url=abc">世界杯真正的预言家相关新闻</a></h3>
-          <div class="fz-mid space-txt"><span>2026年6月13日-</span>这是一条围绕世界杯真正的预言家的新闻摘要，介绍预测结果和赛后讨论。</div>
+          <div class="fz-mid space-txt"><span>2026年6月13日-</span>这是一条围绕世界杯出现了真正的预言家的新闻摘要，介绍预测结果和赛后讨论。</div>
           <div class="citeurl"><span>搜狐 - www.sohu.com</span><span class="cite-date">- 2026-6-13</span></div>
         </div>
         '''
@@ -254,8 +254,8 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
     assert result['data']['relatedNews'][0]['title'] == '世界杯真正的预言家相关新闻'
     assert result['data']['relatedNews'][0]['localUrl'].startswith('/api/news/local/')
     assert DummyNewsDetailService.calls == ['https://www.sogou.com/link?url=abc']
-    assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['summary']
-    assert '围绕世界杯真正的预言家的新闻摘要' in result['data']['content']
+    assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['summary']
+    assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['content']
     assert '该话题来自微博热搜榜' not in result['data']['content']
 
 

@@ -603,16 +603,19 @@ class TianApiService:
                 continue
             scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
-        min_relevance_score = 8 if platform == "baidu" and TianApiService._clean_hot_description(description) else 1
+        min_relevance_score = 8 if platform == "baidu" and TianApiService._clean_hot_description(description) else 4
         matched = [
             item
             for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
             if score >= min_relevance_score
         ]
         if not matched:
-            matched = await TianApiService._fetch_keyword_news(keyword, limit=8)
-        if not matched and not TianApiService._clean_hot_description(description):
-            matched = [item for _score, item in scored[:8]]
+            keyword_news = await TianApiService._fetch_keyword_news(keyword, limit=8)
+            matched = [
+                item
+                for item in keyword_news
+                if TianApiService._score_related_news(keyword, item) >= 4
+            ]
         matched = await TianApiService._materialize_related_news(matched[:8])
         data = TianApiService._build_hot_search_detail(
             platform=platform,
