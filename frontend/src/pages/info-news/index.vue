@@ -104,11 +104,13 @@ const isSafeNewsUrl = (url?: string): url is string => {
   return /^https?:\/\//i.test(url)
 }
 
+const safeImageUrl = (url?: string): string => normalizeNewsUrl(url)
+
 const openNews = (item: NewsItem) => {
   const safeUrl = normalizeNewsUrl(item.url)
   if (!isSafeNewsUrl(safeUrl)) return
   uni.navigateTo({
-    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&image=${encodeURIComponent(item.picUrl || '')}`,
+    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&image=${encodeURIComponent(safeImageUrl(item.picUrl) || '')}`,
     fail: () => {
       uni.setClipboardData({ data: safeUrl })
       uni.showToast({ title: '链接已复制，请到浏览器打开', icon: 'none' })

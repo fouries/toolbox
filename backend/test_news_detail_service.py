@@ -221,6 +221,21 @@ def test_news_detail_rejects_unsafe_urls():
     assert "无效" in result["msg"]
 
 
+def test_news_detail_normalizes_protocol_relative_source_urls():
+    html = """
+    <html><body><article><h1>电竞新闻</h1><p>电竞新闻正文内容足够用于详情页展示。</p></article></body></html>
+    """
+    DummyCache.store = {}
+    DummyHttpClient.calls = []
+    DummyHttpClient.response_text = html
+
+    result = run(NewsDetailService.fetch_detail("//dj.sina.com.cn/article/demo.shtml", preferred_image="//n.sinaimg.cn/games/demo.png"))
+
+    assert result["code"] == 200
+    assert result["data"]["sourceUrl"] == "https://dj.sina.com.cn/article/demo.shtml"
+    assert result["data"]["originalImage"] == "https://n.sinaimg.cn/games/demo.png"
+
+
 def test_news_detail_http_client_is_created_with_redirect_following_enabled():
     html = """
     <html><body><article><p>重定向后的新闻正文内容，足够用于详情页展示。</p></article></body></html>
@@ -274,6 +289,8 @@ if __name__ == "__main__":
     test_news_detail_ignores_author_avatar_when_extracting_body_image()
     setup_module(None)
     test_news_detail_rejects_unsafe_urls()
+    setup_module(None)
+    test_news_detail_normalizes_protocol_relative_source_urls()
     setup_module(None)
     test_news_detail_http_client_is_created_with_redirect_following_enabled()
     setup_module(None)

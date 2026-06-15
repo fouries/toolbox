@@ -88,8 +88,15 @@ class NewsDetailService:
         return f"news-detail:{digest}"
 
     @staticmethod
+    def _normalize_source_url(url: str) -> str:
+        url = str(url or "").strip()
+        if url.startswith("//"):
+            return f"https:{url}"
+        return url
+
+    @staticmethod
     def _is_safe_url(url: str) -> bool:
-        parsed = urlparse(url.strip())
+        parsed = urlparse(NewsDetailService._normalize_source_url(url))
         if parsed.scheme not in {"http", "https"}:
             return False
         if not parsed.netloc:
@@ -305,7 +312,7 @@ class NewsDetailService:
 
     @staticmethod
     async def fetch_detail(url: str, preferred_image: str = "") -> Dict[str, Any]:
-        url = (url or "").strip()
+        url = NewsDetailService._normalize_source_url(url)
         if not NewsDetailService._is_safe_url(url):
             return {"code": 400, "msg": "无效或不安全的新闻链接"}
 
