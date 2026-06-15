@@ -555,10 +555,14 @@ class TianApiService:
                 news_content_lines.append(item_desc)
         news_content = "\n".join(news_content_lines)
         if news_content_lines:
-            summary = news_content_lines[0]
+            # 取第一条的description作为summary，不要标题
+            first_item_desc = ""
+            if related_news and len(related_news) > 0:
+                first_item_desc = str(related_news[0].get("description") or "").strip()
+            summary = first_item_desc if first_item_desc else news_content_lines[0]
             sections = [{"title": "相关新闻内容", "body": news_content}]
         else:
-            summary = f"{keyword}：{desc_text}" if keyword and desc_text else desc_text
+            summary = desc_text
             if hot and keyword and hot not in summary:
                 summary = f"{summary}（热度：{hot}）"
             sections = [raw_section]

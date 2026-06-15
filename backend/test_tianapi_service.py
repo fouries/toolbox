@@ -210,8 +210,9 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['platform'] == 'baidu'
     assert result['data']['keyword'] == '微博话题'
     assert result['data']['sourceUrl'] == 'https://s.weibo.com/weibo?q=test'
-    assert '微博话题 引发关注' in result['data']['summary']
+    # summary只包含description，不包含标题
     assert '网友正在讨论微博话题的最新进展' in result['data']['summary']
+    assert '微博话题 引发关注' not in result['data']['summary']
     assert '微博话题 引发关注' in result['data']['content']
     assert '网友正在讨论微博话题的最新进展' in result['data']['content']
     assert '通常反映用户短时间内集中搜索' not in result['data']['content']
@@ -377,8 +378,9 @@ def test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news():
 
     assert result['code'] == 200
     assert result['data']['keyword'] == '荷兰2比2日本'
-    assert '荷兰2比2日本' in result['data']['summary']
-    assert '世界杯进行F组首轮角逐' in result['data']['summary']
+    # summary只包含description，不包含关键词前缀
+    assert '北京时间6月15日，2026年美加墨世界杯进行F组首轮角逐' in result['data']['summary']
+    assert '荷兰2比2日本' not in result['data']['summary']
     assert '滴滴为什么选择做一件反效率的事' not in result['data']['summary']
     assert result['data']['relatedNews'] == []
 
