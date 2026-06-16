@@ -575,14 +575,18 @@ class TianApiService:
             elif item_desc:
                 news_content_lines.append(item_desc)
         news_content = "\n".join(news_content_lines)
-        if news_content_lines:
-            # 取第一条的description作为summary，不要标题
+        if news_content_lines and not hot_desc:
+            # 只有在没有原始desc的情况下，才用相关新闻的
             first_item_desc = ""
             if related_news and len(related_news) > 0:
                 first_item_desc = str(related_news[0].get("description") or "").strip()
+                # 去掉HTML标签
+                first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
             summary = first_item_desc if first_item_desc else news_content_lines[0]
+            summary = re.sub(r"<[^>]+>", "", summary).strip()
             sections = [{"title": "相关新闻内容", "body": news_content}]
         else:
+            # 优先用原始的desc，不用标题前缀
             summary = desc_text
             if hot and keyword and hot not in summary:
                 summary = f"{summary}（热度：{hot}）"
