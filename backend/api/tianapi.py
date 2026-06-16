@@ -575,18 +575,22 @@ class TianApiService:
             elif item_desc:
                 news_content_lines.append(item_desc)
         news_content = "\n".join(news_content_lines)
-        if news_content_lines and not hot_desc:
-            # 只有在没有原始desc的情况下，才用相关新闻的
-            first_item_desc = ""
-            if related_news and len(related_news) > 0:
-                first_item_desc = str(related_news[0].get("description") or "").strip()
-                # 去掉HTML标签
-                first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
-            summary = first_item_desc if first_item_desc else news_content_lines[0]
-            summary = re.sub(r"<[^>]+>", "", summary).strip()
+        if news_content_lines:
+            # 优先用相关新闻的第一条的description，哪怕有hot_desc？不，还是优先用hot_desc
+            if hot_desc:
+                summary = desc_text
+            else:
+                # 没有hot_desc的时候，用第一条相关新闻的description
+                first_item_desc = ""
+                if related_news and len(related_news) > 0:
+                    first_item_desc = str(related_news[0].get("description") or "").strip()
+                    first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
+                summary = first_item_desc if first_item_desc else news_content_lines[0]
+                summary = re.sub(r"<[^>]+>", "", summary).strip()
+            if hot and keyword and hot not in summary:
+                summary = f"{summary}（热度：{hot}）"
             sections = [{"title": "相关新闻内容", "body": news_content}]
         else:
-            # 优先用原始的desc，不用标题前缀
             summary = desc_text
             if hot and keyword and hot not in summary:
                 summary = f"{summary}（热度：{hot}）"
@@ -632,7 +636,9 @@ class TianApiService:
                 continue
             scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
-        min_relevance_score = 8 if platform == "baidu" and TianApiService._clean_hot_description(description) else 4
+        # 如果有原始desc，要求min_relevance_score=8；如果没有，降低到2
+        has_hot_desc = bool(TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(str(raw or "")))
+        min_relevance_score = 8 if has_hot_desc else 2
         matched = [
             item
             for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
@@ -643,7 +649,7 @@ class TianApiService:
             matched = [
                 item
                 for item in keyword_news
-                if TianApiService._score_related_news(keyword, item) >= 4
+                if TianApiService._score_related_news(keyword, item) >= 2
             ]
         matched = await TianApiService._materialize_related_news(matched[:8])
         data = TianApiService._build_hot_search_detail(
