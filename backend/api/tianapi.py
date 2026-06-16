@@ -472,9 +472,16 @@ class TianApiService:
     @staticmethod
     def _clean_hot_description(description: str) -> str:
         description = html.unescape(str(description or "")).strip()
+        # 只去掉末尾的“查看更多”，保留前面的内容
         description = re.sub(r"\s*查看更多\s*>?\s*$", "", description).strip()
+        # 只有当整个desc都是不可用标记时才返回空
         unavailable_markers = ("热搜接口暂不可用", "接口暂不可用", "展示备用热点分类")
-        if not description or any(marker in description for marker in unavailable_markers):
+        if any(marker in description for marker in unavailable_markers):
+            # 如果除了不可用标记之外还有其他内容，保留其他内容
+            for marker in unavailable_markers:
+                description = description.replace(marker, "").strip()
+        # 只要有内容就保留，不要因为短就返回空
+        if len(description) < 5:
             return ""
         return description
 
@@ -540,7 +547,21 @@ class TianApiService:
         hot_text = f"，当前热度为 {hot}" if hot else ""
         raw_item = raw_item or {}
         raw_desc = str(raw_item.get("brief") or raw_item.get("desc") or raw_item.get("description") or "")
-        hot_desc = TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(raw_desc)
+        # 优先用传入的description，再用raw里的desc/brief，最后才用fallback
+        hot_desc = TianApiService._clean_hot_description(description)
+        if not hot_desc:
+            # 尝试不严格clean，只去掉HTML和查看更多
+            temp_desc = html.unescape(str(description or raw_desc or "")).strip()
+            temp_desc = re.sub(r"\s*查看更多\s*>?\s*$", "", temp_desc).strip()
+            if len(temp_desc) >= 5:
+                hot_desc = temp_desc
+        if not hot_desc:
+            # 再尝试raw_desc的temp版本
+            temp_desc = html.unescape(str(raw_desc or "")).strip()
+            temp_desc = re.sub(r"\s*查看更多\s*>?\s*$", "", temp_desc).strip()
+            if len(temp_desc) >= 5:
+                hot_desc = temp_desc
+        # 最后才用fallback
         desc_text = hot_desc or TianApiService._fallback_hot_detail_description(platform_name, keyword)
         raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
         news_content_lines = []
