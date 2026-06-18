@@ -304,6 +304,20 @@ class NewsDetailService:
         
         # 过滤掉作者信息、编辑、责编、来源、版权等杂项内容
         filtered_lines = []
+        # 常见媒体来源作者信息行基本都是短行，包含媒体名称+时间+地点+作者
+        # 这里收集所有常见媒体相关关键词，只要短行包含这些关键词就过滤掉
+        media_keywords = [
+            '作者', '编辑', '责编', '记者', '来源', '原标题', '原题',
+            '中新经纬', '网易', '网易号', '公众号', '官方号', '客户端',
+            '央视网', '人民网', '新华网', '人民日报', '澎湃新闻', '新京报',
+            '新浪', '搜狐', '腾讯网', '凤凰网', '界面新闻', '封面新闻',
+            '新华社', '中新网', '中国新闻网', '北京日报', '广州日报',
+            '解放日报', '经济日报', '证券时报', '中国证券报',
+            '证券日报', '第一财经', '财新', '每日经济新闻',
+            '经济参考报', '环球网', '环球时报', '中国日报',
+            '央视', '网', '报', '社', '客户端', '公众号', '官方',
+        ]
+        
         skip_patterns = [
             r'^作者[:：]',
             r'^编辑[:：]',
@@ -318,16 +332,35 @@ class NewsDetailService:
             r'^点击阅读原文',
             r'^本文网址',
             r'^[本文为]+.*[翻译整理转载]',
+            r'^本报记者',
+            r'^记者[:：]',
+            r'^通讯员',
+            r'^撰文',
+            r'^摄影',
+            r'^视觉设计',
+            r'^编辑整理',
         ]
         for line in lines:
+            line = _normalize_space(line)
+            if not line:
+                continue
             line_lower = line.lower()
-            # 跳过短的杂项行（通常作者/来源信息都很短）
-            if len(line) < 15:
-                if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
+            # 检查是否匹配明确的跳过模式
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
+                continue
+            # 更短的行直接过滤（小于10字符，基本上就是地点/作者/来源）
+            if len(line) <= 10:
+                continue
+            # 短行（<35字符）包含任何媒体关键词，直接过滤掉
+            if len(line) < 35:
+                if any(k in line_lower for k in media_keywords):
                     continue
-                # 纯单个名字也跳过（很多网站作者就是名字）
-                if len(line) < 8:
+                # 包含年份或者常见省市名称，也过滤掉（时间地点信息）
+                if '202' in line or any(city in line for city in ['北京', '上海', '广州', '深圳', '杭州', '成都', '广东', '江苏', '浙江']):
                     continue
+            # 包含年份+冒号（时间）且是短行，包含媒体关键词，过滤掉
+            if len(line) < 45 and '202' in line and (':' in line or '-' in line):
+                continue
             filtered_lines.append(line)
             
         content = "\n\n".join(filtered_lines)

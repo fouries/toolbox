@@ -16,13 +16,17 @@
       <view class="article-card card" v-else-if="detail">
         <text class="article-title">{{ detail.title }}</text>
         <view class="article-meta">
-          <text v-if="detail.source">{{ detail.source }}</text>
           <text v-if="detail.publishTime">{{ detail.publishTime }}</text>
           <text v-if="detail.fromCache">已缓存</text>
         </view>
         <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image"></image>
         <view class="article-content">
-          <text class="article-paragraph" v-for="(paragraph, index) in paragraphs" :key="index">{{ paragraph }}</text>
+          <template v-for="(paragraph, index) in paragraphs" :key="index">
+            <text 
+              class="article-paragraph" 
+              :class="{ 'special-note': isSpecialNote(paragraph) }"
+            >{{ paragraph }}</text>
+          </template>
         </view>
         <view class="article-actions">
           <button class="copy-btn" @tap="copyOriginalUrl">复制原文链接</button>
@@ -54,6 +58,11 @@ const paragraphs = computed(() => {
     .map(item => item.trim())
     .filter(Boolean)
 })
+
+const isSpecialNote = (paragraph: string) => {
+  const p = paragraph.toLowerCase()
+  return p.includes('特别说明') || p.includes('特别提示') || p.includes('声明') || p.includes('免责')
+}
 
 const copyOriginalUrl = () => {
   if (!sourceUrl.value) return
@@ -182,6 +191,15 @@ onLoad((options: any) => {
   font-size: 30rpx;
   line-height: 1.82;
   text-align: justify;
+}
+
+.article-paragraph.special-note {
+  color: #64748b;
+  font-size: 28rpx;
+  font-style: italic;
+  background: #f1f5f9;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
 }
 
 .article-actions {

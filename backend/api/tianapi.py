@@ -344,7 +344,7 @@ class TianApiService:
             endpoint_map[category],
             cache_key=cache_key,
             cache_ttl=settings.CACHE_TTL_DEFAULT,
-            num=10,
+            num=20,
             form=1,
             fallback=TianApiService._fallback_news(category)
         )
