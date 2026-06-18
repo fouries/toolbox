@@ -143,15 +143,21 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "static/tab-home.png",
+        "selectedIconPath": "static/tab-home-active.png"
       },
       {
         "pagePath": "pages/news/index",
-        "text": "资讯"
+        "text": "资讯",
+        "iconPath": "static/tab-news.png",
+        "selectedIconPath": "static/tab-news-active.png"
       },
       {
         "pagePath": "pages/settings/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "static/tab-my.png",
+        "selectedIconPath": "static/tab-my-active.png"
       }
     ]
   },
