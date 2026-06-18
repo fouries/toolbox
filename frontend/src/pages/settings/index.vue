@@ -2,11 +2,6 @@
   <view :class="['container', themeClass]">
     <view class="page-shell settings-shell">
       <view class="settings-card">
-        <view class="settings-header">
-          <text class="settings-title">我的</text>
-          <text class="settings-desc">设置与关于</text>
-        </view>
-
         <view class="menu-list">
           <view class="menu-item" @click="showThemePicker">
             <view class="menu-left">
@@ -48,25 +43,6 @@ const { themes, currentTheme, themeClass, setTheme, showThemePicker } = useTheme
   border: 2rpx solid var(--theme-border, #eef2f7);
   background: var(--theme-surface, #ffffff);
   box-shadow: var(--theme-shadow-card, 0 18rpx 60rpx rgba(20, 35, 90, 0.08));
-}
-
-.settings-header {
-  padding: 34rpx 32rpx 22rpx;
-  border-bottom: 1rpx solid var(--theme-border, #eef2f7);
-}
-
-.settings-title {
-  display: block;
-  font-size: 38rpx;
-  font-weight: 700;
-  color: var(--theme-text, #243044);
-}
-
-.settings-desc {
-  display: block;
-  margin-top: 10rpx;
-  font-size: 24rpx;
-  color: var(--theme-text-muted, #9aa6b8);
 }
 
 .menu-list {
