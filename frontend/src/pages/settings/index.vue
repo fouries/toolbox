@@ -4,22 +4,33 @@
       <view class="settings-card">
         <view class="settings-header">
           <text class="settings-title">我的</text>
-          <text class="settings-desc">选择页面主题</text>
+          <text class="settings-desc">设置与关于</text>
         </view>
 
-        <view class="theme-list">
-          <view
-            class="theme-item"
-            :class="{ active: currentTheme.id === theme.id }"
-            v-for="theme in themes"
-            :key="theme.id"
-            @click="setTheme(theme.id)"
-          >
-            <view class="theme-left">
-              <text class="theme-icon">{{ theme.icon }}</text>
-              <text class="theme-name">{{ theme.name }}</text>
+        <view class="menu-list">
+          <view class="menu-item" @click="showThemePicker">
+            <view class="menu-left">
+              <text class="menu-icon">🎨</text>
+              <text class="menu-name">主题设置</text>
             </view>
-            <text class="theme-check" v-if="currentTheme.id === theme.id">✓</text>
+            <text class="menu-arrow">></text>
+          </view>
+
+          <view class="theme-section">
+            <text class="section-title">当前主题</text>
+            <view
+              class="theme-item"
+              :class="{ active: currentTheme.id === theme.id }"
+              v-for="theme in themes"
+              :key="theme.id"
+              @click="setTheme(theme.id)"
+            >
+              <view class="theme-left">
+                <text class="theme-icon">{{ theme.icon }}</text>
+                <text class="theme-name">{{ theme.name }}</text>
+              </view>
+              <text class="theme-check" v-if="currentTheme.id === theme.id">✓</text>
+            </view>
           </view>
         </view>
       </view>
@@ -30,7 +41,7 @@
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
 
-const { themes, currentTheme, themeClass, setTheme } = useTheme()
+const { themes, currentTheme, themeClass, setTheme, showThemePicker } = useTheme()
 </script>
 
 <style scoped>
@@ -72,8 +83,55 @@ const { themes, currentTheme, themeClass, setTheme } = useTheme()
   color: var(--theme-text-muted, #9aa6b8);
 }
 
-.theme-list {
+.menu-list {
+  padding: 12rpx 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 92rpx;
+  padding: 0 24rpx;
+  color: var(--theme-text, #243044);
+}
+
+.menu-item:active {
+  background: var(--theme-bg-hover, #f5f7fb);
+}
+
+.menu-left {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.menu-icon {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.menu-name {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.menu-arrow {
+  font-size: 28rpx;
+  color: var(--theme-text-muted, #9aa6b8);
+}
+
+.theme-section {
   padding: 12rpx 20rpx 20rpx;
+  border-top: 1rpx solid var(--theme-border, #eef2f7);
+}
+
+.section-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--theme-text-muted, #9aa6b8);
+  padding: 16rpx 12rpx 20rpx;
 }
 
 .theme-item {
@@ -89,7 +147,7 @@ const { themes, currentTheme, themeClass, setTheme } = useTheme()
 
 .theme-item.active {
   background: var(--theme-primary-soft, #eef5ff);
-  color: var(--theme-primary, #1677ff);
+  color: var(--theme-primary, #2563eb);
 }
 
 .theme-left {
