@@ -17,7 +17,7 @@
           </view>
         </view>
 
-        <view class="quick-panel" v-if="currentTab === 'home'">
+        <view class="quick-panel">
           <view class="quick-panel-title">
             <text class="quick-panel-title-text">热门工具</text>
             <text class="quick-panel-title-icon">🔥</text>
@@ -42,7 +42,7 @@
           </scroll-view>
         </view>
 
-        <view class="main-panel" v-if="currentTab === 'home'">
+        <view class="main-panel">
           <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
             <view class="category-list">
               <view
@@ -84,60 +84,15 @@
             <button class="empty-btn" @click="clearSearch">清空搜索</button>
           </view>
         </view>
-
-        <!-- 资讯 Tab：只显示资讯工具 -->
-        <view class="main-panel news-panel" v-if="currentTab === 'news'">
-          <view class="tool-grid news-grid">
-            <view
-              class="tool-item news-item"
-              :class="{ 'tool-not-implemented': !tool.implemented }"
-              @click="goToTool(tool)"
-              v-for="tool in newsTools"
-              :key="tool.id"
-            >
-              <view class="tool-icon" :style="{ background: tool.color }">
-                <text class="icon-text">{{ tool.icon }}</text>
-              </view>
-              <text class="tool-name">{{ tool.name }}</text>
-              <text class="tool-desc">{{ tool.desc }}</text>
-              <text class="coming-soon-badge" v-if="!tool.implemented">{{ tool.status || '开发中' }}</text>
-            </view>
-          </view>
-
-          <view class="empty-state" v-if="!newsTools.length">
-            <text class="empty-icon">📰</text>
-            <text class="empty-title">暂无资讯工具</text>
-          </view>
-        </view>
       </view>
 
-      <view class="footer" v-if="currentTab === 'home'">
+      <view class="footer">
         <text class="footer-text">小巧的工具箱 v1.0</text>
         <!-- #ifdef H5 -->
         <view class="icp-beian" @click="navigateToBeian">
           <text>粤ICP备2026056747号</text>
         </view>
         <!-- #endif -->
-      </view>
-    </view>
-
-    <!-- 底部 TabBar -->
-    <view class="tab-bar">
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'home' }"
-        @click="currentTab = 'home'"
-      >
-        <text class="tab-icon">🏠</text>
-        <text class="tab-text">首页</text>
-      </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'news' }"
-        @click="currentTab = 'news'"
-      >
-        <text class="tab-icon">📰</text>
-        <text class="tab-text">资讯</text>
       </view>
     </view>
   </view>
@@ -170,7 +125,6 @@ interface ToolItem {
 const searchText = ref('')
 const activeCategory = ref('all')
 const toolClickCounts = ref<Record<string, number>>({})
-const currentTab = ref<'home' | 'news'>('home')
 
 const categories = ref<CategoryItem[]>([
   { id: 'life', name: '生活服务' },
@@ -185,11 +139,6 @@ const tools = ref<ToolItem[]>([
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'life', path: '/pages/calendar/index', implemented: true },
   { id: 'gold-price', name: '黄金行情', desc: '黄金价格与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true },
   { id: 'crude-oil', name: '原油价格', desc: '国际原油市场最新价格', icon: '🛢️', color: '#b45309', category: 'market', path: '', implemented: false },
-  { id: 'internet-news', name: '互联网资讯', desc: '互联网、AI 和科技行业动态', icon: '🌐', color: '#2563eb', category: 'news', path: '/pages/info-news/index?category=internet', implemented: true },
-  { id: 'esports-news', name: '电竞资讯', desc: '电竞赛事与游戏产业消息', icon: '🎮', color: '#7c3aed', category: 'news', path: '/pages/info-news/index?category=esports', implemented: true },
-  { id: 'auto-news', name: '汽车新闻', desc: '新车上市、行业政策和用车资讯', icon: '🚗', color: '#0f766e', category: 'news', path: '/pages/info-news/index?category=auto', implemented: true },
-  { id: 'daily-brief', name: '每日简报', desc: '每天快速了解重要新闻和热点摘要', icon: '🗞️', color: '#4f46e5', category: 'news', path: '/pages/daily-brief/index', implemented: true },
-  { id: 'baidu-hot', name: '百度热搜榜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'news', path: '/pages/hot-search/index?platform=baidu', implemented: true },
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
 ])
 
@@ -204,10 +153,6 @@ const popularTools = computed(() => {
     })
 
   return rankedTools.slice(0, 10)
-})
-
-const newsTools = computed(() => {
-  return tools.value.filter(tool => tool.category === 'news' && tool.implemented)
 })
 
 const filteredTools = computed(() => {
@@ -907,53 +852,5 @@ onMounted(() => {
     border-color: rgba(22, 119, 255, 0.24);
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   }
-}
-
-/* 底部 TabBar */
-.tab-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: #fff;
-  border-top: 1rpx solid #e2e8f0;
-  height: 96rpx;
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
-  z-index: 100;
-}
-
-.tab-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  font-size: 24rpx;
-}
-
-.tab-item.active {
-  color: #2563eb;
-}
-
-.tab-icon {
-  font-size: 36rpx;
-  line-height: 1;
-  margin-bottom: 4rpx;
-}
-
-.tab-text {
-  font-size: 22rpx;
-  line-height: 1;
-}
-
-/* 调整间距避开底部TabBar */
-.container {
-  padding-bottom: 96rpx;
-}
-
-.news-panel {
-  padding-bottom: 110rpx;
 }
 </style>
