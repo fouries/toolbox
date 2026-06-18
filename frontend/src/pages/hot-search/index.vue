@@ -25,8 +25,21 @@
       </view>
 
       <view class="hot-list" v-else>
-        <view class="hot-card card" v-for="item in displayedHotItems" :key="`${item.rank}-${item.title}`" @tap="openHotDetail(item)">
-          <text class="hot-rank" :class="{ top: item.rank <= 3 }">{{ item.rank }}</text>
+        <!-- 第一条置顶 -->
+        <view class="hot-card card hot-card-sticky" v-if="displayedHotItems.length > 0" :key="`sticky-${displayedHotItems[0].title}`" @tap="openHotDetail(displayedHotItems[0])">
+          <text class="hot-rank hot-rank-sticky">⬆️</text>
+          <view class="hot-main">
+            <text class="hot-title">{{ displayedHotItems[0].title }}</text>
+            <view class="hot-meta">
+              <text v-if="displayedHotItems[0].hot">热度：{{ displayedHotItems[0].hot }}</text>
+              <text>点击查看摘要</text>
+            </view>
+          </view>
+          <text class="hot-arrow">›</text>
+        </view>
+        <!-- 后面1-20条 -->
+        <view class="hot-card card" v-for="(item, index) in displayedHotItems.slice(1)" :key="`${index+1}-${item.title}`" @tap="openHotDetail(item)">
+          <text class="hot-rank" :class="{ top: index+1 <= 3 }">{{ index+1 }}</text>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
             <view class="hot-meta">
@@ -40,7 +53,7 @@
 
       <view class="note-card card">
         <text class="note-title">说明</text>
-        <text class="note-text">百度热搜列表最多展示 50 条；点击标题进入详情页，只展示关键词、图片和摘要。</text>
+        <text class="note-text">百度热搜列表共展示 21 条，第一条置顶，后续从 1 到 20 编号；点击标题进入详情页，只展示关键词、图片和摘要。</text>
       </view>
     </view>
   </view>
@@ -61,7 +74,7 @@ const hotItems = ref<HotSearchItem[]>([])
 const updateTime = ref('')
 
 const updateTimeText = computed(() => updateTime.value ? `更新时间：${updateTime.value}` : '实时热搜')
-const displayedHotItems = computed(() => hotItems.value.slice(0, 50))
+const displayedHotItems = computed(() => hotItems.value.slice(0, 21))
 
 const fetchHotSearch = async () => {
   loading.value = true
@@ -216,6 +229,23 @@ onLoad(() => {
 .hot-rank.top {
   color: #fff;
   background: linear-gradient(135deg, #f97316, #ef4444);
+}
+
+.hot-card-sticky {
+  border: 2rpx solid #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, rgba(255, 247, 237, 0.92) 100%);
+}
+
+.hot-rank-sticky {
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  border-radius: 18rpx;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  font-size: 28rpx;
+  font-weight: 800;
 }
 
 .hot-title {

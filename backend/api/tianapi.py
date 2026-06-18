@@ -1,6 +1,7 @@
 import json
 import re
 import html
+import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from urllib.parse import quote, urljoin
@@ -516,19 +517,9 @@ class TianApiService:
         return {"title": f"{platform_name}返回信息", "body": "\n".join(parts)}
 
     @staticmethod
-    async def _materialize_related_news(items: List[Dict[str, str]], limit: int = 3) -> List[Dict[str, str]]:
-        materialized: List[Dict[str, str]] = []
-        for item in items:
-            normalized = dict(item)
-            url = str(normalized.get("url") or "")
-            if len(materialized) < limit and url and NewsDetailService._is_safe_url(url):
-                detail_result = await NewsDetailService.fetch_detail(url)
-                if detail_result.get("code") == 200 and isinstance(detail_result.get("data"), dict):
-                    detail = detail_result["data"]
-                    normalized["localUrl"] = str(detail.get("localUrl") or "")
-                    normalized["localId"] = str(detail.get("localId") or "")
-            materialized.append(normalized)
-        return materialized
+    async def _materialize_related_news(items: List[Dict[str, str]], limit: int = 0) -> List[Dict[str, str]]:
+        # 不再提前抓取新闻详情，等用户真的点击新闻时再抓取，这样加载热搜详情会快很多
+        return items
 
     @staticmethod
     def _build_hot_search_detail(
@@ -623,11 +614,25 @@ class TianApiService:
         """百度热搜详情：生成关键词、图片和摘要所需的结构化内容。"""
         keyword = str(keyword or "").strip()
         platform = "baidu"
+        
+        # 先尝试从缓存获取
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword)
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+        
         all_news: List[Dict[str, Any]] = []
-        for category in ("internet", "esports", "auto"):
-            result = await TianApiService.get_info_news(category)
-            if result.get("code") == 200 and isinstance(result.get("newslist"), list):
-                all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
+        # 检查是否有可用的description，如果有就不用去调用三个资讯接口了，直接快速返回
+        has_hot_desc = bool(TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(str(raw or "")))
+        
+        if not has_hot_desc:
+            # 只有当没有可用的description时，才去调用资讯接口找相关新闻
+            # 并行调用三个资讯接口，而不是串行调用，这样速度会快很多
+            tasks = [TianApiService.get_info_news(category) for category in ("internet", "esports", "auto")]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, dict) and result.get("code") == 200 and isinstance(result.get("newslist"), list):
+                    all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
 
         scored = []
         for item in all_news:
@@ -637,14 +642,13 @@ class TianApiService:
             scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
         # 如果有原始desc，要求min_relevance_score=8；如果没有，降低到2
-        has_hot_desc = bool(TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(str(raw or "")))
         min_relevance_score = 8 if has_hot_desc else 2
         matched = [
             item
             for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
             if score >= min_relevance_score
         ]
-        if not matched:
+        if not matched and not has_hot_desc:
             keyword_news = await TianApiService._fetch_keyword_news(keyword, limit=8)
             matched = [
                 item
@@ -661,7 +665,11 @@ class TianApiService:
             related_news=matched[:8],
             raw_item=TianApiService._parse_hot_raw(raw),
         )
-        return {"code": 200, "msg": "success", "data": data}
+        result = {"code": 200, "msg": "success", "data": data}
+        
+        # 缓存1小时
+        await cache.set(cache_key, result, ttl=3600)
+        return result
 
     @staticmethod
     async def get_gold_price() -> Dict[str, Any]:

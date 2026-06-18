@@ -21,8 +21,7 @@
           <text v-if="detail.fromCache">已缓存</text>
         </view>
         <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image"></image>
-        <text class="article-desc" v-if="detail.description">{{ detail.description }}</text>
-        <view class="article-content" v-if="detail.content">
+        <view class="article-content">
           <text class="article-paragraph" v-for="(paragraph, index) in paragraphs" :key="index">{{ paragraph }}</text>
         </view>
         <view class="article-actions">

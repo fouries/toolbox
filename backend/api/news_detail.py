@@ -301,7 +301,36 @@ class NewsDetailService:
         parser.feed(source_html)
         lines = [_normalize_space(line) for line in "".join(parser.parts).splitlines()]
         lines = [line for line in lines if len(line) >= 2]
-        content = "\n\n".join(lines)
+        
+        # 过滤掉作者信息、编辑、责编、来源、版权等杂项内容
+        filtered_lines = []
+        skip_patterns = [
+            r'^作者[:：]',
+            r'^编辑[:：]',
+            r'^责编[:：]',
+            r'^来源[:：]',
+            r'^原标题[:：]',
+            r'^原题[:：]',
+            r'^本文来源',
+            r'^本文编辑',
+            r'^责任编辑',
+            r'^版权声明',
+            r'^点击阅读原文',
+            r'^本文网址',
+            r'^[本文为]+.*[翻译整理转载]',
+        ]
+        for line in lines:
+            line_lower = line.lower()
+            # 跳过短的杂项行（通常作者/来源信息都很短）
+            if len(line) < 15:
+                if any(re.search(pattern, line, re.IGNORECASE) for pattern in skip_patterns):
+                    continue
+                # 纯单个名字也跳过（很多网站作者就是名字）
+                if len(line) < 8:
+                    continue
+            filtered_lines.append(line)
+            
+        content = "\n\n".join(filtered_lines)
         return content[:12000]
 
     @staticmethod
