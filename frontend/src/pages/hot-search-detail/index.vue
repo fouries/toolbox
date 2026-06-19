@@ -20,17 +20,13 @@
         <view class="keyword-card card">
           <text class="keyword-label">热搜关键词</text>
           <text class="keyword-title">{{ hotKeyword }}</text>
-          <view class="hot-image-section" v-if="displayImage">
-            <image class="hot-image" :src="displayImage" mode="widthFix"></image>
-          </view>
-          <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="video-section" v-if="hotVideos.length">
             <text class="video-title">相关视频</text>
             <view class="video-item" v-for="(video, index) in hotVideos" :key="`${index}-${video.url}`">
               <video
                 class="hot-video"
                 :src="video.url"
-                :poster="video.poster || displayImage"
+                :poster="video.poster || ''"
                 :title="video.title || hotKeyword"
                 controls
                 object-fit="contain"
@@ -39,6 +35,10 @@
               <text class="video-caption">{{ video.title || `${hotKeyword} 相关视频` }}</text>
             </view>
           </view>
+          <view class="hot-image-section" v-if="displayImage && !hotVideos.length">
+            <image class="hot-image" :src="displayImage" mode="widthFix"></image>
+          </view>
+          <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="action-row">
             <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
           </view>
@@ -113,7 +113,7 @@ const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentInd
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
-const hotVideos = computed(() => detail.value?.videos?.filter(item => item?.url) || [])
+const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
 
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
