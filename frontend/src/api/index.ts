@@ -56,6 +56,7 @@ export interface NewsDetail {
   image?: string
   originalImage?: string
   content: string
+  images?: string[]  // 所有图片URL列表（代理后）
   localUrl?: string
   localId?: string
   sourceUrl: string

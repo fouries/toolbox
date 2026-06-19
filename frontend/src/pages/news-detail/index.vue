@@ -21,11 +21,18 @@
         </view>
         <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image"></image>
         <view class="article-content">
-          <template v-for="(paragraph, index) in paragraphs" :key="index">
+          <template v-for="(item, index) in paragraphs" :key="index">
             <text 
+              v-if="item.type === 'text'"
               class="article-paragraph" 
-              :class="{ 'special-note': isSpecialNote(paragraph) }"
-            >{{ paragraph }}</text>
+              :class="{ 'special-note': isSpecialNote(item.content) }"
+            >{{ item.content }}</text>
+            <image 
+              v-else-if="item.type === 'image'" 
+              class="article-inline-image" 
+              :src="item.url" 
+              mode="widthFix"
+            ></image>
           </template>
         </view>
         <view class="article-actions">
@@ -53,10 +60,27 @@ const error = ref('')
 
 const paragraphs = computed(() => {
   const content = detail.value?.content || ''
-  return content
+  const items = content
     .split(/\n+/)
     .map(item => item.trim())
     .filter(Boolean)
+  
+  // 解析段落和图片标记，返回混合数组 {type: 'text', content: string} | {type: 'image', url: string}
+  const result: Array<{type: 'text', content: string} | {type: 'image', url: string}> = []
+  const images = detail.value?.images || []
+  
+  for (const item of items) {
+    const imageMatch = item.match(/^<!--IMAGE:(\d+)-->$/)
+    if (imageMatch) {
+      const idx = parseInt(imageMatch[1], 10)
+      if (idx >= 0 && idx < images.length) {
+        result.push({type: 'image', url: images[idx]})
+      }
+    } else {
+      result.push({type: 'text', content: item})
+    }
+  }
+  return result
 })
 
 const isSpecialNote = (paragraph: string) => {
@@ -200,6 +224,14 @@ onLoad((options: any) => {
   background: #f1f5f9;
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
+}
+
+.article-inline-image {
+  width: 100%;
+  margin: 24rpx 0;
+  border-radius: 16rpx;
+  background: #eff6ff;
+  display: block;
 }
 
 .article-actions {

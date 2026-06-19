@@ -230,34 +230,77 @@ class NewsDetailService:
         return True
 
     @staticmethod
-    def _extract_image(html_text: str, page_url: str, preferred_image: str = "") -> str:
+    def _extract_images(html_text: str, page_url: str, preferred_image: str = "") -> List[str]:
+        """提取所有可用的文章图片，最多返回8张（避免过多图片影响体验）"""
         preferred_image = NewsDetailService._normalize_image_url(preferred_image, page_url)
+        images: List[str] = []
+        
+        # 如果有推荐图片，放在第一位
         if (
             preferred_image
             and NewsDetailService.is_safe_image_url(preferred_image)
             and not NewsDetailService._is_placeholder_image(preferred_image)
             and NewsDetailService._is_preferred_image_trusted(page_url, preferred_image)
         ):
-            return preferred_image
+            images.append(preferred_image)
+        
         source_html = NewsDetailService._extract_main_content_html(html_text)
-        for match in re.finditer(r'<img([^>]+)>', source_html, re.IGNORECASE):
+        # 使用非f-string避免引号转义问题
+        img_pattern = re.compile(r'<img([^>]+)>', re.IGNORECASE)
+        class_pattern = re.compile(r'class=[\'"]([^\'"]*)[\'"]', re.IGNORECASE)
+        
+        for match in img_pattern.finditer(source_html):
+            if len(images) >= 8:
+                break
             attrs = match.group(1)
-            if re.search(r'class=["\'][^"\']*(?:avatar|author|certification|comment|logo)[^"\']*["\']', attrs, re.IGNORECASE):
-                continue
-            for attr_name in ("data-src", "data-original", "data-url", "src"):
-                attr_match = re.search(rf'{attr_name}=["\']([^"\']+)["\']', attrs, re.IGNORECASE)
-                if not attr_match:
+            
+            # 跳过头像、logo、认证等无关图片
+            class_match = class_pattern.search(attrs)
+            if class_match:
+                class_val = class_match.group(1).lower()
+                if any(k in class_val for k in ('avatar', 'author', 'certification', 'comment', 'logo')):
                     continue
-                image_url = NewsDetailService._normalize_image_url(attr_match.group(1), page_url)
-                if NewsDetailService._is_usable_article_image(html_text, page_url, image_url):
-                    return image_url
-        for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
-            value = NewsDetailService._extract_meta(html_text, meta_name)
-            if value:
-                image_url = NewsDetailService._normalize_image_url(value, page_url)
-                if NewsDetailService._is_usable_article_image(html_text, page_url, image_url):
-                    return image_url
-        return ""
+            
+            # 查找图片URL
+            found_url = None
+            for attr_name in ("data-src", "data-original", "data-url", "src"):
+                pattern = re.compile(attr_name + r'=[\'"]([^\'"]+)[\'"]', re.IGNORECASE)
+                attr_match = pattern.search(attrs)
+                if attr_match:
+                    found_url = attr_match.group(1)
+                    break
+            
+            if not found_url:
+                continue
+                
+            image_url = NewsDetailService._normalize_image_url(found_url, page_url)
+            if (
+                NewsDetailService._is_usable_article_image(html_text, page_url, image_url)
+                and image_url not in images
+            ):
+                images.append(image_url)
+        
+        # 如果还不够，从meta补充
+        if len(images) == 0:
+            for meta_name in ("og:image", "twitter:image", "twitter:image:src", "image"):
+                if len(images) >= 8:
+                    break
+                value = NewsDetailService._extract_meta(html_text, meta_name)
+                if value:
+                    image_url = NewsDetailService._normalize_image_url(value, page_url)
+                    if (
+                        NewsDetailService._is_usable_article_image(html_text, page_url, image_url)
+                        and image_url not in images
+                    ):
+                        images.append(image_url)
+        
+        return images
+
+    @staticmethod
+    def _extract_image(html_text: str, page_url: str, preferred_image: str = "") -> str:
+        """保留兼容旧接口：只返回第一张图片"""
+        images = NewsDetailService._extract_images(html_text, page_url, preferred_image)
+        return images[0] if images else ""
 
     @staticmethod
     def is_safe_image_url(url: str) -> bool:
@@ -375,19 +418,53 @@ class NewsDetailService:
         description = NewsDetailService._extract_meta(html_text, "description")
         if len(content) < 20 and description:
             content = description
-        original_image = NewsDetailService._extract_image(html_text, url, preferred_image)
+        # 提取所有图片
+        images = NewsDetailService._extract_images(html_text, url, preferred_image)
+        # 兼容旧字段：第一张图片保持原来位置
+        original_image = images[0] if images else ""
         local_id = NewsDetailService._local_id(url)
+        
+        # 将多张图片均匀插入到正文段落中
+        if len(images) > 1:
+            # 拆分段落，跳过第一张（已经在标题下展示）
+            insert_images = images[1:]
+            paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+            num_paragraphs = len(paragraphs)
+            num_images = len(insert_images)
+            
+            if num_paragraphs > 0 and num_images > 0:
+                # 计算插入位置：均匀分布 - 在每 N 段后插入一张图片
+                # 策略：从正文 1/N, 2/N ... 位置插入，避免在开头和结尾插入过多
+                step = num_paragraphs / (num_images + 1)
+                positions = [int(step * (i + 1)) - 1 for i in range(num_images)]
+                # 确保位置不越界
+                positions = [p for p in positions if 0 <= p < num_paragraphs]
+                
+                # 重建带图片标记的段落
+                new_paragraphs = []
+                insert_idx = 0
+                for idx, para in enumerate(paragraphs):
+                    new_paragraphs.append(para)
+                    if insert_idx < len(positions) and idx == positions[insert_idx]:
+                        # 插入图片标记：<!--IMAGE:索引--> 使用原始图片索引
+                        image_idx = 1 + insert_idx  # 因为跳过了第一张
+                        new_paragraphs.append(f"<!--IMAGE:{image_idx}-->")
+                        insert_idx += 1
+                
+                content = "\n\n".join(new_paragraphs)
+        
         detail = {
             "title": title,
             "source": NewsDetailService._extract_source(html_text, url),
             "publishTime": NewsDetailService._extract_publish_time(html_text),
             "description": _normalize_space(description),
             "content": content,
+            "images": [NewsDetailService._proxied_image_url(img) for img in images],  # 所有代理后的图片URL列表
             "sourceUrl": url,
             "localId": local_id,
             "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "detailVersion": 4,
+            "detailVersion": 5,  # 升级版本
         }
         if original_image:
             detail["originalImage"] = original_image
