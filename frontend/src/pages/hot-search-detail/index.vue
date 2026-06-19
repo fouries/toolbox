@@ -38,7 +38,7 @@
             <image class="hot-image" :src="displayImage" mode="widthFix" @tap="previewHotImage(displayImage)"></image>
           </view>
           <view class="media-loading" v-if="mediaLoading && !hotVideos.length && !detailImage">
-            <text class="media-loading-text">正在补充视频和图片...</text>
+            <text class="media-loading-text">正在加载...</text>
           </view>
           <text class="media-error" v-if="mediaError">{{ mediaError }}</text>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
