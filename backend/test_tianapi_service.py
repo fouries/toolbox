@@ -417,6 +417,38 @@ def test_baidu_hot_search_detail_extracts_video_resources_from_search_html():
     assert result['data']['videos'][0]['poster'] == 'https://t14.baidu.com/poster.jpg'
 
 
+def test_baidu_hot_search_detail_falls_back_to_haokan_video_pages():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
+        ('https://www.so.com/s', None): '''
+        <a data-mdurl="https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912">今年端午60年一遇 好看视频</a>
+        ''',
+        ('https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912', None): '''
+        <title>今年端午节，60年不遇,好看视频</title>
+        <script>{"curVideoMeta":{"title":"今年端午节，60年不遇","clarityUrl":[
+          {"rank":0,"title":"标清","url":"https:\\/\\/vd4.bdstatic.com\\/mda-demo\\/cae_h264\\/demo.mp4?auth_key=test"},
+          {"rank":1,"title":"高清","url":"https:\\/\\/vd4.bdstatic.com\\/mda-demo\\/hd\\/cae_h264\\/demo.mp4?auth_key=test"}
+        ]}}</script>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='今年端午60年一遇',
+        hot='12345',
+        description='快接住60年一遇的端午好运！',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"今年端午60年一遇","desc":"快接住60年一遇的端午好运！"}',
+    ))
+
+    assert result['code'] == 200
+    assert len(result['data']['videos']) == 2
+    assert result['data']['videos'][0]['url'] == 'https://quan1234.com/api/video-proxy?url=https%3A%2F%2Fvd4.bdstatic.com%2Fmda-demo%2Fcae_h264%2Fdemo.mp4%3Fauth_key%3Dtest'
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd4.bdstatic.com/mda-demo/cae_h264/demo.mp4?auth_key=test'
+
+
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
     fallback = TianApiService._empty_hot_search('baidu')
     assert fallback['title'] == '百度热搜榜'
@@ -462,6 +494,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
+        test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)
