@@ -4,7 +4,7 @@ import html
 import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, unquote
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
@@ -505,6 +505,126 @@ class TianApiService:
         return {}
 
     @staticmethod
+    def _normalize_video_url(value: Any) -> str:
+        url = html.unescape(str(value or "")).replace("\\/", "/").strip()
+        if not url:
+            return ""
+        try:
+            url = unquote(url)
+        except Exception:
+            pass
+        if url.startswith("//"):
+            url = f"https:{url}"
+        if url.startswith("http://") and any(host in url for host in ("bdstatic.com", "baidu.com", "bcebos.com")):
+            url = "https://" + url[len("http://"):]
+        if not re.match(r"^https?://", url, flags=re.IGNORECASE):
+            return ""
+        if not re.search(r"\.(?:mp4|m3u8)(?:\?|$)", url, flags=re.IGNORECASE):
+            return ""
+        return url
+
+    @staticmethod
+    def _normalize_video_poster(value: Any) -> str:
+        url = html.unescape(str(value or "")).replace("\\/", "/").strip()
+        if not url:
+            return ""
+        try:
+            url = unquote(url)
+        except Exception:
+            pass
+        if url.startswith("//"):
+            url = f"https:{url}"
+        return url if re.match(r"^https?://", url, flags=re.IGNORECASE) else ""
+
+    @staticmethod
+    def _collect_video_candidates(value: Any, videos: List[Dict[str, str]], seen: set, title: str = "") -> None:
+        if len(videos) >= 3:
+            return
+        if isinstance(value, dict):
+            src = ""
+            poster = ""
+            candidate_title = title
+            for key, item in value.items():
+                key_lower = str(key).lower()
+                if key_lower in {"src", "url", "videourl", "media_url", "mediaurl"} or "videourl" in key_lower:
+                    src = src or TianApiService._normalize_video_url(item)
+                elif key_lower in {"poster", "cover", "image", "img", "thumbnail"} or "poster" in key_lower:
+                    poster = poster or TianApiService._normalize_video_poster(item)
+                elif key_lower in {"title", "text"} and not candidate_title:
+                    candidate_title = TianApiService._strip_html_tags(str(item))[:80]
+            seen_key = src.split("?", 1)[0] if src else ""
+            if src and seen_key not in seen:
+                videos.append({"url": src, "poster": poster, "title": candidate_title})
+                seen.add(seen_key)
+            for item in value.values():
+                TianApiService._collect_video_candidates(item, videos, seen, candidate_title)
+                if len(videos) >= 3:
+                    return
+        elif isinstance(value, list):
+            for item in value:
+                TianApiService._collect_video_candidates(item, videos, seen, title)
+                if len(videos) >= 3:
+                    return
+        elif isinstance(value, str):
+            src = TianApiService._normalize_video_url(value)
+            seen_key = src.split("?", 1)[0] if src else ""
+            if src and seen_key not in seen:
+                videos.append({"url": src, "poster": "", "title": title})
+                seen.add(seen_key)
+
+    @staticmethod
+    def _extract_video_resources_from_text(text: str, limit: int = 3) -> List[Dict[str, str]]:
+        text = str(text or "")
+        videos: List[Dict[str, str]] = []
+        seen = set()
+        for pattern in (
+            r'"video"\s*:\s*({[\s\S]{0,6000}?})\s*,\s*"control"',
+            r'"videoData"\s*:\s*({[\s\S]{0,12000}?})\s*,\s*"contentData"',
+            r'"autoplayInfo"\s*:\s*({[\s\S]{0,12000}?})\s*,\s*"control"',
+        ):
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                if len(videos) >= limit:
+                    break
+                raw_json = html.unescape(match.group(1)).replace('\\/', '/')
+                try:
+                    parsed = json.loads(raw_json)
+                except Exception:
+                    continue
+                TianApiService._collect_video_candidates(parsed, videos, seen)
+            if len(videos) >= limit:
+                break
+        if len(videos) < limit:
+            for match in re.finditer(r'https?:\\?/\\?/[^"\'<>\\\s]+?\.(?:mp4|m3u8)(?:\?[^"\'<>\\\s]*)?', text, flags=re.IGNORECASE):
+                src = TianApiService._normalize_video_url(match.group(0))
+                seen_key = src.split("?", 1)[0] if src else ""
+                if src and seen_key not in seen:
+                    videos.append({"url": src, "poster": "", "title": ""})
+                    seen.add(seen_key)
+                    if len(videos) >= limit:
+                        break
+        return videos[:limit]
+
+    @staticmethod
+    async def _fetch_baidu_hot_videos(keyword: str, limit: int = 3) -> List[Dict[str, str]]:
+        keyword = str(keyword or "").strip()
+        if not keyword:
+            return []
+        search_url = "https://m.baidu.com/s"
+        try:
+            async with HttpClient(timeout=15) as client:
+                text = await client.get_text(
+                    search_url,
+                    params={"word": keyword, "sa": "fyb_news"},
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    },
+                )
+        except Exception:
+            return []
+        return TianApiService._extract_video_resources_from_text(text, limit=limit)
+
+    @staticmethod
     def _build_hot_raw_section(platform_name: str, keyword: str, hot: str, desc_text: str, raw_item: Dict[str, Any]) -> Dict[str, str]:
         title = str(raw_item.get("word") or raw_item.get("hotword") or raw_item.get("title") or raw_item.get("keyword") or keyword)
         heat = str(raw_item.get("hotScore") or raw_item.get("hotwordnum") or raw_item.get("num") or raw_item.get("hot") or hot or "--")
@@ -530,6 +650,7 @@ class TianApiService:
         url: str = "",
         related_news: Optional[List[Dict[str, Any]]] = None,
         raw_item: Optional[Dict[str, Any]] = None,
+        videos: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         platform = platform if platform in {"weibo", "baidu"} else "baidu"
         platform_name = TianApiService._hot_search_title(platform)
@@ -537,6 +658,7 @@ class TianApiService:
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
         hot_text = f"，当前热度为 {hot}" if hot else ""
         raw_item = raw_item or {}
+        videos = videos or []
         raw_desc = str(raw_item.get("brief") or raw_item.get("desc") or raw_item.get("description") or "")
         # 优先用传入的description，再用raw里的desc/brief，最后才用fallback
         hot_desc = TianApiService._clean_hot_description(description)
@@ -598,6 +720,7 @@ class TianApiService:
             "content": content,
             "sections": sections,
             "relatedNews": related_news,
+            "videos": videos,
             "rawHotItem": raw_item,
             "updatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
@@ -616,7 +739,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword)
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_v1")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -656,6 +779,7 @@ class TianApiService:
                 if TianApiService._score_related_news(keyword, item) >= 2
             ]
         matched = await TianApiService._materialize_related_news(matched[:8])
+        videos = await TianApiService._fetch_baidu_hot_videos(keyword, limit=3) if platform == "baidu" else []
         data = TianApiService._build_hot_search_detail(
             platform=platform,
             keyword=keyword,
@@ -664,6 +788,7 @@ class TianApiService:
             url=str(url or ""),
             related_news=matched[:8],
             raw_item=TianApiService._parse_hot_raw(raw),
+            videos=videos,
         )
         result = {"code": 200, "msg": "success", "data": data}
         

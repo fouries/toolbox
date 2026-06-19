@@ -24,6 +24,21 @@
             <image class="hot-image" :src="displayImage" mode="widthFix"></image>
           </view>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
+          <view class="video-section" v-if="hotVideos.length">
+            <text class="video-title">相关视频</text>
+            <view class="video-item" v-for="(video, index) in hotVideos" :key="`${index}-${video.url}`">
+              <video
+                class="hot-video"
+                :src="video.url"
+                :poster="video.poster || displayImage"
+                :title="video.title || hotKeyword"
+                controls
+                object-fit="contain"
+                @error="onVideoError"
+              ></video>
+              <text class="video-caption">{{ video.title || `${hotKeyword} 相关视频` }}</text>
+            </view>
+          </view>
           <view class="action-row">
             <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
           </view>
@@ -74,7 +89,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getHotSearchDetail, type HotSearchDetailData, type HotSearchItem } from '@/api'
+import { getHotSearchDetail, type HotSearchDetailData, type HotSearchItem, type NewsItem } from '@/api'
 
 // getCurrentPages 是全局可用的
 declare function getCurrentPages(): any[];
@@ -98,17 +113,19 @@ const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentInd
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
+const hotVideos = computed(() => detail.value?.videos?.filter(item => item?.url) || [])
 
-const decodeValue = (value: unknown) => {
+const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
+  let decoded = value
   try {
     // 多次解码，处理双重编码
-    while (value.includes('%')) {
-      value = decodeURIComponent(value)
+    while (decoded.includes('%')) {
+      decoded = decodeURIComponent(decoded)
     }
-    return value
+    return decoded
   } catch {
-    return value
+    return decoded
   }
 }
 
@@ -138,6 +155,10 @@ const extractImageFromRaw = () => pickText(parseRawHotData(), ['image', 'img', '
 
 const hotKeyword = computed(() => detail.value?.keyword || keyword.value || extractKeywordFromRaw() || '未知热搜')
 const displayImage = computed(() => hotImage.value || extractImageFromRaw())
+
+const onVideoError = () => {
+  uni.showToast({ title: '视频暂时无法播放，可点击原链接查看', icon: 'none' })
+}
 
 const copyHotLink = () => {
   const data = sourceUrl.value || keyword.value
@@ -348,6 +369,42 @@ onLoad((options: any) => {
   width: 100%;
   border-radius: 20rpx;
   background: #ffedd5;
+}
+
+.video-section {
+  margin-top: 22rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #fed7aa;
+}
+
+.video-title,
+.video-caption {
+  display: block;
+}
+
+.video-title {
+  color: #c2410c;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.video-item {
+  margin-top: 16rpx;
+}
+
+.hot-video {
+  width: 100%;
+  height: 420rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.video-caption {
+  margin-top: 10rpx;
+  color: #64748b;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .keyword-desc {

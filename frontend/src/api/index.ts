@@ -100,6 +100,12 @@ export interface HotSearchDetailSection {
   body: string
 }
 
+export interface HotSearchVideo {
+  url: string
+  poster?: string
+  title?: string
+}
+
 export interface HotSearchDetailData {
   platform: string
   keyword: string
@@ -111,6 +117,7 @@ export interface HotSearchDetailData {
   content: string
   sections: HotSearchDetailSection[]
   relatedNews: NewsItem[]
+  videos?: HotSearchVideo[]
   rawHotItem?: Record<string, unknown>
   updatedAt?: string
 }

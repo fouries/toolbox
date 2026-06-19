@@ -91,7 +91,7 @@ def test_news_endpoints_use_real_paths_and_normalize_nested_newslist():
     assert internet['newslist'] == [{"title": "internet"}]
     assert esports['newslist'] == [{"title": "esports"}]
     assert auto['newslist'] == [{"title": "auto"}]
-    assert all(call[1].get('num') == '10' for call in DummyHttpClient.calls)
+    assert all(call[1].get('num') == '20' for call in DummyHttpClient.calls)
     assert all(call[1].get('form') == '1' for call in DummyHttpClient.calls)
 
 
@@ -205,7 +205,9 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
         url='https://s.weibo.com/weibo?q=test',
     ))
 
-    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/internet/index', '/esports/index', '/auto/index']
+    paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
+    assert paths[:3] == ['/internet/index', '/esports/index', '/auto/index']
+    assert 'https://m.baidu.com/s' in paths
     assert result['code'] == 200
     assert result['data']['platform'] == 'baidu'
     assert result['data']['keyword'] == '微博话题'
@@ -219,8 +221,8 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert result['data']['sections']
     assert result['data']['sections'][0]['title'] == '相关新闻内容'
     assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
-    assert result['data']['relatedNews'][0]['localUrl'].startswith('/api/news/local/')
-    assert DummyNewsDetailService.calls == ['https://example.com/topic']
+    assert result['data']['relatedNews'][0]['url'] == 'https://example.com/topic'
+    assert DummyNewsDetailService.calls == []
 
 
 def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match():
@@ -253,8 +255,8 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
     assert 'https://www.sogou.com/sogou' in paths
     assert result['code'] == 200
     assert result['data']['relatedNews'][0]['title'] == '世界杯真正的预言家相关新闻'
-    assert result['data']['relatedNews'][0]['localUrl'].startswith('/api/news/local/')
-    assert DummyNewsDetailService.calls == ['https://www.sogou.com/link?url=abc']
+    assert result['data']['relatedNews'][0]['url'] == 'https://www.sogou.com/link?url=abc'
+    assert DummyNewsDetailService.calls == []
     assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['summary']
     assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['content']
     assert '该话题来自微博热搜榜' not in result['data']['content']
@@ -385,6 +387,35 @@ def test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news():
     assert result['data']['relatedNews'] == []
 
 
+def test_baidu_hot_search_detail_extracts_video_resources_from_search_html():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://m.baidu.com/s', None): '''
+        <script>
+        window.tplData={"videoData":{"autoplayInfo":{"video":{
+          "poster":"https://t14.baidu.com/poster.jpg",
+          "src":"https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test",
+          "videoInfo":{"clarityUrl":[{"url":"https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test"}]}
+        }}},"contentData":{}}
+        </script>
+        '''
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='叠滘龙船漂移',
+        hot='12345',
+        description='百度接口返回的新闻摘要',
+        url='https://m.baidu.com/s?word=real',
+        raw='{"word":"叠滘龙船漂移","desc":"百度接口返回的新闻摘要"}',
+    ))
+
+    assert result['code'] == 200
+    assert result['data']['videos'][0]['url'] == 'https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test'
+    assert result['data']['videos'][0]['poster'] == 'https://t14.baidu.com/poster.jpg'
+
+
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
     fallback = TianApiService._empty_hot_search('baidu')
     assert fallback['title'] == '百度热搜榜'
@@ -429,6 +460,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
+        test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)
