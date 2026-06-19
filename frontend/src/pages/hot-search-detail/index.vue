@@ -118,8 +118,7 @@ const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentInd
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
-const isFirstHot = computed(() => currentIndex.value === 0)
-const visibleRelatedNews = computed(() => isFirstHot.value ? [] : relatedNews.value)
+const visibleRelatedNews = computed(() => relatedNews.value)
 const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
 const hasLoadedMedia = ref(false)
 const shouldShowFallbackImage = computed(() => hasLoadedMedia.value && !mediaLoading.value)

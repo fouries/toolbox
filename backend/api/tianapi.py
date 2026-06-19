@@ -1187,7 +1187,7 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v12_mobile_vsearch_desc_v9_images_short_empty")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v14_related_news_keyword_v1_mobile_vsearch_desc_v9_images_short_empty")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -1229,14 +1229,14 @@ class TianApiService:
             and (not original_desc_incomplete or official_desc_complete)
         )
         
-        if not has_hot_desc:
-            # 只有当没有可用的description时，才去调用资讯接口找相关新闻
-            # 并行调用三个资讯接口，而不是串行调用，这样速度会快很多
-            tasks = [TianApiService.get_info_news(category) for category in ("internet", "esports", "auto")]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
-                if isinstance(result, dict) and result.get("code") == 200 and isinstance(result.get("newslist"), list):
-                    all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
+        # detail-media 用这组数据同时补视频/图片/相关资讯。
+        # 即使已有百度摘要，也要尝试匹配相关新闻；否则大部分热搜只返回视频，前端看起来“全部没有相关资讯”。
+        # 只抓列表摘要，不提前抓新闻正文，避免回到早期慢加载问题。
+        tasks = [TianApiService.get_info_news(category) for category in ("internet", "esports", "auto")]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, dict) and result.get("code") == 200 and isinstance(result.get("newslist"), list):
+                all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
 
         scored = []
         for item in all_news:
@@ -1252,7 +1252,7 @@ class TianApiService:
             for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
             if score >= min_relevance_score
         ]
-        if not matched and not has_hot_desc:
+        if not matched:
             keyword_news = await TianApiService._fetch_keyword_news(keyword, limit=8)
             matched = [
                 item

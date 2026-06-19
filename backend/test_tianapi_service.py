@@ -290,7 +290,7 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
     assert '该话题来自微博热搜榜' not in result['data']['content']
 
 
-def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
+def test_baidu_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
         ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
@@ -319,6 +319,40 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     assert result['data']['sections'][0]['title'] == '百度热搜榜返回信息'
     assert '热度：987654' in result['data']['sections'][0]['body']
     assert result['data']['rawHotItem']['word'] == '百度真实热搜'
+
+
+def test_baidu_hot_search_detail_fetches_related_news_even_with_complete_summary():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+    DummyHttpClient.text_responses = {
+        ('https://www.sogou.com/sogou', None): '''
+        <div class="vrwrap">
+          <h3 class="vr-title"><a href="/link?url=abc">百度真实热搜 相关新闻</a></h3>
+          <div class="fz-mid space-txt"><span>2026年6月19日-</span>百度真实热搜出现了新的相关报道，介绍事件背景和最新进展。</div>
+          <div class="citeurl"><span>媒体 - news.example.com</span></div>
+        </div>
+        '''
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='百度真实热搜',
+        hot='987654',
+        description='百度接口返回的真实摘要正文',
+        url='https://m.baidu.com/s?word=real',
+        raw='{"word":"百度真实热搜","desc":"百度接口返回的真实摘要正文"}',
+    ))
+
+    paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
+    assert paths[:3] == ['/internet/index', '/esports/index', '/auto/index']
+    assert 'https://www.sogou.com/sogou' in paths
+    assert result['code'] == 200
+    assert result['data']['relatedNews']
+    assert result['data']['relatedNews'][0]['title'] == '百度真实热搜 相关新闻'
 
 
 def test_baidu_hot_search_merges_official_images_when_nethot_lacks_media():
@@ -840,7 +874,8 @@ if __name__ == '__main__':
         test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items,
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
-        test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
+        test_baidu_hot_search_detail_includes_baidu_raw_result_fields_as_content,
+        test_baidu_hot_search_detail_fetches_related_news_even_with_complete_summary,
         test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
         test_baidu_hot_search_replaces_truncated_nethot_summary_with_official_desc,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
