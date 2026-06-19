@@ -653,7 +653,7 @@ class TianApiService:
         return videos[:limit]
 
     @staticmethod
-    def _extract_haokan_video_page_urls(text: str, limit: int = 5) -> List[str]:
+    def _extract_haokan_video_page_urls(text: str, limit: int = 3) -> List[str]:
         text = html.unescape(str(text or "")).replace("\\/", "/")
         urls: List[str] = []
         seen = set()
@@ -698,7 +698,7 @@ class TianApiService:
         return score >= 2
 
     @staticmethod
-    async def _fetch_baidu_hot_videos(keyword: str, limit: int = 3) -> List[Dict[str, str]]:
+    async def _fetch_baidu_hot_videos(keyword: str, source_url: str = "", limit: int = 1) -> List[Dict[str, str]]:
         keyword = str(keyword or "").strip()
         if not keyword:
             return []
@@ -710,35 +710,27 @@ class TianApiService:
         }
         try:
             async with HttpClient(timeout=15, follow_redirects=True) as client:
-                text = await client.get_text(
-                    search_url,
-                    params={"word": keyword, "sa": "fyb_news"},
-                    headers=headers,
-                )
-                videos = TianApiService._extract_video_resources_from_text(text, limit=limit)
-                if videos:
-                    return videos
+                source_url = str(source_url or "").strip()
+                candidate_pages: List[tuple[str, Dict[str, str], Dict[str, str]]] = []
+                if source_url.startswith("http"):
+                    candidate_pages.append((source_url, {}, headers))
+                candidate_pages.append((search_url, {"word": keyword, "sa": "fyb_news"}, headers))
+
                 video_pages: List[str] = []
-                search_headers = {
-                    **headers,
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
-                }
-                for fallback_url, params in (
-                    ("https://www.so.com/s", {"q": f"{keyword} 好看视频"}),
-                    ("https://www.sogou.com/web", {"query": f"{keyword} 好看视频"}),
-                ):
+                for page_url, params, page_headers in candidate_pages:
                     try:
-                        result_text = await client.get_text(fallback_url, params=params, headers=search_headers)
+                        text = await client.get_text(page_url, params=params, headers=page_headers)
                     except Exception:
                         continue
-                    for page_url in TianApiService._extract_haokan_video_page_urls(result_text, limit=5):
-                        if page_url not in video_pages:
-                            video_pages.append(page_url)
-                    if len(video_pages) >= 5:
-                        break
+                    videos = TianApiService._extract_video_resources_from_text(text, limit=limit)
+                    if videos:
+                        return videos[:limit]
+                    for haokan_url in TianApiService._extract_haokan_video_page_urls(text, limit=3):
+                        if haokan_url not in video_pages:
+                            video_pages.append(haokan_url)
                 collected: List[Dict[str, str]] = []
                 seen_original = set()
-                for page_url in video_pages[:5]:
+                for page_url in video_pages[:3]:
                     try:
                         page_text = await client.get_text(page_url, headers={**headers, "Referer": "https://m.baidu.com/"})
                     except Exception:
@@ -752,8 +744,8 @@ class TianApiService:
                             seen_original.add(seen_key)
                             collected.append(video)
                             if len(collected) >= limit:
-                                return collected
-                return collected
+                                return collected[:limit]
+                return collected[:limit]
         except Exception:
             return []
         return []
@@ -873,7 +865,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v4")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v5")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -913,7 +905,7 @@ class TianApiService:
                 if TianApiService._score_related_news(keyword, item) >= 2
             ]
         matched = await TianApiService._materialize_related_news(matched[:8])
-        videos = await TianApiService._fetch_baidu_hot_videos(keyword, limit=3) if platform == "baidu" else []
+        videos = await TianApiService._fetch_baidu_hot_videos(keyword, source_url=str(url or ""), limit=1) if platform == "baidu" else []
         data = TianApiService._build_hot_search_detail(
             platform=platform,
             keyword=keyword,

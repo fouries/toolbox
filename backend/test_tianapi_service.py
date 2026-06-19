@@ -421,10 +421,10 @@ def test_baidu_hot_search_detail_falls_back_to_haokan_video_pages():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
     DummyHttpClient.text_responses = {
-        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
-        ('https://www.so.com/s', None): '''
+        ('https://www.baidu.com/s?wd=real', None): '''
         <a data-mdurl="https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912">今年端午60年一遇 好看视频</a>
         ''',
+        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
         ('https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912', None): '''
         <title>今年端午节，60年不遇,好看视频</title>
         <script>{"curVideoMeta":{"title":"今年端午节，60年不遇","clarityUrl":[
@@ -444,9 +444,39 @@ def test_baidu_hot_search_detail_falls_back_to_haokan_video_pages():
     ))
 
     assert result['code'] == 200
-    assert len(result['data']['videos']) == 2
+    assert len(result['data']['videos']) == 1
     assert result['data']['videos'][0]['url'] == 'https://quan1234.com/api/video-proxy?url=https%3A%2F%2Fvd4.bdstatic.com%2Fmda-demo%2Fcae_h264%2Fdemo.mp4%3Fauth_key%3Dtest'
     assert result['data']['videos'][0]['originalUrl'] == 'https://vd4.bdstatic.com/mda-demo/cae_h264/demo.mp4?auth_key=test'
+    called_urls = [call[0] for call in DummyHttpClient.calls]
+    assert 'https://www.so.com/s' not in called_urls
+    assert 'https://www.sogou.com/web' not in called_urls
+
+
+def test_baidu_hot_search_detail_does_not_use_generic_search_video_results():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html>百度安全验证</html>',
+        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
+        ('https://www.so.com/s', None): '''
+        <a data-mdurl="https://haokan.baidu.com/v?pd=wisenatural&vid=wrong">相似但不是原链接视频</a>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='今年端午60年一遇',
+        hot='12345',
+        description='快接住60年一遇的端午好运！',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"今年端午60年一遇","desc":"快接住60年一遇的端午好运！"}',
+    ))
+
+    assert result['code'] == 200
+    assert result['data']['videos'] == []
+    called_urls = [call[0] for call in DummyHttpClient.calls]
+    assert 'https://www.so.com/s' not in called_urls
+    assert 'https://www.sogou.com/web' not in called_urls
 
 
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
@@ -495,6 +525,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
+        test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)
