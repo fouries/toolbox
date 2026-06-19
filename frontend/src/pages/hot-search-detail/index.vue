@@ -6,9 +6,18 @@
         <text class="subtitle">百度热搜榜</text>
       </view>
 
-      <view class="loading" v-if="loading">
-        <text class="loading-icon">⏳</text>
+      <view class="loading detail-loading-card card" v-if="loading">
+        <view class="detail-loading-orbit">
+          <view class="detail-loading-ring"></view>
+          <text class="detail-loading-flame">🔥</text>
+        </view>
         <text class="loading-text">正在加载热搜..</text>
+        <view class="detail-loading-bars">
+          <view class="detail-loading-bar detail-loading-bar-title"></view>
+          <view class="detail-loading-bar detail-loading-bar-media"></view>
+          <view class="detail-loading-bar"></view>
+          <view class="detail-loading-bar detail-loading-bar-short"></view>
+        </view>
       </view>
 
       <view class="error-box card" v-else-if="error">
@@ -38,6 +47,12 @@
             <image class="hot-image" :src="displayImage" mode="widthFix" @tap="previewHotImage(displayImage)"></image>
           </view>
           <view class="media-loading" v-if="mediaLoading && !hotVideos.length && !detailImage">
+            <view class="media-loading-player">
+              <view class="media-loading-play"></view>
+              <view class="media-loading-wave media-loading-wave-a"></view>
+              <view class="media-loading-wave media-loading-wave-b"></view>
+              <view class="media-loading-wave media-loading-wave-c"></view>
+            </view>
             <text class="media-loading-text">正在加载...</text>
           </view>
           <text class="media-error" v-if="mediaError">{{ mediaError }}</text>
@@ -423,9 +438,72 @@ onLoad((options: any) => {
 .media-loading,
 .related-loading {
   margin-top: 18rpx;
-  padding: 18rpx 20rpx;
+  padding: 22rpx 20rpx;
   border-radius: 18rpx;
   background: #fff7ed;
+}
+
+.media-loading {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.media-loading-player {
+  position: relative;
+  flex: 0 0 86rpx;
+  width: 86rpx;
+  height: 58rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  box-shadow: 0 10rpx 24rpx rgba(249, 115, 22, 0.2);
+  overflow: hidden;
+}
+
+.media-loading-player::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 48%, transparent 100%);
+  animation: video-shine 1.2s ease-in-out infinite;
+}
+
+.media-loading-play {
+  position: absolute;
+  left: 34rpx;
+  top: 18rpx;
+  width: 0;
+  height: 0;
+  border-top: 12rpx solid transparent;
+  border-bottom: 12rpx solid transparent;
+  border-left: 18rpx solid #fff;
+  z-index: 2;
+}
+
+.media-loading-wave {
+  position: absolute;
+  bottom: 10rpx;
+  width: 8rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.72);
+  animation: video-wave 0.9s ease-in-out infinite;
+}
+
+.media-loading-wave-a {
+  left: 14rpx;
+  height: 16rpx;
+}
+
+.media-loading-wave-b {
+  left: 24rpx;
+  height: 24rpx;
+  animation-delay: 0.14s;
+}
+
+.media-loading-wave-c {
+  left: 58rpx;
+  height: 18rpx;
+  animation-delay: 0.28s;
 }
 
 .media-loading-text,
@@ -440,6 +518,35 @@ onLoad((options: any) => {
 .media-error {
   margin-top: 16rpx;
   color: #dc2626;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flame-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.82; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes skeleton-flow {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes loading-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes video-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes video-wave {
+  0%, 100% { transform: scaleY(0.65); opacity: 0.58; }
+  50% { transform: scaleY(1.2); opacity: 1; }
 }
 
 .keyword-desc {
@@ -518,17 +625,86 @@ onLoad((options: any) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80rpx 0;
+  padding: 52rpx 28rpx;
   color: #f97316;
 }
 
-.loading-icon {
-  font-size: 54rpx;
+.detail-loading-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-loading-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 20%, rgba(249, 115, 22, 0.14), transparent 34%), linear-gradient(120deg, transparent 0%, rgba(251, 146, 60, 0.08) 44%, rgba(249, 115, 22, 0.18) 50%, rgba(251, 146, 60, 0.08) 56%, transparent 100%);
+  animation: loading-shine 1.8s ease-in-out infinite;
+}
+
+.detail-loading-orbit {
+  position: relative;
+  width: 108rpx;
+  height: 108rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-loading-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999rpx;
+  border: 8rpx solid #fed7aa;
+  border-top-color: #f97316;
+  border-right-color: #ef4444;
+  animation: spin 0.9s linear infinite;
+}
+
+.detail-loading-flame {
+  position: relative;
+  z-index: 1;
+  font-size: 44rpx;
+  animation: flame-pulse 1.1s ease-in-out infinite;
 }
 
 .loading-text {
+  position: relative;
+  z-index: 1;
   margin-top: 18rpx;
   font-size: 26rpx;
+  font-weight: 760;
+}
+
+.detail-loading-bars {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-top: 30rpx;
+}
+
+.detail-loading-bar {
+  height: 22rpx;
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #ffedd5 0%, #fed7aa 45%, #fff7ed 90%);
+  background-size: 220% 100%;
+  animation: skeleton-flow 1.3s ease-in-out infinite;
+}
+
+.detail-loading-bar-title {
+  width: 56%;
+  height: 34rpx;
+}
+
+.detail-loading-bar-media {
+  width: 100%;
+  height: 180rpx;
+  border-radius: 22rpx;
+}
+
+.detail-loading-bar-short {
+  width: 68%;
 }
 
 .retry-btn {

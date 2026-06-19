@@ -14,9 +14,21 @@
         <button class="refresh-btn" @tap="fetchHotSearch" :disabled="loading">{{ loading ? '刷新中...' : '刷新热搜' }}</button>
       </view>
 
-      <view class="loading" v-if="loading">
-        <text class="loading-icon">⏳</text>
+      <view class="loading hot-loading-card card" v-if="loading">
+        <view class="hot-loading-orbit">
+          <view class="hot-loading-ring"></view>
+          <text class="hot-loading-flame">🔥</text>
+        </view>
         <text class="loading-text">正在加载百度热搜榜...</text>
+        <view class="hot-loading-skeletons">
+          <view class="hot-loading-skeleton" v-for="item in 4" :key="item">
+            <view class="skeleton-rank"></view>
+            <view class="skeleton-lines">
+              <view class="skeleton-line skeleton-line-title"></view>
+              <view class="skeleton-line skeleton-line-meta"></view>
+            </view>
+          </view>
+        </view>
       </view>
 
       <view class="error-box card" v-else-if="error">
@@ -194,17 +206,116 @@ onLoad(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80rpx 0;
+  padding: 52rpx 28rpx;
   color: #f97316;
 }
 
-.loading-icon {
-  font-size: 54rpx;
+.hot-loading-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.hot-loading-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(251, 146, 60, 0.08) 44%, rgba(249, 115, 22, 0.18) 50%, rgba(251, 146, 60, 0.08) 56%, transparent 100%);
+  animation: loading-shine 1.8s ease-in-out infinite;
+}
+
+.hot-loading-orbit {
+  position: relative;
+  width: 104rpx;
+  height: 104rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hot-loading-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999rpx;
+  border: 8rpx solid #fed7aa;
+  border-top-color: #f97316;
+  border-right-color: #ef4444;
+  animation: spin 0.9s linear infinite;
+}
+
+.hot-loading-flame {
+  position: relative;
+  z-index: 1;
+  font-size: 44rpx;
+  animation: flame-pulse 1.1s ease-in-out infinite;
 }
 
 .loading-text {
   margin-top: 18rpx;
   font-size: 26rpx;
+  font-weight: 760;
+}
+
+.hot-loading-skeletons {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-top: 30rpx;
+}
+
+.hot-loading-skeleton {
+  display: grid;
+  grid-template-columns: 52rpx 1fr;
+  gap: 18rpx;
+  align-items: center;
+  padding: 18rpx 0;
+  border-top: 1rpx solid rgba(254, 215, 170, 0.8);
+}
+
+.skeleton-rank,
+.skeleton-line {
+  overflow: hidden;
+  background: linear-gradient(90deg, #ffedd5 0%, #fed7aa 45%, #fff7ed 90%);
+  background-size: 220% 100%;
+  animation: skeleton-flow 1.3s ease-in-out infinite;
+}
+
+.skeleton-rank {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 18rpx;
+}
+
+.skeleton-line {
+  height: 22rpx;
+  border-radius: 999rpx;
+}
+
+.skeleton-line-title {
+  width: 78%;
+}
+
+.skeleton-line-meta {
+  width: 42%;
+  margin-top: 14rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flame-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.82; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes skeleton-flow {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes loading-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .hot-list {
