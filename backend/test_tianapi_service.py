@@ -595,6 +595,67 @@ def test_baidu_hot_search_detail_does_not_use_generic_search_video_results():
     assert 'https://www.sogou.com/web' not in called_urls
 
 
+def test_baidu_hot_search_detail_uses_mobile_vsearch_when_source_hits_safety_check():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html><title>百度安全验证</title></html>',
+        ('https://www.baidu.com/s', 'real'): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/s', None): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/sf/vsearch', 'real'): '''
+        <script>window.pageData={"title":"顶流演员也没戏拍了？刘亦菲超900天没进组，董子健刘昊然在线求工作",
+          "loc":"https://haokan.baidu.com/v?pd=wisenatural&vid=12641358385028720826",
+          "videoSrc":"https://vd3.bdstatic.com/mda-real/hd/cae_h264/demo.mp4?pd=19&vt=1",
+          "previewProps":{"poster":"http://t15.baidu.com/it/u=480050288,1670784519&fm=225"}}
+        </script>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='顶流演员竟然没戏拍了吗',
+        hot='7808291',
+        description='多位演员集体求职。',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"顶流演员竟然没戏拍了吗","desc":"多位演员集体求职。"}',
+    ))
+
+    assert result['code'] == 200
+    assert len(result['data']['videos']) == 1
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd3.bdstatic.com/mda-real/hd/cae_h264/demo.mp4?pd=19&vt=1'
+    assert result['data']['videos'][0]['poster'] == 'http://t15.baidu.com/it/u=480050288,1670784519&fm=225'
+    calls = {(call[0], tuple(sorted((call[1] or {}).items()))) for call in DummyHttpClient.calls}
+    assert ('https://m.baidu.com/sf/vsearch', (('atn', 'index'), ('pd', 'video'), ('tn', 'vsearch'), ('word', 'real'))) in calls
+
+
+def test_baidu_hot_search_detail_rejects_unmatched_mobile_vsearch_video():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html><title>百度安全验证</title></html>',
+        ('https://www.baidu.com/s', 'real'): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/s', None): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/sf/vsearch', 'real'): '''
+        <script>window.pageData={"title":"完全无关的娱乐短视频",
+          "loc":"https://haokan.baidu.com/v?pd=wisenatural&vid=wrong",
+          "videoSrc":"https://vd3.bdstatic.com/mda-wrong/hd/cae_h264/demo.mp4?pd=19&vt=1"}
+        </script>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='顶流演员竟然没戏拍了吗',
+        hot='7808291',
+        description='多位演员集体求职。',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"顶流演员竟然没戏拍了吗","desc":"多位演员集体求职。"}',
+    ))
+
+    assert result['code'] == 200
+    assert result['data']['videos'] == []
+
+
 def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
@@ -789,6 +850,8 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
+        test_baidu_hot_search_detail_uses_mobile_vsearch_when_source_hits_safety_check,
+        test_baidu_hot_search_detail_rejects_unmatched_mobile_vsearch_video,
         test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
         test_baidu_hot_search_detail_extracts_baidu_video_landing_pages,
         test_baidu_hot_search_detail_accepts_near_match_original_haokan_video,

@@ -2,7 +2,7 @@ import json
 import re
 import html
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 from urllib.parse import quote, urljoin, unquote, urlparse, parse_qs
 from utils.http_client import HttpClient
@@ -782,6 +782,46 @@ class TianApiService:
         return videos[:limit]
 
     @staticmethod
+    def _extract_video_page_cards(text: str, limit: int = 6) -> List[Dict[str, str]]:
+        """Extract structured cards from Baidu mobile video result pages.
+
+        The `/sf/vsearch?...&atn=index` page can expose `title`, `loc`,
+        `videoSrc`, and preview poster in JSON-ish blobs without using the
+        older `autoplayInfo`/`curVideoMeta` wrappers. Keep this extraction
+        source-limited to Baidu-owned video result pages; callers still run
+        `_video_page_matches_keyword` on each card before accepting a video.
+        """
+        text = html.unescape(str(text or "")).replace("\\/", "/")
+        cards: List[Dict[str, str]] = []
+        seen = set()
+        for match in re.finditer(r'"videoSrc"\s*:\s*"([^"<>]+)"', text, flags=re.IGNORECASE):
+            if len(cards) >= limit:
+                break
+            src = TianApiService._normalize_video_url(match.group(1))
+            seen_key = src.split("?", 1)[0] if src else ""
+            if not src or seen_key in seen:
+                continue
+            start = max(0, match.start() - 3000)
+            end = min(len(text), match.end() + 1600)
+            context = text[start:end]
+            title_match = re.search(r'"title"\s*:\s*"([^"<>]{2,160})"', context, flags=re.IGNORECASE)
+            loc_match = re.search(r'"loc"\s*:\s*"(https?://[^"<>]+)"', context, flags=re.IGNORECASE)
+            poster_match = re.search(r'"poster"\s*:\s*"(https?://[^"<>]+)"', context, flags=re.IGNORECASE)
+            title = TianApiService._strip_html_tags(title_match.group(1))[:120] if title_match else ""
+            source_url = html.unescape(loc_match.group(1)).strip() if loc_match else ""
+            poster = TianApiService._normalize_video_poster(poster_match.group(1)) if poster_match else ""
+            cards.append({
+                "url": TianApiService._proxy_baidu_video_url(src),
+                "originalUrl": src,
+                "poster": poster,
+                "title": title,
+                "sourceUrl": source_url,
+                "_context": context,
+            })
+            seen.add(seen_key)
+        return cards
+
+    @staticmethod
     def _extract_haokan_video_page_urls(text: str, limit: int = 3) -> List[str]:
         text = html.unescape(str(text or "")).replace("\\/", "/")
         urls: List[str] = []
@@ -858,6 +898,11 @@ class TianApiService:
         matched_terms = {term for term in terms if term in compact_haystack}
         if len(matched_terms) >= 3 and len(matched_terms) >= max(3, len(set(terms)) // 3):
             return True
+        keyword_words = re.findall(r"[\u4e00-\u9fff]{2,}", compact_keyword)
+        if keyword_words:
+            matched_chars = sum(len(word) for word in keyword_words if word and word in compact_haystack)
+            if matched_chars >= max(4, min(len(compact_keyword), 12) // 2):
+                return True
         score = 0
         for term in ("今年", "端午", "60年", "六十年"):
             if term in keyword and term.lower() in haystack:
@@ -875,10 +920,15 @@ class TianApiService:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
+        video_headers = {
+            **headers,
+            "Referer": "https://m.baidu.com/",
+        }
         try:
             async with HttpClient(timeout=15, follow_redirects=True) as client:
                 source_url = str(source_url or "").strip()
-                candidate_pages: List[tuple[str, Dict[str, str], Dict[str, str]]] = []
+                candidate_pages: List[Tuple[str, Dict[str, str], Dict[str, str]]] = []
+                source_word = keyword
                 if source_url.startswith("http"):
                     candidate_pages.append((source_url, {}, headers))
                     parsed_source = urlparse(source_url)
@@ -887,11 +937,38 @@ class TianApiService:
                         source_word = str((source_query.get("wd") or source_query.get("word") or [keyword])[0] or keyword)
                         # 有些热搜原链接直接访问会触发安全验证，但同一个百度普通搜索
                         # 模板（非视频垂搜）可以返回原搜索结果里的好看视频卡片。
-                        # 这里仍限定在百度普通搜索页，不使用 vsearch/外部搜索，避免错配。
                         candidate_pages.append(("https://www.baidu.com/s", {"wd": source_word, "tn": "baiduhome_pg"}, headers))
                 candidate_pages.append((search_url, {"word": keyword, "sa": "fyb_news"}, headers))
 
                 video_pages: List[str] = []
+                collected: List[Dict[str, str]] = []
+                seen_original = set()
+
+                async def collect_from_text(text_result: str, allow_inline_video_cards: bool = False) -> bool:
+                    videos = TianApiService._extract_video_resources_from_text(text_result, limit=limit)
+                    if allow_inline_video_cards:
+                        videos = TianApiService._extract_video_page_cards(text_result, limit=max(limit * 3, 6)) or videos
+                    for video in videos:
+                        if allow_inline_video_cards:
+                            haystack = " ".join(str(video.get(field) or "") for field in ("title", "sourceUrl", "_context"))
+                            if not TianApiService._video_page_matches_keyword(keyword, haystack):
+                                continue
+                        original_url = str(video.get("originalUrl") or video.get("url") or "")
+                        seen_key = original_url.split("?", 1)[0]
+                        if seen_key and seen_key not in seen_original:
+                            seen_original.add(seen_key)
+                            video.pop("_context", None)
+                            collected.append(video)
+                            if len(collected) >= limit:
+                                return True
+                    for haokan_url in TianApiService._extract_haokan_video_page_urls(text_result, limit=3):
+                        if haokan_url not in video_pages:
+                            video_pages.append(haokan_url)
+                    for landing_url in TianApiService._extract_baidu_video_landing_urls(text_result, limit=3):
+                        if landing_url not in video_pages:
+                            video_pages.append(landing_url)
+                    return False
+
                 candidate_results = await asyncio.gather(
                     *(client.get_text(page_url, params=params, headers=page_headers) for page_url, params, page_headers in candidate_pages),
                     return_exceptions=True,
@@ -899,19 +976,24 @@ class TianApiService:
                 for text_result in candidate_results:
                     if isinstance(text_result, BaseException):
                         continue
-                    videos = TianApiService._extract_video_resources_from_text(text_result, limit=limit)
-                    if videos:
-                        return videos[:limit]
-                    for haokan_url in TianApiService._extract_haokan_video_page_urls(text_result, limit=3):
-                        if haokan_url not in video_pages:
-                            video_pages.append(haokan_url)
-                    for landing_url in TianApiService._extract_baidu_video_landing_urls(text_result, limit=3):
-                        if landing_url not in video_pages:
-                            video_pages.append(landing_url)
-                collected: List[Dict[str, str]] = []
-                seen_original = set()
+                    if await collect_from_text(text_result):
+                        return collected[:limit]
+
+                # 百度普通搜索在服务器侧经常被重定向到“百度安全验证”。移动端视频
+                # 结果页 `/sf/vsearch?...&atn=index` 目前不触发该验证，并且页面内
+                # 直接包含 `videoSrc`、标题、落地页和封面。仅作为兜底，并继续用
+                # 标题/落地页上下文做关键词校验，避免把泛搜索视频错配到热搜详情。
+                if not video_pages:
+                    video_search_text = await client.get_text(
+                        "https://m.baidu.com/sf/vsearch",
+                        params={"pd": "video", "word": source_word or keyword, "tn": "vsearch", "atn": "index"},
+                        headers=video_headers,
+                    )
+                    if await collect_from_text(video_search_text, allow_inline_video_cards=True):
+                        return collected[:limit]
+
                 video_page_results = await asyncio.gather(
-                    *(client.get_text(page_url, headers={**headers, "Referer": "https://m.baidu.com/"}) for page_url in video_pages[:3]),
+                    *(client.get_text(page_url, headers=video_headers) for page_url in video_pages[:3]),
                     return_exceptions=True,
                 )
                 for page_text in video_page_results:
@@ -1105,7 +1187,7 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v11_baidu_landing_desc_v9_images_short_empty")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v12_mobile_vsearch_desc_v9_images_short_empty")
         cached = await cache.get(cache_key)
         if cached:
             return cached
