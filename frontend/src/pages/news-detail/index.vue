@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getNewsDetail, type NewsDetail, type NewsItem } from '@/api'
+import { getNewsDetail, getInfoNews, type NewsDetail, type NewsItem } from '@/api'
 import { useTheme } from '@/utils/theme'
 
 const { themeClass } = useTheme()
@@ -228,14 +228,19 @@ const fetchNewsList = async () => {
     const res: any = await getInfoNews(category.value)
     if (res.code === 200 && Array.isArray(res.newslist)) {
       newsList.value = res.newslist
+      console.log('[news-nav] 加载分类列表成功, count=', newsList.value.length, 'category=', category.value, 'current url=', sourceUrl.value)
       // 如果url匹配找到正确的索引
       if (currentIndex.value === -1 || !newsList.value[currentIndex.value] || newsList.value[currentIndex.value].url !== sourceUrl.value) {
         // 查找当前url在列表中的位置
         const foundIndex = newsList.value.findIndex(item => item.url === sourceUrl.value)
+        console.log('[news-nav] 查找当前URL索引: found=', foundIndex)
         if (foundIndex >= 0) {
           currentIndex.value = foundIndex
+          console.log('[news-nav] 更新索引到: ', foundIndex)
         }
       }
+    } else {
+      console.log('[news-nav] 加载失败，res=', res)
     }
   } catch (err) {
     // 获取失败不影响主流程，只是不显示上下篇按钮
