@@ -61,8 +61,7 @@ const { themeClass } = useTheme()
 const categories = [
   { id: 'internet', title: '互联网资讯', icon: '🌐', desc: '关注互联网产品、AI、科技公司与行业动态' },
   { id: 'esports', title: '电竞资讯', icon: '🎮', desc: '查看电竞赛事、战队动态和游戏产业消息' },
-  { id: 'auto', title: '汽车新闻', icon: '🚗', desc: '了解新车上市、行业政策和用车资讯' },
-  { id: 'weibo', title: '微博热搜', icon: '🔥', desc: '查看微博实时热点热搜头条' }
+  { id: 'auto', title: '汽车新闻', icon: '🚗', desc: '了解新车上市、行业政策和用车资讯' }
 ]
 
 const activeCategory = ref('internet')
@@ -154,7 +153,7 @@ onLoad((options: any) => {
 
 .category-tabs {
  display: grid;
- grid-template-columns: repeat(2, 1fr);
+ grid-template-columns: repeat(3, 1fr);
  gap: 12rpx;
  margin-bottom: 22rpx;
 }
