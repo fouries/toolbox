@@ -49,7 +49,8 @@ class DummyHttpClient:
     async def get_text(self, url, params=None, headers=None):
         self.__class__.calls.append((url, params or {}))
         path = url.replace('https://apis.tianapi.com', '')
-        key = (path, (params or {}).get('code'))
+        query_value = (params or {}).get('code') or (params or {}).get('q') or (params or {}).get('query') or (params or {}).get('word') or (params or {}).get('wd')
+        key = (path, query_value)
         if key in self.__class__.text_responses:
             return self.__class__.text_responses[key]
         if (path, None) in self.__class__.text_responses:
@@ -402,6 +403,48 @@ def test_baidu_hot_search_detail_completes_truncated_summary_from_related_news()
     assert '...' not in result['data']['summary']
 
 
+def test_baidu_hot_search_detail_filters_incomplete_related_news_content():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('https://top.baidu.com/api/board', None): {"success": True, "data": {"cards": [{"content": []}]}},
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+    DummyHttpClient.text_responses = {
+        ('https://www.sogou.com/sogou', '工信部辟谣8家车企被撤销资质'): '',
+        ('https://www.bing.com/search', '工信部辟谣8家车企被撤销资质'): '''
+        <li class="b_algo">
+          <h2><a href="https://www.sohu.com/a/1038271640_114984"><strong>工信部辟谣</strong>：<strong>8家车企被撤销</strong>生产<strong>资质</strong>为不实信息_搜狐汽车 ...</a></h2>
+          <div class="b_caption"><p>1 天前&ensp;&#0183;&ensp;工信部方面表示，网传被撤销生产资质的8家企业，仅原一汽夏利多年前已注销准入许可；其余7家企业中，仅部分企业已注销或拟注销个别生产地址，并非整车生产资质被注销。 网传信息来源不明，缺乏任何官方依据。</p></div>
+          <cite>https://www.sohu.com/a/1038271640_114984</cite>
+        </li>
+        <li class="b_algo">
+          <h2><a href="https://example.com/bad">8家车企被撤销生产资质？消息是假的</a></h2>
+          <div class="b_caption"><p>前日,网传“工信部第408批公告将一汽夏利、华晨自主、众泰、猎豹、力帆等8家汽车企业移出车企名录”。6月17日,经多家正规媒体向工...</p></div>
+        </li>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='工信部辟谣8家车企被撤销资质',
+        hot='6851511',
+        description='近日，针对“8家车企被移出名录、整车生产资质永久失效”的网传消息，工信部回应称相关说法不实。除一汽夏利早年已注销准入许可外，其余车企仍在名录中，部分... 查看更多&gt;',
+        url='https://m.baidu.com/s?word=real&sa=fyb_news',
+        raw='{"word":"工信部辟谣8家车企被撤销资质"}',
+    ))
+
+    content = result['data']['content']
+    assert '并非整车生产资质被注销。' in content
+    assert '8家车企被撤销生产资质？消息是假的' not in content
+    assert '8家车企被 冻结生产 资质 众泰 辟谣 :不实信息' not in content
+    assert '工...' not in content
+    assert '为不...' not in content
+    assert '消息...' not in content
+    assert '查看更多' not in content
+
+
 def test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
@@ -606,6 +649,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_replaces_truncated_nethot_summary_with_official_desc,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
         test_baidu_hot_search_detail_completes_truncated_summary_from_related_news,
+        test_baidu_hot_search_detail_filters_incomplete_related_news_content,
         test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,

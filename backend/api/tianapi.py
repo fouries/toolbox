@@ -404,23 +404,68 @@ class TianApiService:
         return results
 
     @staticmethod
+    def _parse_bing_news_results(text: str, keyword: str, limit: int = 8) -> List[Dict[str, str]]:
+        results: List[Dict[str, str]] = []
+        seen_titles = set()
+        blocks = re.findall(
+            r"<li[^>]+class=[\"'][^\"']*b_algo[^\"']*[\"'][^>]*>[\s\S]*?(?=<li[^>]+class=[\"'][^\"']*b_algo|</ol>|</body>|$)",
+            text or "",
+            flags=re.IGNORECASE,
+        )
+        for block in blocks:
+            title_match = re.search(r"<h2[^>]*>[\s\S]*?<a[^>]*href=[\"']([^\"']+)[\"'][^>]*>([\s\S]*?)</a>", block, flags=re.IGNORECASE)
+            if not title_match:
+                continue
+            title = TianApiService._clean_search_title(title_match.group(2))
+            if not title or title in seen_titles:
+                continue
+            desc_match = re.search(r"<div[^>]+class=[\"'][^\"']*b_caption[^\"']*[\"'][^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)</p>", block, flags=re.IGNORECASE)
+            description = TianApiService._clean_search_description(desc_match.group(1)) if desc_match else ""
+            description = TianApiService._strip_leading_repeated_title(title, description)
+            if not description and keyword not in title:
+                continue
+            source_match = re.search(r"<cite[^>]*>([\s\S]*?)</cite>", block, flags=re.IGNORECASE)
+            source = TianApiService._strip_html_tags(source_match.group(1)) if source_match else "必应搜索"
+            href = html.unescape(title_match.group(1))
+            results.append({
+                "title": title,
+                "description": description,
+                "source": source,
+                "ctime": "",
+                "url": href,
+            })
+            seen_titles.add(title)
+            if len(results) >= limit:
+                break
+        return results
+
+    @staticmethod
     async def _fetch_keyword_news(keyword: str, limit: int = 8) -> List[Dict[str, str]]:
         keyword = str(keyword or "").strip()
         if not keyword:
             return []
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        }
         try:
-            async with HttpClient(timeout=15) as client:
+            async with HttpClient(timeout=15, follow_redirects=True) as client:
                 text = await client.get_text(
                     "https://www.sogou.com/sogou",
                     params={"query": keyword, "ie": "utf8"},
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    },
+                    headers=headers,
+                )
+                results = TianApiService._parse_sogou_news_results(text, keyword, limit=limit)
+                if results:
+                    return results
+                text = await client.get_text(
+                    "https://www.bing.com/search",
+                    params={"q": keyword},
+                    headers=headers,
                 )
         except Exception:
             return []
-        return TianApiService._parse_sogou_news_results(text, keyword, limit=limit)
+        return TianApiService._parse_bing_news_results(text, keyword, limit=limit)
 
     @staticmethod
     def _longest_common_substring_length(left: str, right: str) -> int:
@@ -469,6 +514,34 @@ class TianApiService:
             "url": str(item.get("url") or item.get("link") or ""),
             "picUrl": str(item.get("picUrl") or item.get("picurl") or ""),
         }
+
+    @staticmethod
+    def _strip_leading_repeated_title(title: str, description: str) -> str:
+        title_clean = TianApiService._strip_html_tags(title)
+        description = TianApiService._strip_html_tags(description)
+        if not title_clean or not description:
+            return description
+        normalized_title = re.sub(r"\s+", "", title_clean)
+        normalized_desc = re.sub(r"\s+", "", description)
+        title_variants = {
+            normalized_title,
+            re.sub(r"[_\-—|].*$", "", normalized_title),
+        }
+        for variant in sorted(title_variants, key=len, reverse=True):
+            if len(variant) >= 6 and normalized_desc.startswith(variant):
+                prefix_end = 0
+                compact = ""
+                for index, char in enumerate(description):
+                    if char.isspace():
+                        continue
+                    compact += char
+                    if len(compact) >= len(variant):
+                        prefix_end = index + 1
+                        break
+                remainder = description[prefix_end:].lstrip(" _-—:：，,。\n\t")
+                if remainder:
+                    return remainder
+        return description
 
     @staticmethod
     def _clean_hot_description(description: str) -> str:
@@ -866,15 +939,33 @@ class TianApiService:
 
         raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
         news_content_lines = []
-        for item in related_news[:5]:
-            item_title = str(item.get("title") or "").strip()
-            item_desc = str(item.get("description") or "").strip()
-            if item_title and item_desc:
-                news_content_lines.append(f"{item_title}：{item_desc}")
-            elif item_title:
-                news_content_lines.append(item_title)
-            elif item_desc:
-                news_content_lines.append(item_desc)
+        seen_content_lines = set()
+        seen_descriptions = set()
+        for item in related_news[:8]:
+            item_title = TianApiService._strip_html_tags(str(item.get("title") or "")).strip()
+            item_desc = TianApiService._strip_html_tags(str(item.get("description") or "")).strip()
+            if TianApiService._is_incomplete_hot_description(item_title):
+                item_title = ""
+            if TianApiService._is_incomplete_hot_description(item_desc):
+                item_desc = ""
+            # 正文区域只放有完整摘要的相关新闻；标题本身不是正文，避免出现“...但难活的可不止这8家”这类残缺标题行。
+            if not item_desc:
+                continue
+            desc_key = re.sub(r"\s+", "", item_desc)
+            if desc_key in seen_descriptions:
+                continue
+            seen_descriptions.add(desc_key)
+            line = f"{item_title}：{item_desc}" if item_title else item_desc
+            line = TianApiService._trim_incomplete_hot_description(line) or line
+            if TianApiService._is_incomplete_hot_description(line):
+                continue
+            line_key = re.sub(r"\s+", "", line)
+            if line_key in seen_content_lines:
+                continue
+            seen_content_lines.add(line_key)
+            news_content_lines.append(line)
+            if len(news_content_lines) >= 5:
+                break
         news_content = "\n".join(news_content_lines)
         if news_content_lines:
             # desc_text 已经在上方从热搜摘要和首条相关新闻中择优，并会裁掉明显截断的 “...” 尾巴。
@@ -918,7 +1009,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v3")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v8")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -926,26 +1017,39 @@ class TianApiService:
         raw_item_for_desc = TianApiService._parse_hot_raw(raw)
         raw_desc_for_check = str(raw_item_for_desc.get("brief") or raw_item_for_desc.get("desc") or raw_item_for_desc.get("description") or raw or "")
         is_baidu_source = str(url or "").startswith(("https://www.baidu.com/", "https://m.baidu.com/"))
-        if is_baidu_source and (
-            TianApiService._is_incomplete_hot_description(description)
-            or (not TianApiService._clean_hot_description(description) and TianApiService._is_incomplete_hot_description(raw_desc_for_check))
-        ):
+        original_desc_incomplete = TianApiService._is_incomplete_hot_description(description) or (
+            not TianApiService._clean_hot_description(description)
+            and TianApiService._is_incomplete_hot_description(raw_desc_for_check)
+        )
+        official_desc_complete = False
+        if is_baidu_source and original_desc_incomplete:
             official = await TianApiService._get_baidu_top_search_data()
             for official_item in official.get("items") or []:
                 if not isinstance(official_item, dict):
                     continue
                 if str(official_item.get("title") or "").strip() != keyword:
                     continue
+                official_desc = str(official_item.get("description") or "")
+                official_desc_complete = bool(
+                    TianApiService._clean_hot_description(official_desc)
+                    and not TianApiService._is_incomplete_hot_description(official_desc)
+                )
                 description = TianApiService._prefer_complete_hot_description(
                     description or raw_desc_for_check,
-                    str(official_item.get("description") or ""),
+                    official_desc,
                 )
                 break
 
         all_news: List[Dict[str, Any]] = []
-        # 检查是否有可用的description，如果有就不用去调用三个资讯接口了，直接快速返回
+        # 检查是否有可用的description，如果有就不用去调用三个资讯接口了，直接快速返回。
+        # 如果原始摘要是“... 查看更多>”一类截断文本，不能把裁剪后的半句当作完整正文，
+        # 除非百度官方接口明确给了完整 desc；否则继续查强匹配相关新闻来补正文。
         cleaned_desc_for_check = TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(raw_desc_for_check)
-        has_hot_desc = bool(cleaned_desc_for_check and not TianApiService._is_incomplete_hot_description(cleaned_desc_for_check))
+        has_hot_desc = bool(
+            cleaned_desc_for_check
+            and not TianApiService._is_incomplete_hot_description(cleaned_desc_for_check)
+            and (not original_desc_incomplete or official_desc_complete)
+        )
         
         if not has_hot_desc:
             # 只有当没有可用的description时，才去调用资讯接口找相关新闻
