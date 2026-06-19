@@ -189,9 +189,25 @@ const loadDetail = async () => {
 }
 
 onLoad((options: any) => {
-  sourceUrl.value = decodeURIComponent(options?.url || '')
-  localUrl.value = decodeURIComponent(options?.localUrl || '')
-  preferredImage.value = decodeURIComponent(options?.image || '')
+  // 多次解码，处理双重编码问题（微信路由会再次编码）
+  let url = options?.url || ''
+  while (url.includes('%')) {
+    url = decodeURIComponent(url)
+  }
+  sourceUrl.value = url
+  
+  let localUrl = options?.localUrl || ''
+  while (localUrl.includes('%')) {
+    localUrl = decodeURIComponent(localUrl)
+  }
+  localUrl.value = localUrl
+  
+  let image = options?.image || ''
+  while (image.includes('%')) {
+    image = decodeURIComponent(image)
+  }
+  preferredImage.value = image
+  
   // 获取分类和索引参数，用于上下篇跳转
   if (options?.category) {
     category.value = options.category as string
@@ -212,6 +228,14 @@ const fetchNewsList = async () => {
     const res: any = await getInfoNews(category.value)
     if (res.code === 200 && Array.isArray(res.newslist)) {
       newsList.value = res.newslist
+      // 如果url匹配找到正确的索引
+      if (currentIndex.value === -1 || !newsList.value[currentIndex.value] || newsList.value[currentIndex.value].url !== sourceUrl.value) {
+        // 查找当前url在列表中的位置
+        const foundIndex = newsList.value.findIndex(item => item.url === sourceUrl.value)
+        if (foundIndex >= 0) {
+          currentIndex.value = foundIndex
+        }
+      }
     }
   } catch (err) {
     // 获取失败不影响主流程，只是不显示上下篇按钮
