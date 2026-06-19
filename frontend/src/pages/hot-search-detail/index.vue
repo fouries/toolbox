@@ -8,7 +8,7 @@
 
       <view class="loading" v-if="loading">
         <text class="loading-icon">⏳</text>
-        <text class="loading-text">正在加载热搜摘要...</text>
+        <text class="loading-text">正在加载热搜..</text>
       </view>
 
       <view class="error-box card" v-else-if="error">
