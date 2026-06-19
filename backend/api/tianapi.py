@@ -806,6 +806,35 @@ class TianApiService:
         return urls
 
     @staticmethod
+    def _extract_baidu_video_landing_urls(text: str, limit: int = 3) -> List[str]:
+        text = html.unescape(str(text or "")).replace("\\/", "/")
+        urls: List[str] = []
+        seen = set()
+        for pattern in (
+            r'https?://mbd\.baidu\.com/newspage/data/videolanding\?[^"\'<>\s]+',
+            r'url=["\'](https?%3A%2F%2Fmbd\.baidu\.com%2Fnewspage%2Fdata%2Fvideolanding%3F[^"\']+)["\']',
+            r'src["\']?\s*:\s*["\'](https?://mbd\.baidu\.com/newspage/data/videolanding\?[^"\']+)["\']',
+        ):
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                url = match.group(1) if match.groups() else match.group(0)
+                try:
+                    url = unquote(url)
+                except Exception:
+                    pass
+                url = html.unescape(url).strip()
+                parsed = urlparse(url)
+                if parsed.netloc != "mbd.baidu.com" or parsed.path != "/newspage/data/videolanding":
+                    continue
+                dedupe_key = url.split("#", 1)[0]
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                urls.append(url)
+                if len(urls) >= limit:
+                    return urls
+        return urls
+
+    @staticmethod
     def _video_page_matches_keyword(keyword: str, text: str) -> bool:
         keyword = str(keyword or "").strip()
         if not keyword:
@@ -874,6 +903,9 @@ class TianApiService:
                     for haokan_url in TianApiService._extract_haokan_video_page_urls(text, limit=3):
                         if haokan_url not in video_pages:
                             video_pages.append(haokan_url)
+                    for landing_url in TianApiService._extract_baidu_video_landing_urls(text, limit=3):
+                        if landing_url not in video_pages:
+                            video_pages.append(landing_url)
                 collected: List[Dict[str, str]] = []
                 seen_original = set()
                 for page_url in video_pages[:3]:
@@ -1068,7 +1100,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v9_near_match_desc_v9_images")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v10_baidu_landing_desc_v9_images")
         cached = await cache.get(cache_key)
         if cached:
             return cached

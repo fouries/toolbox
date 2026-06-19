@@ -604,6 +604,38 @@ def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     assert ('https://www.baidu.com/s', (('tn', 'baiduhome_pg'), ('wd', 'real'))) in calls
 
 
+def test_baidu_hot_search_detail_extracts_baidu_video_landing_pages():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html>百度安全验证</html>',
+        ('https://www.baidu.com/s', 'real'): '''
+        <script>{"src":"https://mbd.baidu.com/newspage/data/videolanding?nid=sv_3221883602623471607"}</script>
+        ''',
+        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
+        ('https://mbd.baidu.com/newspage/data/videolanding?nid=sv_3221883602623471607', None): '''
+        <script>window.jsonData={"curVideoMeta":{"title":"缅甸总统敏昂莱抵达宇树科技，机器人现场演示写毛笔字","clarityUrl":[
+          {"rank":0,"title":"标清","url":"https:\\/\\/vd3.bdstatic.com\\/mda-unitree\\/540p\\/h264_cae\\/demo.mp4?v_from_s=bdapp-resbox-hnb"},
+          {"rank":2,"title":"超清","url":"https:\\/\\/vd3.bdstatic.com\\/mda-unitree\\/720p_frame30\\/h264_cae\\/demo.mp4?v_from_s=bdapp-resbox-hnb"}
+        ]}}</script>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='宇树机器人在缅甸总统面前秀书法',
+        hot='7714660',
+        description='缅甸总统参观宇树科技，机器人现场书写书法展示科技成果。',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"宇树机器人在缅甸总统面前秀书法","desc":"缅甸总统参观宇树科技。"}',
+    ))
+
+    assert result['code'] == 200
+    assert len(result['data']['videos']) == 1
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd3.bdstatic.com/mda-unitree/540p/h264_cae/demo.mp4?v_from_s=bdapp-resbox-hnb'
+    assert result['data']['videos'][0]['url'].startswith('https://quan1234.com/api/video-proxy?url=')
+
+
 def test_baidu_hot_search_detail_accepts_near_match_original_haokan_video():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
@@ -731,6 +763,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
         test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
+        test_baidu_hot_search_detail_extracts_baidu_video_landing_pages,
         test_baidu_hot_search_detail_accepts_near_match_original_haokan_video,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
         test_baidu_hot_search_detail_extracts_long_image_from_matching_news_detail,
