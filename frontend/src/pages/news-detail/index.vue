@@ -196,11 +196,11 @@ onLoad((options: any) => {
   }
   sourceUrl.value = url
   
-  let localUrl = options?.localUrl || ''
-  while (localUrl.includes('%')) {
-    localUrl = decodeURIComponent(localUrl)
+  let localUrlVal = options?.localUrl || ''
+  while (localUrlVal.includes('%')) {
+    localUrlVal = decodeURIComponent(localUrlVal)
   }
-  localUrl.value = localUrl
+  localUrl.value = localUrlVal
   
   let image = options?.image || ''
   while (image.includes('%')) {
