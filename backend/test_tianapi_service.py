@@ -412,7 +412,8 @@ def test_baidu_hot_search_detail_extracts_video_resources_from_search_html():
     ))
 
     assert result['code'] == 200
-    assert result['data']['videos'][0]['url'] == 'https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test'
+    assert result['data']['videos'][0]['url'] == 'https://quan1234.com/api/video-proxy?url=https%3A%2F%2Fvd3.bdstatic.com%2Fmda-demo%2F540p%2Fh264%2Fdemo.mp4%3Fauthorization%3Dtest'
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test'
     assert result['data']['videos'][0]['poster'] == 'https://t14.baidu.com/poster.jpg'
 
 

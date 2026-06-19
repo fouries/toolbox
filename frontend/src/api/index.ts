@@ -102,6 +102,7 @@ export interface HotSearchDetailSection {
 
 export interface HotSearchVideo {
   url: string
+  originalUrl?: string
   poster?: string
   title?: string
 }

@@ -523,6 +523,13 @@ class TianApiService:
             return ""
         return url
 
+
+    @staticmethod
+    def _proxy_baidu_video_url(video_url: str) -> str:
+        if not video_url:
+            return ""
+        return f"https://quan1234.com/api/video-proxy?url={quote(video_url, safe='')}"
+
     @staticmethod
     def _normalize_video_poster(value: Any) -> str:
         url = html.unescape(str(value or "")).replace("\\/", "/").strip()
@@ -554,7 +561,7 @@ class TianApiService:
                     candidate_title = TianApiService._strip_html_tags(str(item))[:80]
             seen_key = src.split("?", 1)[0] if src else ""
             if src and seen_key not in seen:
-                videos.append({"url": src, "poster": poster, "title": candidate_title})
+                videos.append({"url": TianApiService._proxy_baidu_video_url(src), "originalUrl": src, "poster": poster, "title": candidate_title})
                 seen.add(seen_key)
             for item in value.values():
                 TianApiService._collect_video_candidates(item, videos, seen, candidate_title)
@@ -569,7 +576,7 @@ class TianApiService:
             src = TianApiService._normalize_video_url(value)
             seen_key = src.split("?", 1)[0] if src else ""
             if src and seen_key not in seen:
-                videos.append({"url": src, "poster": "", "title": title})
+                videos.append({"url": TianApiService._proxy_baidu_video_url(src), "originalUrl": src, "poster": "", "title": title})
                 seen.add(seen_key)
 
     @staticmethod
@@ -598,7 +605,7 @@ class TianApiService:
                 src = TianApiService._normalize_video_url(match.group(0))
                 seen_key = src.split("?", 1)[0] if src else ""
                 if src and seen_key not in seen:
-                    videos.append({"url": src, "poster": "", "title": ""})
+                    videos.append({"url": TianApiService._proxy_baidu_video_url(src), "originalUrl": src, "poster": "", "title": ""})
                     seen.add(seen_key)
                     if len(videos) >= limit:
                         break
@@ -739,7 +746,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_v1")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_proxy_v2")
         cached = await cache.get(cache_key)
         if cached:
             return cached

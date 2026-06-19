@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
+from starlette.background import BackgroundTask
 import asyncio
+import re
 import httpx
 
 from config import get_settings
@@ -144,6 +146,51 @@ async def image_proxy(url: str):
     if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="URL is not an image")
     return Response(content=response.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/video-proxy", summary="视频代理", tags=["本地工具"])
+async def video_proxy(url: str, request: Request):
+    """代理百度热搜视频，避免直连百度视频资源时被防盗链/CORS/小程序域名限制拦截。"""
+    parsed = urlparse(url)
+    allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com")
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):
+        raise HTTPException(status_code=400, detail="Unsupported video host")
+    if not re.search(r"\.(?:mp4|m3u8)(?:\?|$)", url, flags=re.IGNORECASE):
+        raise HTTPException(status_code=400, detail="URL is not a supported video")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+        "Referer": "https://m.baidu.com/",
+        "Accept": "video/*,*/*;q=0.8",
+    }
+    range_header = request.headers.get("range")
+    if range_header:
+        headers["Range"] = range_header
+
+    client = httpx.AsyncClient(timeout=30, follow_redirects=True)
+    try:
+        upstream = await client.send(client.build_request("GET", url, headers=headers), stream=True)
+        upstream.raise_for_status()
+    except Exception as exc:
+        await client.aclose()
+        raise HTTPException(status_code=502, detail=f"视频读取失败: {exc}")
+
+    response_headers = {
+        "Cache-Control": "public, max-age=3600",
+        "Accept-Ranges": upstream.headers.get("accept-ranges", "bytes"),
+    }
+    for header_name in ("content-length", "content-range"):
+        header_value = upstream.headers.get(header_name)
+        if header_value:
+            response_headers[header_name.title()] = header_value
+    media_type = upstream.headers.get("content-type") or ("application/vnd.apple.mpegurl" if parsed.path.lower().endswith(".m3u8") else "video/mp4")
+    return StreamingResponse(
+        upstream.aiter_bytes(),
+        status_code=upstream.status_code,
+        media_type=media_type,
+        headers=response_headers,
+        background=BackgroundTask(client.aclose),
+    )
 
 @app.get("/api/location/reverse", summary="逆地址解析", tags=["定位服务"])
 async def reverse_location(latitude: float, longitude: float):
