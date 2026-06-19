@@ -164,7 +164,7 @@ class TianApiService:
     def _normalize_hot_item(item: Dict[str, Any], rank: int, platform: str) -> Dict[str, Any]:
         title = str(item.get("hotword") or item.get("word") or item.get("note") or item.get("title") or item.get("keyword") or "")
         hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("index") or item.get("num") or item.get("hot") or "")
-        description = str(item.get("desc") or item.get("brief") or item.get("description") or "")
+        description = TianApiService._clean_hot_description(str(item.get("desc") or item.get("brief") or item.get("description") or ""))
         url = str(item.get("url") or item.get("mobilUrl") or "")
         image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or item.get("avatar") or item.get("cover") or ""))
         if not url and platform == "weibo" and title:
@@ -487,6 +487,50 @@ class TianApiService:
         return description
 
     @staticmethod
+    def _is_incomplete_hot_description(description: str) -> bool:
+        description = TianApiService._strip_html_tags(html.unescape(str(description or ""))).strip()
+        if not description:
+            return True
+        if not TianApiService._clean_hot_description(description):
+            return True
+        # 百度热榜列表经常把摘要截成 “…… 查看更多>”，这种摘要在详情页显得不完整。
+        return bool(re.search(r"(?:\.{3,}|…|⋯)\s*(?:查看更多\s*>?)?\s*$", description))
+
+    @staticmethod
+    def _trim_incomplete_hot_description(description: str) -> str:
+        description = TianApiService._clean_hot_description(description)
+        if not description or not TianApiService._is_incomplete_hot_description(description):
+            return description
+        base = re.sub(r"\s*(?:\.{3,}|…|⋯).*?$", "", description).strip()
+        if not base:
+            return ""
+        punctuation_positions = [base.rfind(mark) for mark in ("。", "！", "？", "!", "?", "；", ";")]
+        last_punctuation = max(punctuation_positions)
+        if last_punctuation >= 10:
+            return base[: last_punctuation + 1].strip()
+        return base if len(base) >= 20 else ""
+
+    @staticmethod
+    def _prefer_complete_hot_description(current: str, candidate: str) -> str:
+        current_clean = TianApiService._clean_hot_description(current)
+        candidate_clean = TianApiService._clean_hot_description(candidate)
+        if not candidate_clean:
+            return TianApiService._trim_incomplete_hot_description(current_clean)
+        if not current_clean:
+            return TianApiService._trim_incomplete_hot_description(candidate_clean) or candidate_clean
+        candidate_complete = not TianApiService._is_incomplete_hot_description(candidate_clean)
+        current_incomplete = TianApiService._is_incomplete_hot_description(current_clean)
+        if current_incomplete and candidate_complete:
+            return candidate_clean
+        if candidate_complete and len(candidate_clean) >= len(current_clean) + 8:
+            return candidate_clean
+        candidate_trimmed = TianApiService._trim_incomplete_hot_description(candidate_clean)
+        current_trimmed = TianApiService._trim_incomplete_hot_description(current_clean)
+        if current_incomplete and candidate_trimmed and len(candidate_trimmed) >= len(current_trimmed):
+            return candidate_trimmed
+        return current_trimmed if current_incomplete and current_trimmed else current_clean
+
+    @staticmethod
     def _fallback_hot_detail_description(platform_name: str, keyword: str) -> str:
         return f"“{keyword}”正在{platform_name}受到关注，相关讨论可能涉及新闻进展、公众反馈和后续影响。"
 
@@ -762,7 +806,8 @@ class TianApiService:
     def _build_hot_raw_section(platform_name: str, keyword: str, hot: str, desc_text: str, raw_item: Dict[str, Any]) -> Dict[str, str]:
         title = str(raw_item.get("word") or raw_item.get("hotword") or raw_item.get("title") or raw_item.get("keyword") or keyword)
         heat = str(raw_item.get("hotScore") or raw_item.get("hotwordnum") or raw_item.get("num") or raw_item.get("hot") or hot or "--")
-        desc = TianApiService._clean_hot_description(str(raw_item.get("desc") or raw_item.get("description") or "")) or desc_text
+        raw_desc = TianApiService._clean_hot_description(str(raw_item.get("desc") or raw_item.get("description") or ""))
+        desc = TianApiService._prefer_complete_hot_description(raw_desc, desc_text)
         parts = [f"平台：{platform_name}", f"关键词：{title}"]
         if heat:
             parts.append(f"热度：{heat}")
@@ -808,8 +853,17 @@ class TianApiService:
             temp_desc = re.sub(r"\s*查看更多\s*>?\s*$", "", temp_desc).strip()
             if len(temp_desc) >= 5:
                 hot_desc = temp_desc
-        # 最后才用fallback
-        desc_text = hot_desc or TianApiService._fallback_hot_detail_description(platform_name, keyword)
+        desc_text = hot_desc
+        first_item_desc = ""
+        if related_news and len(related_news) > 0:
+            first_item_desc = str(related_news[0].get("description") or "").strip()
+            first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
+        if first_item_desc:
+            desc_text = TianApiService._prefer_complete_hot_description(desc_text, first_item_desc)
+        desc_text = TianApiService._trim_incomplete_hot_description(desc_text) or desc_text
+        if not desc_text:
+            desc_text = TianApiService._fallback_hot_detail_description(platform_name, keyword)
+
         raw_section = TianApiService._build_hot_raw_section(platform_name, keyword, hot, desc_text, raw_item)
         news_content_lines = []
         for item in related_news[:5]:
@@ -823,17 +877,8 @@ class TianApiService:
                 news_content_lines.append(item_desc)
         news_content = "\n".join(news_content_lines)
         if news_content_lines:
-            # 优先用相关新闻的第一条的description，哪怕有hot_desc？不，还是优先用hot_desc
-            if hot_desc:
-                summary = desc_text
-            else:
-                # 没有hot_desc的时候，用第一条相关新闻的description
-                first_item_desc = ""
-                if related_news and len(related_news) > 0:
-                    first_item_desc = str(related_news[0].get("description") or "").strip()
-                    first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
-                summary = first_item_desc if first_item_desc else news_content_lines[0]
-                summary = re.sub(r"<[^>]+>", "", summary).strip()
+            # desc_text 已经在上方从热搜摘要和首条相关新闻中择优，并会裁掉明显截断的 “...” 尾巴。
+            summary = desc_text
             if hot and keyword and hot not in summary:
                 summary = f"{summary}（热度：{hot}）"
             sections = [{"title": "相关新闻内容", "body": news_content}]
@@ -873,14 +918,34 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v3")
         cached = await cache.get(cache_key)
         if cached:
             return cached
         
+        raw_item_for_desc = TianApiService._parse_hot_raw(raw)
+        raw_desc_for_check = str(raw_item_for_desc.get("brief") or raw_item_for_desc.get("desc") or raw_item_for_desc.get("description") or raw or "")
+        is_baidu_source = str(url or "").startswith(("https://www.baidu.com/", "https://m.baidu.com/"))
+        if is_baidu_source and (
+            TianApiService._is_incomplete_hot_description(description)
+            or (not TianApiService._clean_hot_description(description) and TianApiService._is_incomplete_hot_description(raw_desc_for_check))
+        ):
+            official = await TianApiService._get_baidu_top_search_data()
+            for official_item in official.get("items") or []:
+                if not isinstance(official_item, dict):
+                    continue
+                if str(official_item.get("title") or "").strip() != keyword:
+                    continue
+                description = TianApiService._prefer_complete_hot_description(
+                    description or raw_desc_for_check,
+                    str(official_item.get("description") or ""),
+                )
+                break
+
         all_news: List[Dict[str, Any]] = []
         # 检查是否有可用的description，如果有就不用去调用三个资讯接口了，直接快速返回
-        has_hot_desc = bool(TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(str(raw or "")))
+        cleaned_desc_for_check = TianApiService._clean_hot_description(description) or TianApiService._clean_hot_description(raw_desc_for_check)
+        has_hot_desc = bool(cleaned_desc_for_check and not TianApiService._is_incomplete_hot_description(cleaned_desc_for_check))
         
         if not has_hot_desc:
             # 只有当没有可用的description时，才去调用资讯接口找相关新闻
@@ -1028,7 +1093,7 @@ class TianApiService:
             if not title:
                 continue
             hot = str(item.get("hotScore") or item.get("hot_value") or item.get("hot") or item.get("newHotName") or item.get("labelTagName") or "")
-            description = str(item.get("desc") or item.get("description") or "")
+            description = TianApiService._clean_hot_description(str(item.get("desc") or item.get("description") or ""))
             image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or item.get("avatar") or item.get("cover") or ""))
             url = str(item.get("url") or item.get("appUrl") or item.get("rawUrl") or item.get("mobilUrl") or "")
             if not url:
@@ -1069,8 +1134,11 @@ class TianApiService:
             default_search_url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news" if title else ""
             if official_item.get("url") and (not item.get("url") or item.get("url") == default_search_url):
                 item["url"] = official_item["url"]
-            if not item.get("description") and official_item.get("description"):
-                item["description"] = official_item["description"]
+            if official_item.get("description"):
+                item["description"] = TianApiService._prefer_complete_hot_description(
+                    str(item.get("description") or ""),
+                    str(official_item.get("description") or ""),
+                )
         return primary
 
     @staticmethod
@@ -1099,7 +1167,7 @@ class TianApiService:
             return {"code": 200, "msg": "success", "fallback": True, "data": TianApiService._empty_hot_search(platform)}
         result = await TianApiService._request(
             endpoint_map[platform],
-            cache_key=make_cache_key("hot_search", platform=platform),
+            cache_key=make_cache_key("hot_search", platform=platform, desc="complete_v2"),
             cache_ttl=settings.CACHE_TTL_DEFAULT,
         )
         if result.get("code") == 200:
@@ -1108,7 +1176,9 @@ class TianApiService:
                 if platform == "baidu":
                     needs_official_media = any(
                         isinstance(item, dict) and (
-                            not item.get("image") or str(item.get("url") or "").startswith("https://m.baidu.com/s?word=")
+                            not item.get("image")
+                            or str(item.get("url") or "").startswith("https://m.baidu.com/s?word=")
+                            or TianApiService._is_incomplete_hot_description(str(item.get("description") or ""))
                         )
                         for item in data["items"]
                     )

@@ -166,7 +166,7 @@ def test_daily_brief_endpoint_uses_bulletin_and_normalizes_lines():
 def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
-        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要", "trend": "沸", "picUrl": "https://example.com/hot.png", "url": "https://example.com/hot"}]}},
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要正文", "trend": "沸", "picUrl": "https://example.com/hot.png", "url": "https://example.com/hot"}]}},
     }
 
     weibo_removed = run(TianApiService.get_hot_search('weibo'))
@@ -179,7 +179,7 @@ def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     assert baidu['data']['title'] == '百度热搜榜'
     assert baidu['data']['items'][0]['title'] == '百度话题'
     assert baidu['data']['items'][0]['hot'] == '9999'
-    assert baidu['data']['items'][0]['description'] == '话题摘要'
+    assert baidu['data']['items'][0]['description'] == '话题摘要正文'
     assert baidu['data']['items'][0]['image'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Fexample.com%2Fhot.png'
     assert baidu['data']['items'][0]['url'] == 'https://example.com/hot'
     assert baidu['data']['items'][0]['raw']['keyword'] == '百度话题'
@@ -296,7 +296,7 @@ def test_hot_search_detail_includes_baidu_raw_result_fields_as_content():
 def test_baidu_hot_search_merges_official_images_when_nethot_lacks_media():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
-        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要"}]}},
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "百度话题", "index": "9999", "brief": "话题摘要正文"}]}},
         ('https://top.baidu.com/api/board', None): {
             "success": True,
             "data": {
@@ -311,9 +311,29 @@ def test_baidu_hot_search_merges_official_images_when_nethot_lacks_media():
     assert paths == ['/nethot/index', 'https://top.baidu.com/api/board']
     item = result['data']['items'][0]
     assert item['title'] == '百度话题'
-    assert item['description'] == '话题摘要'
+    assert item['description'] == '话题摘要正文'
     assert item['image'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Ffyb-2.cdn.bcebos.com%2Fhotboard_image%2Fdemo-image'
     assert item['url'] == 'https://www.baidu.com/s?wd=official&sa=fyb_news'
+
+
+def test_baidu_hot_search_replaces_truncated_nethot_summary_with_official_desc():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/nethot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"keyword": "1分钱外卖要凉了", "index": "9999", "brief": "外卖平台脱离正常促销范畴的长期、大额补贴活动，将迎来监管红线。市场监管总局发布的《外卖平台补贴行为规范十条（征求意见稿）》明确，外卖平台不得以长期、... 查看更多&gt;", "picUrl": "https://example.com/hot.png", "url": "https://www.baidu.com/s?wd=nethot"}]}},
+        ('https://top.baidu.com/api/board', None): {
+            "success": True,
+            "data": {
+                "cards": [{"content": [{"word": "1分钱外卖要凉了", "hotScore": "8888", "desc": "外卖平台脱离正常促销范畴的长期、大额补贴活动，将迎来监管红线。市场监管总局发布的《外卖平台补贴行为规范十条（征求意见稿）》明确，外卖平台不得以长期、大额补贴扰乱市场秩序。", "img": "https://fyb-2.cdn.bcebos.com/hotboard_image/demo-image", "url": "https://www.baidu.com/s?wd=official&sa=fyb_news"}]}]
+            }
+        },
+    }
+
+    result = run(TianApiService.get_hot_search('baidu'))
+
+    item = result['data']['items'][0]
+    assert item['description'].endswith('不得以长期、大额补贴扰乱市场秩序。')
+    assert '查看更多' not in item['description']
+    assert '...' not in item['description']
 
 
 def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
@@ -354,6 +374,32 @@ def test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable():
     assert result['data']['items'][0]['url'] == 'https://www.baidu.com/s?wd=official&sa=fyb_news'
     assert result['data']['items'][0]['raw']['word'] == '百度官方热搜'
     assert all(topic not in str(result['data']) for topic in ['今日热点', '民生新闻', '科技动态', '财经观察', '文娱资讯'])
+
+
+def test_baidu_hot_search_detail_completes_truncated_summary_from_related_news():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('https://top.baidu.com/api/board', None): {"success": True, "data": {"cards": [{"content": []}]}},
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": [
+            {"title": "瑞士外交部证实美伊会谈取消", "description": "瑞士外交部19日证实美国和伊朗原定当日在瑞士举行的会谈取消。", "source": "新华社", "url": "https://example.com/swiss"},
+        ]}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='瑞士外交部证实美伊会谈取消',
+        hot='12345',
+        description='瑞士外交部19日证实美国和伊朗原定当日在瑞士举行的... 查看更多&gt;',
+        url='https://www.baidu.com/s?wd=real&sa=fyb_news',
+        raw='{"word":"瑞士外交部证实美伊会谈取消","desc":"瑞士外交部19日证实美国和伊朗原定当日在瑞士举行的... 查看更多&gt;"}',
+    ))
+
+    assert result['code'] == 200
+    assert result['data']['summary'].startswith('瑞士外交部19日证实美国和伊朗原定当日在瑞士举行的会谈取消。')
+    assert '查看更多' not in result['data']['summary']
+    assert '...' not in result['data']['summary']
 
 
 def test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news():
@@ -557,7 +603,9 @@ if __name__ == '__main__':
         test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
         test_hot_search_detail_includes_baidu_raw_result_fields_as_content,
         test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
+        test_baidu_hot_search_replaces_truncated_nethot_summary_with_official_desc,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,
+        test_baidu_hot_search_detail_completes_truncated_summary_from_related_news,
         test_baidu_hot_search_detail_prefers_matching_brief_over_unrelated_news,
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
