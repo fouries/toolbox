@@ -892,26 +892,30 @@ class TianApiService:
                 candidate_pages.append((search_url, {"word": keyword, "sa": "fyb_news"}, headers))
 
                 video_pages: List[str] = []
-                for page_url, params, page_headers in candidate_pages:
-                    try:
-                        text = await client.get_text(page_url, params=params, headers=page_headers)
-                    except Exception:
+                candidate_results = await asyncio.gather(
+                    *(client.get_text(page_url, params=params, headers=page_headers) for page_url, params, page_headers in candidate_pages),
+                    return_exceptions=True,
+                )
+                for text_result in candidate_results:
+                    if isinstance(text_result, BaseException):
                         continue
-                    videos = TianApiService._extract_video_resources_from_text(text, limit=limit)
+                    videos = TianApiService._extract_video_resources_from_text(text_result, limit=limit)
                     if videos:
                         return videos[:limit]
-                    for haokan_url in TianApiService._extract_haokan_video_page_urls(text, limit=3):
+                    for haokan_url in TianApiService._extract_haokan_video_page_urls(text_result, limit=3):
                         if haokan_url not in video_pages:
                             video_pages.append(haokan_url)
-                    for landing_url in TianApiService._extract_baidu_video_landing_urls(text, limit=3):
+                    for landing_url in TianApiService._extract_baidu_video_landing_urls(text_result, limit=3):
                         if landing_url not in video_pages:
                             video_pages.append(landing_url)
                 collected: List[Dict[str, str]] = []
                 seen_original = set()
-                for page_url in video_pages[:3]:
-                    try:
-                        page_text = await client.get_text(page_url, headers={**headers, "Referer": "https://m.baidu.com/"})
-                    except Exception:
+                video_page_results = await asyncio.gather(
+                    *(client.get_text(page_url, headers={**headers, "Referer": "https://m.baidu.com/"}) for page_url in video_pages[:3]),
+                    return_exceptions=True,
+                )
+                for page_text in video_page_results:
+                    if isinstance(page_text, BaseException):
                         continue
                     if not TianApiService._video_page_matches_keyword(keyword, page_text):
                         continue
@@ -1173,8 +1177,20 @@ class TianApiService:
                 if TianApiService._score_related_news(keyword, item) >= 2
             ]
         matched = await TianApiService._materialize_related_news(matched[:8])
-        videos = await TianApiService._fetch_baidu_hot_videos(keyword, source_url=str(url or ""), limit=1) if platform == "baidu" else []
-        images = await TianApiService._fetch_hot_detail_images(keyword, matched[:8], limit=3) if is_baidu_source and matched else []
+        # 视频识别和长图提取都会访问外部页面，彼此不依赖；并发执行可减少首次打开详情的等待时间。
+        video_task = TianApiService._fetch_baidu_hot_videos(keyword, source_url=str(url or ""), limit=1) if platform == "baidu" else asyncio.sleep(0, result=[])
+        image_task = TianApiService._fetch_hot_detail_images(keyword, matched[:8], limit=3) if is_baidu_source and matched else asyncio.sleep(0, result=[])
+        video_result, image_result = await asyncio.gather(video_task, image_task, return_exceptions=True)
+        videos: List[Dict[str, str]]
+        images: List[str]
+        if isinstance(video_result, BaseException):
+            videos = []
+        else:
+            videos = video_result
+        if isinstance(image_result, BaseException):
+            images = []
+        else:
+            images = image_result
         data = TianApiService._build_hot_search_detail(
             platform=platform,
             keyword=keyword,
