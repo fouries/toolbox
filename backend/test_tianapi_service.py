@@ -661,6 +661,52 @@ def test_baidu_hot_search_detail_uses_mobile_vsearch_when_source_hits_safety_che
     assert ('https://m.baidu.com/sf/vsearch', (('atn', 'index'), ('pd', 'video'), ('tn', 'vsearch'), ('word', 'real'))) in calls
 
 
+
+def test_baidu_hot_search_detail_uses_android_ua_for_mobile_vsearch_fallback():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    captured_headers = []
+    original_get_text = DummyHttpClient.get_text
+
+    async def get_text_with_headers(self, url, params=None, headers=None):
+        captured_headers.append((url, params or {}, headers or {}))
+        return await original_get_text(self, url, params=params, headers=headers)
+
+    DummyHttpClient.get_text = get_text_with_headers
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html><title>百度安全验证</title></html>',
+        ('https://www.baidu.com/s', 'real'): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/s', None): '<html><title>百度安全验证</title></html>',
+        ('https://m.baidu.com/sf/vsearch', 'real'): '''
+        <script>window.pageData={"title":"顶流演员也没戏拍了？刘亦菲超900天没进组，董子健刘昊然在线求工作",
+          "loc":"https://haokan.baidu.com/v?pd=wisenatural&vid=12641358385028720826",
+          "videoSrc":"https://vd3.bdstatic.com/mda-real/hd/cae_h264/demo.mp4?pd=19&vt=1",
+          "previewProps":{"poster":"http://t15.baidu.com/it/u=480050288,1670784519&fm=225"}}
+        </script>
+        ''',
+    }
+
+    try:
+        result = run(TianApiService.get_hot_search_detail(
+            platform='baidu',
+            keyword='顶流演员竟然没戏拍了吗',
+            hot='7808291',
+            description='多位演员集体求职。',
+            url='https://www.baidu.com/s?wd=real',
+            raw='{"word":"顶流演员竟然没戏拍了吗","desc":"多位演员集体求职。"}',
+        ))
+    finally:
+        DummyHttpClient.get_text = original_get_text
+
+    assert result['code'] == 200
+    assert len(result['data']['videos']) == 1
+    vsearch_headers = [headers for url, params, headers in captured_headers if url == 'https://m.baidu.com/sf/vsearch']
+    assert vsearch_headers
+    assert 'Android' in vsearch_headers[0]['User-Agent']
+    assert 'Chrome/' in vsearch_headers[0]['User-Agent']
+    assert 'iPhone' not in vsearch_headers[0]['User-Agent']
+
+
 def test_baidu_hot_search_detail_rejects_unmatched_mobile_vsearch_video():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
@@ -885,6 +931,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
         test_baidu_hot_search_detail_uses_mobile_vsearch_when_source_hits_safety_check,
+        test_baidu_hot_search_detail_uses_android_ua_for_mobile_vsearch_fallback,
         test_baidu_hot_search_detail_rejects_unmatched_mobile_vsearch_video,
         test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
         test_baidu_hot_search_detail_extracts_baidu_video_landing_pages,

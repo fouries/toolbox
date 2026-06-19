@@ -920,8 +920,13 @@ class TianApiService:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
+        # 百度移动普通搜索现在经常把服务端请求导向 wappass 图形验证。
+        # 实测视频垂搜页对 Android Chrome UA 仍返回包含 videoSrc 的结果页，
+        # iPhone Safari UA 则也会触发验证，导致所有视频提取为空。
         video_headers = {
-            **headers,
+            "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9",
             "Referer": "https://m.baidu.com/",
         }
         try:
@@ -1187,7 +1192,7 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v15_no_related_card_mobile_vsearch_desc_v9_images_short_empty")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty")
         cached = await cache.get(cache_key)
         if cached:
             return cached
