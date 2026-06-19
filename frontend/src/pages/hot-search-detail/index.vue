@@ -32,7 +32,6 @@
                 object-fit="contain"
                 @error="onVideoError"
               ></video>
-              <text class="video-caption">{{ video.title || `${hotKeyword} 相关视频` }}</text>
             </view>
           </view>
           <view class="hot-image-section" v-if="displayImage && !hotVideos.length">
@@ -377,8 +376,7 @@ onLoad((options: any) => {
   border-top: 1rpx solid #fed7aa;
 }
 
-.video-title,
-.video-caption {
+.video-title {
   display: block;
 }
 
@@ -398,13 +396,6 @@ onLoad((options: any) => {
   border-radius: 20rpx;
   overflow: hidden;
   background: #0f172a;
-}
-
-.video-caption {
-  margin-top: 10rpx;
-  color: #64748b;
-  font-size: 24rpx;
-  line-height: 1.5;
 }
 
 .keyword-desc {
