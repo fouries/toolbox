@@ -19,7 +19,7 @@
           <text v-if="detail.publishTime">{{ detail.publishTime }}</text>
           <text v-if="detail.fromCache">已缓存</text>
         </view>
-        <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image"></image>
+        <image class="article-image" :src="detail.image" mode="widthFix" v-if="detail.image" @tap="previewImage(detail.image)"></image>
         <view class="article-content">
           <template v-for="(item, index) in paragraphs" :key="index">
             <text 
@@ -32,6 +32,7 @@
               class="article-inline-image" 
               :src="item.url" 
               mode="widthFix"
+              @tap="previewImage(item.url)"
             ></image>
           </template>
         </view>
@@ -92,6 +93,22 @@ const copyOriginalUrl = () => {
   if (!sourceUrl.value) return
   uni.setClipboardData({ data: sourceUrl.value })
   uni.showToast({ title: '原文链接已复制', icon: 'none' })
+}
+
+const previewImage = (currentUrl: string) => {
+  if (!detail.value?.images || detail.value.images.length === 0) {
+    // 如果只有单张图片
+    uni.previewImage({
+      current: currentUrl,
+      urls: currentUrl ? [currentUrl] : []
+    })
+  } else {
+    // 多张图片，可以预览所有
+    uni.previewImage({
+      current: currentUrl,
+      urls: detail.value.images
+    })
+  }
 }
 
 const loadDetail = async () => {
