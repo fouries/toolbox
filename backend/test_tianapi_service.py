@@ -12,10 +12,10 @@ class DummyNewsDetailService:
         return str(url or '').startswith('http')
 
     @staticmethod
-    async def fetch_detail(url):
+    async def fetch_detail(url, preferred_image=""):
         DummyNewsDetailService.calls.append(url)
         local_id = str(abs(hash(url)))[:8]
-        return {"code": 200, "data": {"localId": local_id, "localUrl": f"/api/news/local/{local_id}", "description": "本地化后的新闻正文摘要"}}
+        return {"code": 200, "data": {"localId": local_id, "localUrl": f"/api/news/local/{local_id}", "description": "本地化后的新闻正文摘要", "images": []}}
 
 
 class DummyCache:
@@ -633,6 +633,48 @@ def test_baidu_empty_hot_search_does_not_show_unavailable_message():
     assert '接口暂不可用' not in text
 
 
+def test_baidu_hot_search_detail_extracts_long_image_from_matching_news_detail():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('https://top.baidu.com/api/board', None): {"success": True, "data": {"cards": [{"content": []}]}},
+        ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+        ('/esports/index', None): {"code": 200, "msg": "success", "result": {"list": []}},
+        ('/auto/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
+    }
+    DummyHttpClient.text_responses = {
+        ('https://www.sogou.com/sogou', '总书记引屈原诗话家国情'): '''
+        <div class="vrwrap">
+          <h3 class="vr-title"><a href="https://www.xinhuanet.com/politics/20260619/demo/c.html">学习新语·端午丨总书记引屈原诗话家国情</a></h3>
+          <div class="fz-mid space-txt">统筹：黄庆华 苏晓洲 文案：郭洁宇 设计：马发展 新华社新媒体中心、湖南分社联合制作 新华社出品</div>
+          <div class="citeurl"><span>新华网</span></div>
+        </div>
+        ''',
+    }
+    original_fetch_detail = DummyNewsDetailService.fetch_detail
+
+    async def fetch_detail(url, preferred_image=""):
+        DummyNewsDetailService.calls.append(url)
+        return {"code": 200, "data": {"images": ["https://quan1234.com/api/news/image-proxy?url=https%3A%2F%2Fwww.xinhuanet.com%2Flong.png"]}}
+
+    DummyNewsDetailService.fetch_detail = staticmethod(fetch_detail)
+    try:
+        result = run(TianApiService.get_hot_search_detail(
+            platform='baidu',
+            keyword='总书记引屈原诗话家国情',
+            hot='7904134',
+            description='节分端午自谁言，万古传闻为屈原。爱国诗人屈原的精神气节，始终感召着中华儿女。习近平总书记曾在多个场合引用屈原诗作名句阐述思想、寄情言志。一起重温这些... 查看更多&gt;',
+            url='https://m.baidu.com/s?word=real&sa=fyb_news',
+            raw='{"word":"总书记引屈原诗话家国情"}',
+        ))
+    finally:
+        DummyNewsDetailService.fetch_detail = original_fetch_detail
+
+    assert result['code'] == 200
+    assert result['data']['images'] == ['https://quan1234.com/api/news/image-proxy?url=https%3A%2F%2Fwww.xinhuanet.com%2Flong.png']
+    assert '节分端午自谁言' in result['data']['summary']
+    assert result['data']['summary'].startswith('统筹') is False
+
+
 if __name__ == '__main__':
     setup_module(None)
     for test in [
@@ -656,6 +698,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
         test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
+        test_baidu_hot_search_detail_extracts_long_image_from_matching_news_detail,
     ]:
         setup_module(None)
         test()

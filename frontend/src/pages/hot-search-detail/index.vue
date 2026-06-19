@@ -35,7 +35,7 @@
             </view>
           </view>
           <view class="hot-image-section" v-if="displayImage && !hotVideos.length">
-            <image class="hot-image" :src="displayImage" mode="widthFix"></image>
+            <image class="hot-image" :src="displayImage" mode="widthFix" @tap="previewHotImage(displayImage)"></image>
           </view>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="action-row">
@@ -153,7 +153,14 @@ const extractKeywordFromRaw = () => pickText(parseRawHotData(), ['keyword', 'wor
 const extractImageFromRaw = () => pickText(parseRawHotData(), ['image', 'img', 'pic', 'picUrl', 'avatar', 'cover'])
 
 const hotKeyword = computed(() => detail.value?.keyword || keyword.value || extractKeywordFromRaw() || '未知热搜')
-const displayImage = computed(() => hotImage.value || extractImageFromRaw())
+const detailImage = computed(() => detail.value?.image || detail.value?.images?.[0] || '')
+const displayImage = computed(() => detailImage.value || hotImage.value || extractImageFromRaw())
+
+const previewHotImage = (currentUrl: string) => {
+  const urls = detail.value?.images?.length ? detail.value.images : (currentUrl ? [currentUrl] : [])
+  if (!urls.length) return
+  uni.previewImage({ current: currentUrl, urls })
+}
 
 const onVideoError = () => {
   uni.showToast({ title: '视频暂时无法播放，可点击原链接查看', icon: 'none' })
@@ -221,6 +228,9 @@ const loadDetail = async () => {
       hot.value = res.data.hot || hot.value
       description.value = res.data.description || description.value
       sourceUrl.value = res.data.sourceUrl || sourceUrl.value
+      if (!hotImage.value && (res.data.image || res.data.images?.[0])) {
+        hotImage.value = res.data.image || res.data.images?.[0] || ''
+      }
     } else {
       detail.value = null
       error.value = res.msg || '热搜摘要加载失败'

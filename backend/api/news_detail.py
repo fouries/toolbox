@@ -186,6 +186,12 @@ class NewsDetailService:
             "avatar",
             "s-avatar",
             "certification",
+            "favicon",
+            ".ico",
+            "qrcode",
+            "qr-code",
+            "ewm.png",
+            "zxcode_",
         ))
 
     @staticmethod
@@ -327,6 +333,8 @@ class NewsDetailService:
     @staticmethod
     def _extract_main_content_html(html_text: str) -> str:
         container_patterns = [
+            r'<div[^>]+class=["\'][^"\']*detailPage-layout-bottom[^"\']*["\'][^>]*>(.*?)(?:</div><!--\[-->|<div[^>]+class=["\'][^"\']*footer|</body>)',
+            r'<div[^>]+class=["\'][^"\']*news_html[^"\']*["\'][^>]*>(.*?)(?:</div>\s*</div>|</body>)',
             r'<div[^>]+id=["\']artibody["\'][^>]*>(.*?)(?:<div[^>]+class=["\'][^"\']*article_share|<article\b[^>]*class=["\'][^"\']*comment|</section>)',
             r'<div[^>]+class=["\'][^"\']*(?:article-content|article_content|article-body|main-content)[^"\']*["\'][^>]*>(.*?)</div>',
             r'<article\b(?![^>]+class=["\'][^"\']*comment)[^>]*>(.*?)</article>',
@@ -464,7 +472,7 @@ class NewsDetailService:
             "localId": local_id,
             "localUrl": NewsDetailService._local_url(local_id),
             "cachedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "detailVersion": 5,  # 升级版本
+            "detailVersion": 6,  # 升级版本
         }
         if original_image:
             detail["originalImage"] = original_image
@@ -506,7 +514,7 @@ class NewsDetailService:
         has_preferred_image = bool(NewsDetailService._normalize_image_url(preferred_image, url))
         normalized_preferred_image = NewsDetailService._normalize_image_url(preferred_image, url)
         cached = await cache.get(cache_key)
-        if cached and cached.get("detailVersion") == 4 and (not has_preferred_image or cached.get("originalImage") == normalized_preferred_image):
+        if cached and cached.get("detailVersion") == 6 and (not has_preferred_image or cached.get("originalImage") == normalized_preferred_image):
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:

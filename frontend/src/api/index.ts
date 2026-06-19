@@ -46,6 +46,8 @@ export interface NewsItem {
   url?: string
   localUrl?: string
   picUrl?: string
+  image?: string
+  images?: string[]
 }
 
 export interface NewsDetail {
@@ -119,6 +121,8 @@ export interface HotSearchDetailData {
   sections: HotSearchDetailSection[]
   relatedNews: NewsItem[]
   videos?: HotSearchVideo[]
+  image?: string
+  images?: string[]
   rawHotItem?: Record<string, unknown>
   updatedAt?: string
 }

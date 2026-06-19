@@ -584,6 +584,18 @@ class TianApiService:
         return base if len(base) >= 20 else ""
 
     @staticmethod
+    def _hot_description_mentions_keyword(keyword: str, description: str) -> bool:
+        keyword = re.sub(r"\s+", "", str(keyword or ""))
+        description = re.sub(r"\s+", "", TianApiService._strip_html_tags(str(description or "")))
+        if not keyword or not description:
+            return False
+        if keyword in description:
+            return True
+        terms = {keyword[i:i + 2] for i in range(max(0, len(keyword) - 1))}
+        terms = {term for term in terms if len(term) == 2 and term not in {"一个", "这些", "相关", "新闻", "热搜"}}
+        return sum(1 for term in terms if term in description) >= 1
+
+    @staticmethod
     def _prefer_complete_hot_description(current: str, candidate: str) -> str:
         current_clean = TianApiService._clean_hot_description(current)
         candidate_clean = TianApiService._clean_hot_description(candidate)
@@ -894,6 +906,32 @@ class TianApiService:
         return items
 
     @staticmethod
+    async def _fetch_hot_detail_images(keyword: str, related_news: List[Dict[str, Any]], limit: int = 3) -> List[str]:
+        """从强匹配相关新闻原文里提取正文图片，用于原文主体是长图的百度热搜。"""
+        images: List[str] = []
+        seen = set()
+        for item in related_news[:3]:
+            url = str(item.get("url") or "").strip()
+            if not url or TianApiService._score_related_news(keyword, item) < 2:
+                continue
+            if not NewsDetailService._is_safe_url(url):
+                continue
+            try:
+                detail_result = await NewsDetailService.fetch_detail(url, preferred_image=str(item.get("picUrl") or ""))
+            except Exception:
+                continue
+            if detail_result.get("code") != 200 or not isinstance(detail_result.get("data"), dict):
+                continue
+            for image_url in detail_result["data"].get("images") or []:
+                image_url = str(image_url or "").strip()
+                if image_url and image_url not in seen:
+                    seen.add(image_url)
+                    images.append(image_url)
+                    if len(images) >= limit:
+                        return images
+        return images
+
+    @staticmethod
     def _build_hot_search_detail(
         platform: str,
         keyword: str,
@@ -903,6 +941,7 @@ class TianApiService:
         related_news: Optional[List[Dict[str, Any]]] = None,
         raw_item: Optional[Dict[str, Any]] = None,
         videos: Optional[List[Dict[str, str]]] = None,
+        images: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         platform = platform if platform in {"weibo", "baidu"} else "baidu"
         platform_name = TianApiService._hot_search_title(platform)
@@ -911,6 +950,7 @@ class TianApiService:
         hot_text = f"，当前热度为 {hot}" if hot else ""
         raw_item = raw_item or {}
         videos = videos or []
+        images = images or []
         raw_desc = str(raw_item.get("brief") or raw_item.get("desc") or raw_item.get("description") or "")
         # 优先用传入的description，再用raw里的desc/brief，最后才用fallback
         hot_desc = TianApiService._clean_hot_description(description)
@@ -931,8 +971,14 @@ class TianApiService:
         if related_news and len(related_news) > 0:
             first_item_desc = str(related_news[0].get("description") or "").strip()
             first_item_desc = re.sub(r"<[^>]+>", "", first_item_desc).strip()
+            if first_item_desc and not TianApiService._hot_description_mentions_keyword(keyword, first_item_desc):
+                first_item_desc = ""
         if first_item_desc:
             desc_text = TianApiService._prefer_complete_hot_description(desc_text, first_item_desc)
+        # 长图新闻的搜索摘要常只有“统筹/文案/设计/新华社出品”等署名信息，
+        # 不能用这类署名覆盖百度官方给出的正文摘要。
+        if re.fullmatch(r"[\s\S]{0,80}(?:统筹|文案|设计|制作|出品|来源|编辑|作者|记者|新媒体中心)[\s\S]{0,80}", desc_text or ""):
+            desc_text = hot_desc or raw_desc
         desc_text = TianApiService._trim_incomplete_hot_description(desc_text) or desc_text
         if not desc_text:
             desc_text = TianApiService._fallback_hot_detail_description(platform_name, keyword)
@@ -947,6 +993,8 @@ class TianApiService:
             if TianApiService._is_incomplete_hot_description(item_title):
                 item_title = ""
             if TianApiService._is_incomplete_hot_description(item_desc):
+                item_desc = ""
+            if item_desc and not TianApiService._hot_description_mentions_keyword(keyword, item_desc):
                 item_desc = ""
             # 正文区域只放有完整摘要的相关新闻；标题本身不是正文，避免出现“...但难活的可不止这8家”这类残缺标题行。
             if not item_desc:
@@ -991,6 +1039,8 @@ class TianApiService:
             "sections": sections,
             "relatedNews": related_news,
             "videos": videos,
+            "image": images[0] if images else "",
+            "images": images,
             "rawHotItem": raw_item,
             "updatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
@@ -1009,7 +1059,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v8")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v9_images")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -1083,6 +1133,7 @@ class TianApiService:
             ]
         matched = await TianApiService._materialize_related_news(matched[:8])
         videos = await TianApiService._fetch_baidu_hot_videos(keyword, source_url=str(url or ""), limit=1) if platform == "baidu" else []
+        images = await TianApiService._fetch_hot_detail_images(keyword, matched[:8], limit=3) if is_baidu_source and matched else []
         data = TianApiService._build_hot_search_detail(
             platform=platform,
             keyword=keyword,
@@ -1092,6 +1143,7 @@ class TianApiService:
             related_news=matched[:8],
             raw_item=TianApiService._parse_hot_raw(raw),
             videos=videos,
+            images=images,
         )
         result = {"code": 200, "msg": "success", "data": data}
         
