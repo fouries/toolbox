@@ -1209,6 +1209,42 @@ class TianApiService:
         return result
 
     @staticmethod
+    async def get_hot_search_detail_basic(
+        platform: str = "baidu",
+        keyword: str = "",
+        hot: str = "",
+        description: str = "",
+        url: str = "",
+        raw: str = "",
+    ) -> Dict[str, Any]:
+        """百度热搜轻详情：只使用列表随带字段，避免阻塞首屏。"""
+        keyword = str(keyword or "").strip()
+        platform = "baidu"
+
+        cache_key = make_cache_key("hot_search_detail_basic", platform=platform, keyword=keyword, desc=description, media="basic_v1")
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+
+        raw_item = TianApiService._parse_hot_raw(raw)
+        raw_desc = str(raw_item.get("brief") or raw_item.get("desc") or raw_item.get("description") or raw or "")
+        quick_description = TianApiService._prefer_complete_hot_description(str(description or ""), raw_desc)
+        data = TianApiService._build_hot_search_detail(
+            platform=platform,
+            keyword=keyword,
+            hot=str(hot or ""),
+            description=quick_description,
+            url=str(url or ""),
+            related_news=[],
+            raw_item=raw_item,
+            videos=[],
+            images=[],
+        )
+        result = {"code": 200, "msg": "success", "data": data}
+        await cache.set(cache_key, result, ttl=3600)
+        return result
+
+    @staticmethod
     async def get_gold_price() -> Dict[str, Any]:
         """黄金行情查询。"""
         cache_key = make_cache_key("gold", kinds="au9999,au9995,agTplusD")

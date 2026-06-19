@@ -37,15 +37,22 @@
           <view class="hot-image-section" v-if="displayImage && !hotVideos.length">
             <image class="hot-image" :src="displayImage" mode="widthFix" @tap="previewHotImage(displayImage)"></image>
           </view>
+          <view class="media-loading" v-if="mediaLoading && !hotVideos.length && !detailImage">
+            <text class="media-loading-text">正在补充视频和图片...</text>
+          </view>
+          <text class="media-error" v-if="mediaError">{{ mediaError }}</text>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="action-row">
             <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
           </view>
         </view>
 
-        <view class="news-card card" v-if="visibleRelatedNews.length">
+        <view class="news-card card" v-if="visibleRelatedNews.length || (mediaLoading && !isFirstHot)">
           <text class="news-title">相关资讯</text>
-          <view class="news-list">
+          <view class="related-loading" v-if="mediaLoading && !visibleRelatedNews.length && !isFirstHot">
+            <text class="related-loading-text">正在补充相关资讯...</text>
+          </view>
+          <view class="news-list" v-if="visibleRelatedNews.length">
             <view class="news-item" v-for="(item, index) in visibleRelatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
               <view class="news-main">
                 <text class="news-item-title">{{ item.title }}</text>
@@ -88,7 +95,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getHotSearchDetail, type HotSearchDetailData, type HotSearchItem, type NewsItem } from '@/api'
+import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem, type NewsItem } from '@/api'
 
 // getCurrentPages 是全局可用的
 declare function getCurrentPages(): any[];
@@ -103,7 +110,9 @@ const hotImage = ref('')
 const rawHotData = ref('')
 const currentIndex = ref(-1)     // 当前在热搜列表中的索引
 const loading = ref(false)
+const mediaLoading = ref(false)
 const error = ref('')
+const mediaError = ref('')
 const detail = ref<HotSearchDetailData | null>(null)
 
 // 计算上一篇/下一篇
@@ -164,6 +173,25 @@ const previewHotImage = (currentUrl: string) => {
   uni.previewImage({ current: currentUrl, urls })
 }
 
+const detailParams = () => ({
+  platform: 'baidu',
+  keyword: keyword.value,
+  hot: hot.value,
+  description: description.value,
+  url: sourceUrl.value,
+  raw: rawHotData.value
+})
+
+const applyDetail = (data: HotSearchDetailData) => {
+  detail.value = data
+  hot.value = data.hot || hot.value
+  description.value = data.description || description.value
+  sourceUrl.value = data.sourceUrl || sourceUrl.value
+  if (!hotImage.value && (data.image || data.images?.[0])) {
+    hotImage.value = data.image || data.images?.[0] || ''
+  }
+}
+
 const onVideoError = () => {
   uni.showToast({ title: '视频暂时无法播放，可点击原链接查看', icon: 'none' })
 }
@@ -208,6 +236,23 @@ const goNext = () => {
   }
 }
 
+const loadMediaDetail = async () => {
+  mediaLoading.value = true
+  mediaError.value = ''
+  try {
+    const res = await getHotSearchDetailMedia(detailParams())
+    if (res.code === 200 && res.data) {
+      applyDetail(res.data)
+    } else {
+      mediaError.value = res.msg || '视频和相关资讯稍后再试'
+    }
+  } catch (err: any) {
+    mediaError.value = err.message || '视频和相关资讯暂时加载失败'
+  } finally {
+    mediaLoading.value = false
+  }
+}
+
 const loadDetail = async () => {
   if (!hotKeyword.value || hotKeyword.value === '未知热搜') {
     error.value = '缺少热搜关键词'
@@ -215,32 +260,23 @@ const loadDetail = async () => {
   }
   keyword.value = hotKeyword.value
   loading.value = true
+  mediaLoading.value = false
   error.value = ''
+  mediaError.value = ''
   try {
-    const res = await getHotSearchDetail({
-      platform: 'baidu',
-      keyword: keyword.value,
-      hot: hot.value,
-      description: description.value,
-      url: sourceUrl.value,
-      raw: rawHotData.value
-    })
+    const res = await getHotSearchDetailBasic(detailParams())
     if (res.code === 200 && res.data) {
-      detail.value = res.data
-      hot.value = res.data.hot || hot.value
-      description.value = res.data.description || description.value
-      sourceUrl.value = res.data.sourceUrl || sourceUrl.value
-      if (!hotImage.value && (res.data.image || res.data.images?.[0])) {
-        hotImage.value = res.data.image || res.data.images?.[0] || ''
-      }
+      applyDetail(res.data)
+      loading.value = false
+      loadMediaDetail()
     } else {
       detail.value = null
       error.value = res.msg || '热搜摘要加载失败'
+      loading.value = false
     }
   } catch (err: any) {
     detail.value = null
     error.value = err.message || '网络错误'
-  } finally {
     loading.value = false
   }
 }
@@ -408,6 +444,28 @@ onLoad((options: any) => {
   border-radius: 20rpx;
   overflow: hidden;
   background: #0f172a;
+}
+
+.media-loading,
+.related-loading {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  background: #fff7ed;
+}
+
+.media-loading-text,
+.related-loading-text,
+.media-error {
+  display: block;
+  color: #c2410c;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.media-error {
+  margin-top: 16rpx;
+  color: #dc2626;
 }
 
 .keyword-desc {

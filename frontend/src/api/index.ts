@@ -262,6 +262,30 @@ export const getHotSearchDetail = (params: {
   return request<HotSearchDetailData>(`/api/hot-search/detail?${query}`, { timeout: 20000 })
 }
 
+export const getHotSearchDetailBasic = (params: {
+  platform?: string
+  keyword: string
+  hot?: string
+  description?: string
+  url?: string
+  raw?: string
+}) => {
+  const query = buildQueryString(params as Record<string, unknown>)
+  return request<HotSearchDetailData>(`/api/hot-search/detail-basic?${query}`, { timeout: 8000 })
+}
+
+export const getHotSearchDetailMedia = (params: {
+  platform?: string
+  keyword: string
+  hot?: string
+  description?: string
+  url?: string
+  raw?: string
+}) => {
+  const query = buildQueryString(params as Record<string, unknown>)
+  return request<HotSearchDetailData>(`/api/hot-search/detail-media?${query}`, { timeout: 20000 })
+}
+
 export const getGoldPrice = () => {
   return request<GoldPriceItem[]>('/api/gold-price')
 }
@@ -320,6 +344,10 @@ export default {
   getCrudeOilPrice,
   getInfoNews,
   getNewsDetail,
+  getHotSearch,
+  getHotSearchDetail,
+  getHotSearchDetailBasic,
+  getHotSearchDetailMedia,
   getGoldPrice,
   getWeather,
   reverseLocation,

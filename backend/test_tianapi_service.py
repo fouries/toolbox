@@ -187,6 +187,33 @@ def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     assert baidu['data']['items'][0]['raw']['index'] == '9999'
 
 
+def test_hot_search_detail_basic_uses_only_payload_fields_for_fast_first_paint():
+    DummyHttpClient.calls = []
+    raw = {
+        "word": "百度轻详情",
+        "hotScore": "123456",
+        "desc": "列表携带的摘要正文",
+        "url": "https://m.baidu.com/s?word=fast",
+    }
+
+    result = run(TianApiService.get_hot_search_detail_basic(
+        platform='baidu',
+        keyword='百度轻详情',
+        hot='123456',
+        description='列表携带的摘要正文',
+        url='https://m.baidu.com/s?word=fast',
+        raw=json.dumps(raw, ensure_ascii=False),
+    ))
+
+    assert DummyHttpClient.calls == []
+    assert result['code'] == 200
+    assert result['data']['keyword'] == '百度轻详情'
+    assert result['data']['summary'] == '列表携带的摘要正文'
+    assert result['data']['videos'] == []
+    assert result['data']['images'] == []
+    assert result['data']['relatedNews'] == []
+
+
 def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {

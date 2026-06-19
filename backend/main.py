@@ -128,7 +128,19 @@ async def hot_search(platform: str = "baidu"):
 
 @app.get("/api/hot-search/detail", summary="百度热搜详情", tags=["天行数据"])
 async def hot_search_detail(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
-    """生成百度热搜详情：关键词、图片和摘要。"""
+    """生成百度热搜完整详情：摘要、视频、图片和相关资讯。"""
+    result = await TianApiService.get_hot_search_detail("baidu", keyword, hot, description, url, raw)
+    return result
+
+@app.get("/api/hot-search/detail-basic", summary="百度热搜轻详情", tags=["天行数据"])
+async def hot_search_detail_basic(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
+    """生成百度热搜轻详情：只返回首屏所需字段，视频/图片/相关资讯由完整详情异步补齐。"""
+    result = await TianApiService.get_hot_search_detail_basic("baidu", keyword, hot, description, url, raw)
+    return result
+
+@app.get("/api/hot-search/detail-media", summary="百度热搜富媒体详情", tags=["天行数据"])
+async def hot_search_detail_media(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
+    """生成百度热搜富媒体详情。当前复用完整详情缓存，供前端异步补齐。"""
     result = await TianApiService.get_hot_search_detail("baidu", keyword, hot, description, url, raw)
     return result
 
