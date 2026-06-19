@@ -48,7 +48,6 @@
           </view>
           <view class="media-loading" v-if="mediaLoading && !hotVideos.length && !detailImage">
             <view class="media-loading-player">
-              <view class="media-loading-play"></view>
               <view class="media-loading-wave media-loading-wave-a"></view>
               <view class="media-loading-wave media-loading-wave-b"></view>
               <view class="media-loading-wave media-loading-wave-c"></view>
@@ -454,6 +453,10 @@ onLoad((options: any) => {
   flex: 0 0 86rpx;
   width: 86rpx;
   height: 58rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
   border-radius: 16rpx;
   background: linear-gradient(135deg, #f97316, #ef4444);
   box-shadow: 0 10rpx 24rpx rgba(249, 115, 22, 0.2);
@@ -468,42 +471,27 @@ onLoad((options: any) => {
   animation: video-shine 1.2s ease-in-out infinite;
 }
 
-.media-loading-play {
-  position: absolute;
-  left: 34rpx;
-  top: 18rpx;
-  width: 0;
-  height: 0;
-  border-top: 12rpx solid transparent;
-  border-bottom: 12rpx solid transparent;
-  border-left: 18rpx solid #fff;
-  z-index: 2;
-}
-
 .media-loading-wave {
-  position: absolute;
-  bottom: 10rpx;
+  position: relative;
+  z-index: 2;
   width: 8rpx;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.72);
+  transform-origin: center;
   animation: video-wave 0.9s ease-in-out infinite;
 }
 
 .media-loading-wave-a {
-  left: 14rpx;
-  height: 16rpx;
+  height: 18rpx;
 }
 
 .media-loading-wave-b {
-  left: 24rpx;
-  height: 24rpx;
+  height: 30rpx;
   animation-delay: 0.14s;
 }
 
 .media-loading-wave-c {
-  left: 58rpx;
   height: 18rpx;
-  animation-delay: 0.28s;
 }
 
 .media-loading-text,
