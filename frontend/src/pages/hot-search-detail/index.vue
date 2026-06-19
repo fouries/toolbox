@@ -47,12 +47,9 @@
           </view>
         </view>
 
-        <view class="news-card card" v-if="visibleRelatedNews.length || (mediaLoading && !isFirstHot)">
+        <view class="news-card card" v-if="visibleRelatedNews.length">
           <text class="news-title">相关资讯</text>
-          <view class="related-loading" v-if="mediaLoading && !visibleRelatedNews.length && !isFirstHot">
-            <text class="related-loading-text">正在补充相关资讯...</text>
-          </view>
-          <view class="news-list" v-if="visibleRelatedNews.length">
+          <view class="news-list">
             <view class="news-item" v-for="(item, index) in visibleRelatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
               <view class="news-main">
                 <text class="news-item-title">{{ item.title }}</text>
