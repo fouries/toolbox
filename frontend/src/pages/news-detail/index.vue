@@ -41,7 +41,7 @@
         </view>
 
         <!-- 上一篇 / 下一篇导航 -->
-        <view class="neighbor-navigation" v-if="hasNeighbors">
+        <view class="neighbor-navigation">
           <button 
             class="nav-btn prev-btn" 
             :disabled="!prevNews" 
