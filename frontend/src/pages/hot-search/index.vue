@@ -19,7 +19,6 @@
           <view class="hot-loading-ring"></view>
           <text class="hot-loading-flame">🔥</text>
         </view>
-        <text class="loading-text">正在加载百度热搜榜...</text>
         <view class="hot-loading-skeletons">
           <view class="hot-loading-skeleton" v-for="item in 4" :key="item">
             <view class="skeleton-rank"></view>

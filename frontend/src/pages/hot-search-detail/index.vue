@@ -11,7 +11,6 @@
           <view class="detail-loading-ring"></view>
           <text class="detail-loading-flame">🔥</text>
         </view>
-        <text class="loading-text">正在加载热搜..</text>
         <view class="detail-loading-bars">
           <view class="detail-loading-bar detail-loading-bar-title"></view>
           <view class="detail-loading-bar detail-loading-bar-media"></view>
@@ -52,7 +51,6 @@
               <view class="media-loading-wave media-loading-wave-b"></view>
               <view class="media-loading-wave media-loading-wave-c"></view>
             </view>
-            <text class="media-loading-text">正在加载...</text>
           </view>
           <text class="media-error" v-if="mediaError">{{ mediaError }}</text>
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
@@ -494,7 +492,6 @@ onLoad((options: any) => {
   height: 18rpx;
 }
 
-.media-loading-text,
 .related-loading-text,
 .media-error {
   display: block;
