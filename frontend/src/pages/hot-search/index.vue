@@ -84,6 +84,12 @@ const fetchHotSearch = async () => {
     const data = res.data || res.newslist
     if (res.code === 200 && data && Array.isArray(data.items)) {
       hotItems.value = data.items
+      // 缓存热搜列表给详情页上下篇导航用
+      try {
+        uni.setStorageSync('hot_search_current_list', hotItems.value.slice(0, 21))
+      } catch (e) {
+        console.warn('Cache hot search list failed', e)
+      }
       updateTime.value = data.updateTime || ''
       if (!hotItems.value.length) error.value = '暂无百度热搜数据'
     } else {

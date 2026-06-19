@@ -161,6 +161,7 @@ const navigateToHot = (item: HotSearchItem) => {
     uni.showToast({ title: '链接无效', icon: 'none' })
     return
   }
+  // 直接跳转，索引已经正确，不用获取列表
   uni.redirectTo({
     url: `/pages/hot-search-detail/index?platform=baidu&title=百度热搜&keyword=${encodeURIComponent(item.title)}&hot=${encodeURIComponent(item.hot || '')}&description=${encodeURIComponent(item.description || '')}&url=${encodeURIComponent(item.url || '')}&image=${encodeURIComponent(item.image || '')}&index=${hotList.value.findIndex(n => n === item)}&raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
   })
@@ -223,27 +224,57 @@ onLoad((options: any) => {
   if (options?.index !== undefined) {
     currentIndex.value = parseInt(decodeValue(options.index), 10)
   }
-  // 尝试从页面栈获取热搜列表
+  // 获取热搜列表，尝试从内存/缓存获取
+  // 1. 优先从页面栈获取
   const pages = getCurrentPages()
-  if (pages.length >= 2 && pages[pages.length - 2]) {
-    // 上一页就是 hot-search 列表页
+  console.log('[hot-nav] current pages length: ', pages.length)
+  let gotList = false
+  if (pages.length >= 2) {
     const prevPage = pages[pages.length - 2]
-    if (prevPage && prevPage.vm && prevPage.vm.$setup && prevPage.vm.$setup.hotItems) {
-      hotList.value = prevPage.vm.$setup.hotItems.value || []
-      // 修剪为只显示21条，和列表一致
-      if (hotList.value.length > 21) {
-        hotList.value = hotList.value.slice(0, 21)
+    console.log('[hot-nav] prevPage route: ', prevPage.route)
+    let hotItemsData: any = null
+    if (prevPage.vm && prevPage.vm.$setup && prevPage.vm.$setup.hotItems) {
+      hotItemsData = prevPage.vm.$setup.hotItems
+    } else if (prevPage.$vm && prevPage.$vm._setup && prevPage.$vm._setup.hotItems) {
+      hotItemsData = prevPage.$vm._setup.hotItems
+    } else if (prevPage.data && prevPage.data.hotItems) {
+      hotItemsData = { value: prevPage.data.hotItems }
+    }
+    if (hotItemsData && Array.isArray(hotItemsData.value)) {
+      hotList.value = hotItemsData.value
+      gotList = true
+    }
+  }
+  // 2. 如果从页面栈获取不到，尝试从uni.getStorageSync获取
+  if (!gotList) {
+    try {
+      const cached = uni.getStorageSync('hot_search_current_list')
+      if (Array.isArray(cached) && cached.length > 0) {
+        hotList.value = cached
+        gotList = true
+        console.log('[hot-nav] 从缓存获取热搜列表成功, length=', hotList.value.length)
       }
-      console.log('[hot-nav] 从列表页获取热搜列表, length=', hotList.value.length)
-      // 如果索引不正确，根据当前keyword重新查找
-      if (currentIndex.value === -1 || !hotList.value[currentIndex.value] || hotList.value[currentIndex.value].title !== keyword.value) {
-        const foundIndex = hotList.value.findIndex(item => item.title === keyword.value)
-        if (foundIndex >= 0) {
-          currentIndex.value = foundIndex
-          console.log('[hot-nav] 更新索引到: ', foundIndex)
-        }
+    } catch (e) {
+      console.warn('[hot-nav] read cache failed', e)
+    }
+  }
+  // 修剪列表
+  if (hotList.value.length > 21) {
+    hotList.value = hotList.value.slice(0, 21)
+  }
+  if (gotList) {
+    console.log('[hot-nav] 获取热搜列表成功, length=', hotList.value.length)
+    // 如果索引不正确，根据当前keyword重新查找
+    if (currentIndex.value === -1 || !hotList.value[currentIndex.value] || hotList.value[currentIndex.value].title !== keyword.value) {
+      const foundIndex = hotList.value.findIndex(item => item.title === keyword.value)
+      console.log('[hot-nav] 查找当前关键词索引: ', keyword.value, 'found=', foundIndex)
+      if (foundIndex >= 0) {
+        currentIndex.value = foundIndex
+        console.log('[hot-nav] 更新索引到: ', foundIndex)
       }
     }
+  } else {
+    console.log('[hot-nav] 获取热搜列表失败')
   }
   if (!keyword.value) {
     keyword.value = extractKeywordFromRaw()
