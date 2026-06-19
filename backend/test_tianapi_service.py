@@ -479,24 +479,12 @@ def test_baidu_hot_search_detail_does_not_use_generic_search_video_results():
     assert 'https://www.sogou.com/web' not in called_urls
 
 
-def test_baidu_hot_search_detail_uses_baidu_video_vertical_when_source_is_blocked():
+def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {}
     DummyHttpClient.text_responses = {
         ('https://www.baidu.com/s?wd=real', None): '<html>百度安全验证</html>',
         ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
-        ('https://www.baidu.com/s', None): '''
-        <div class="result" mu="https://haokan.baidu.com/v?pd=wisenatural&vid=7166699675077810870">
-            今年端午60年一遇，不一般，有四人要躲端午
-        </div>
-        ''',
-        ('https://haokan.baidu.com/v?pd=wisenatural&vid=7166699675077810870', None): '''
-        <title>今年端午60年一遇，不一般，有四人要躲端午,好看视频</title>
-        <script>{"curVideoMeta":{"title":"今年端午60年一遇，不一般，有四人要躲端午","clarityUrl":[
-          {"rank":0,"title":"标清","url":"https:\\/\\/vd2.bdstatic.com\\/mda-demo\\/cae_h264\\/demo.mp4?auth_key=test"},
-          {"rank":1,"title":"高清","url":"https:\\/\\/vd2.bdstatic.com\\/mda-demo\\/hd\\/cae_h264\\/demo.mp4?auth_key=test"}
-        ]}}</script>
-        ''',
     }
 
     result = run(TianApiService.get_hot_search_detail(
@@ -509,10 +497,9 @@ def test_baidu_hot_search_detail_uses_baidu_video_vertical_when_source_is_blocke
     ))
 
     assert result['code'] == 200
-    assert len(result['data']['videos']) == 1
-    assert result['data']['videos'][0]['originalUrl'] == 'https://vd2.bdstatic.com/mda-demo/cae_h264/demo.mp4?auth_key=test'
+    assert result['data']['videos'] == []
     calls = {(call[0], tuple(sorted((call[1] or {}).items()))) for call in DummyHttpClient.calls}
-    assert ('https://www.baidu.com/s', (('pd', 'video'), ('tn', 'vsearch'), ('wd', '今年端午60年一遇'))) in calls
+    assert ('https://www.baidu.com/s', (('pd', 'video'), ('tn', 'vsearch'), ('wd', '今年端午60年一遇'))) not in calls
 
 
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
@@ -562,7 +549,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_extracts_video_resources_from_search_html,
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
-        test_baidu_hot_search_detail_uses_baidu_video_vertical_when_source_is_blocked,
+        test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
     ]:
         setup_module(None)

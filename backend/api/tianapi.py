@@ -715,10 +715,6 @@ class TianApiService:
                 if source_url.startswith("http"):
                     candidate_pages.append((source_url, {}, headers))
                 candidate_pages.append((search_url, {"word": keyword, "sa": "fyb_news"}, headers))
-                # 百度热搜原链接有时在服务端只返回安全验证/简化页，但百度自己的
-                # 视频垂搜页仍会返回与该关键词对应的好看视频卡片。这里仍限定为
-                # 百度域内结果，后续还会校验好看视频页面标题，避免外部泛搜索错配。
-                candidate_pages.append(("https://www.baidu.com/s", {"wd": keyword, "tn": "vsearch", "pd": "video"}, headers))
 
                 video_pages: List[str] = []
                 for page_url, params, page_headers in candidate_pages:
@@ -869,7 +865,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v6")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v7")
         cached = await cache.get(cache_key)
         if cached:
             return cached
