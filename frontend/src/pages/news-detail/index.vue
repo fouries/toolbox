@@ -199,8 +199,8 @@ onLoad((options: any) => {
   if (options?.index !== undefined) {
     currentIndex.value = parseInt(options.index, 10)
   }
-  // 如果有分类，重新获取该分类的新闻列表
-  if (category.value && currentIndex.value >= 0) {
+  // 如果有分类，无论有没有索引，都加载新闻列表方便导航
+  if (category.value) {
     fetchNewsList()
   }
   loadDetail()
