@@ -39,6 +39,26 @@
         <view class="article-actions">
           <button class="copy-btn" @tap="copyOriginalUrl">复制原文链接</button>
         </view>
+
+        <!-- 上一篇 / 下一篇导航 -->
+        <view class="neighbor-navigation" v-if="hasNeighbors">
+          <button 
+            class="nav-btn prev-btn" 
+            :disabled="!prevNews" 
+            @tap="goPrev"
+          >
+            <text class="nav-arrow">‹</text>
+            <text class="nav-text">{{ prevNews ? '上一篇' : '已经是第一篇' }}</text>
+          </button>
+          <button 
+            class="nav-btn next-btn" 
+            :disabled="!nextNews" 
+            @tap="goNext"
+          >
+            <text class="nav-text">{{ nextNews ? '下一篇' : '已经是最后一篇' }}</text>
+            <text class="nav-arrow">›</text>
+          </button>
+        </view>
       </view>
     </view>
   </view>
@@ -47,7 +67,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getNewsDetail, type NewsDetail } from '@/api'
+import { getNewsDetail, type NewsDetail, type NewsItem } from '@/api'
 import { useTheme } from '@/utils/theme'
 
 const { themeClass } = useTheme()
@@ -55,9 +75,18 @@ const { themeClass } = useTheme()
 const sourceUrl = ref('')
 const localUrl = ref('')
 const preferredImage = ref('')
+const category = ref('internet')  // 当前分类
+const currentIndex = ref(-1)     // 当前在列表中的索引
+const newsList = ref<NewsItem[]>([]) // 当前分类的新闻列表
+
 const detail = ref<NewsDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
+
+// 计算上一篇/下一篇
+const hasNeighbors = computed(() => newsList.value.length > 0)
+const prevNews = computed(() => currentIndex.value > 0 ? newsList.value[currentIndex.value - 1] : null)
+const nextNews = computed(() => currentIndex.value < newsList.value.length - 1 ? newsList.value[currentIndex.value + 1] : null)
 
 const paragraphs = computed(() => {
   const content = detail.value?.content || ''
@@ -111,6 +140,31 @@ const previewImage = (currentUrl: string) => {
   }
 }
 
+// 跳转到指定新闻
+const navigateToNews = (item: NewsItem) => {
+  const safeUrl = (item.url || '').startsWith('//') ? `https:${item.url}` : (item.url || '')
+  if (!/^https?:\/\//i.test(safeUrl)) {
+    uni.showToast({ title: '链接无效', icon: 'none' })
+    return
+  }
+  const imageUrl = (item.picUrl || '').startsWith('//') ? `https:${item.picUrl}` : (item.picUrl || '')
+  uni.redirectTo({
+    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&category=${category.value}&index=${newsList.value.findIndex(n => n === item)}&image=${encodeURIComponent(imageUrl)}`
+  })
+}
+
+const goPrev = () => {
+  if (prevNews.value) {
+    navigateToNews(prevNews.value)
+  }
+}
+
+const goNext = () => {
+  if (nextNews.value) {
+    navigateToNews(nextNews.value)
+  }
+}
+
 const loadDetail = async () => {
   if (!sourceUrl.value && !localUrl.value) {
     error.value = '缺少新闻链接'
@@ -138,8 +192,32 @@ onLoad((options: any) => {
   sourceUrl.value = decodeURIComponent(options?.url || '')
   localUrl.value = decodeURIComponent(options?.localUrl || '')
   preferredImage.value = decodeURIComponent(options?.image || '')
+  // 获取分类和索引参数，用于上下篇跳转
+  if (options?.category) {
+    category.value = options.category as string
+  }
+  if (options?.index !== undefined) {
+    currentIndex.value = parseInt(options.index, 10)
+  }
+  // 如果有分类，重新获取该分类的新闻列表
+  if (category.value && currentIndex.value >= 0) {
+    fetchNewsList()
+  }
   loadDetail()
 })
+
+// 获取当前分类的新闻列表
+const fetchNewsList = async () => {
+  try {
+    const res: any = await getInfoNews(category.value)
+    if (res.code === 200 && Array.isArray(res.newslist)) {
+      newsList.value = res.newslist
+    }
+  } catch (err) {
+    // 获取失败不影响主流程，只是不显示上下篇按钮
+    console.error('Failed to fetch news list for navigation', err)
+  }
+}
 </script>
 
 <style scoped>
@@ -288,5 +366,48 @@ onLoad((options: any) => {
 .retry-btn {
   background: #e2e8f0;
   color: #334155;
+}
+
+/* 上一篇下一篇导航 */
+.neighbor-navigation {
+  margin-top: 36rpx;
+  display: flex;
+  gap: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #e2e8f0;
+}
+
+.nav-btn {
+  flex: 1;
+  border-radius: 16rpx;
+  padding: 20rpx 16rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+  border: 1rpx solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  color: #94a3b8;
+}
+
+.nav-btn:not(:disabled):active {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #fff;
+}
+
+.nav-arrow {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.nav-text {
+  font-size: 26rpx;
 }
 </style>

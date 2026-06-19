@@ -30,7 +30,7 @@
       </view>
 
       <view class="news-list" v-else>
-        <view class="news-card card" v-for="item in newsList" :key="item.title" @tap="openNews(item)">
+        <view class="news-card card" v-for="(item, index) in newsList" :key="item.title" @tap="openNews(item, index)">
           <view class="news-main">
             <text class="news-title">{{ item.title }}</text>
             <view class="news-meta">
@@ -106,11 +106,11 @@ const isSafeNewsUrl = (url?: string): url is string => {
 
 const safeImageUrl = (url?: string): string => normalizeNewsUrl(url)
 
-const openNews = (item: NewsItem) => {
+const openNews = (item: NewsItem, index: number) => {
   const safeUrl = normalizeNewsUrl(item.url)
   if (!isSafeNewsUrl(safeUrl)) return
   uni.navigateTo({
-    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&image=${encodeURIComponent(safeImageUrl(item.picUrl) || '')}`,
+    url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&category=${activeCategory.value}&index=${index}&image=${encodeURIComponent(safeImageUrl(item.picUrl) || '')}`,
     fail: () => {
       uni.setClipboardData({ data: safeUrl })
       uni.showToast({ title: '链接已复制，请到浏览器打开', icon: 'none' })
