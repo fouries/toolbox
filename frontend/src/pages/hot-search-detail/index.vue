@@ -47,23 +47,6 @@
           </view>
         </view>
 
-        <view class="news-card card" v-if="visibleRelatedNews.length">
-          <text class="news-title">相关资讯</text>
-          <view class="news-list">
-            <view class="news-item" v-for="(item, index) in visibleRelatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
-              <view class="news-main">
-                <text class="news-item-title">{{ item.title }}</text>
-                <view class="news-meta">
-                  <text v-if="item.source">{{ item.source }}</text>
-                  <text v-if="item.ctime">{{ item.ctime }}</text>
-                  <text v-if="item.localUrl">已缓存正文</text>
-                </view>
-              </view>
-              <text class="news-arrow">›</text>
-            </view>
-          </view>
-        </view>
-
         <!-- 上一篇 / 下一篇导航 -->
         <view class="neighbor-navigation">
           <button 
@@ -92,7 +75,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem, type NewsItem } from '@/api'
+import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem } from '@/api'
 
 // getCurrentPages 是全局可用的
 declare function getCurrentPages(): any[];
@@ -117,8 +100,6 @@ const hotList = ref<HotSearchItem[]>([])
 const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentIndex.value - 1] : null)
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
-const relatedNews = computed(() => detail.value?.relatedNews || [])
-const visibleRelatedNews = computed(() => relatedNews.value)
 const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
 const hasLoadedMedia = ref(false)
 const shouldShowFallbackImage = computed(() => hasLoadedMedia.value && !mediaLoading.value)
@@ -201,14 +182,6 @@ const copyHotLink = () => {
   uni.showToast({ title: sourceUrl.value ? '原链接已复制' : '关键词已复制', icon: 'none' })
 }
 
-const openNewsDetail = (item: NewsItem) => {
-  const safeUrl = item.url || sourceUrl.value || ''
-  if (!safeUrl && !item.localUrl) {
-    uni.showToast({ title: '暂无资讯链接', icon: 'none' })
-    return
-  }
-  uni.navigateTo({ url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&localUrl=${encodeURIComponent(item.localUrl || '')}` })
-}
 
 // 跳转到指定热搜
 const navigateToHot = (item: HotSearchItem) => {
@@ -243,10 +216,10 @@ const loadMediaDetail = async () => {
     if (res.code === 200 && res.data) {
       applyDetail(res.data)
     } else {
-      mediaError.value = res.msg || '视频和相关资讯稍后再试'
+      mediaError.value = res.msg || '内容稍后再试'
     }
   } catch (err: any) {
-    mediaError.value = err.message || '视频和相关资讯暂时加载失败'
+    mediaError.value = err.message || '内容暂时加载失败'
   } finally {
     hasLoadedMedia.value = true
     mediaLoading.value = false

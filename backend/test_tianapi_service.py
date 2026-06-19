@@ -248,8 +248,7 @@ def test_hot_search_detail_builds_content_from_keyword_and_related_news():
     assert '通常反映用户短时间内集中搜索' not in result['data']['content']
     assert result['data']['sections']
     assert result['data']['sections'][0]['title'] == '相关新闻内容'
-    assert result['data']['relatedNews'][0]['title'] == '微博话题 引发关注'
-    assert result['data']['relatedNews'][0]['url'] == 'https://example.com/topic'
+    assert result['data']['relatedNews'] == []
     assert DummyNewsDetailService.calls == []
 
 
@@ -282,8 +281,7 @@ def test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match
     assert paths[:3] == ['/internet/index', '/esports/index', '/auto/index']
     assert 'https://www.sogou.com/sogou' in paths
     assert result['code'] == 200
-    assert result['data']['relatedNews'][0]['title'] == '世界杯真正的预言家相关新闻'
-    assert result['data']['relatedNews'][0]['url'] == 'https://www.sogou.com/link?url=abc'
+    assert result['data']['relatedNews'] == []
     assert DummyNewsDetailService.calls == []
     assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['summary']
     assert '围绕世界杯出现了真正的预言家的新闻摘要' in result['data']['content']
@@ -321,7 +319,7 @@ def test_baidu_hot_search_detail_includes_baidu_raw_result_fields_as_content():
     assert result['data']['rawHotItem']['word'] == '百度真实热搜'
 
 
-def test_baidu_hot_search_detail_fetches_related_news_even_with_complete_summary():
+def test_baidu_hot_search_detail_skips_related_news_when_summary_is_complete():
     DummyHttpClient.calls = []
     DummyHttpClient.responses = {
         ('/internet/index', None): {"code": 200, "msg": "success", "result": {"newslist": []}},
@@ -348,11 +346,12 @@ def test_baidu_hot_search_detail_fetches_related_news_even_with_complete_summary
     ))
 
     paths = [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls]
-    assert paths[:3] == ['/internet/index', '/esports/index', '/auto/index']
-    assert 'https://www.sogou.com/sogou' in paths
+    assert '/internet/index' not in paths
+    assert '/esports/index' not in paths
+    assert '/auto/index' not in paths
+    assert 'https://www.sogou.com/sogou' not in paths
     assert result['code'] == 200
-    assert result['data']['relatedNews']
-    assert result['data']['relatedNews'][0]['title'] == '百度真实热搜 相关新闻'
+    assert result['data']['relatedNews'] == []
 
 
 def test_baidu_hot_search_merges_official_images_when_nethot_lacks_media():
@@ -875,7 +874,7 @@ if __name__ == '__main__':
         test_hot_search_detail_builds_content_from_keyword_and_related_news,
         test_hot_search_detail_fetches_keyword_news_when_category_feeds_do_not_match,
         test_baidu_hot_search_detail_includes_baidu_raw_result_fields_as_content,
-        test_baidu_hot_search_detail_fetches_related_news_even_with_complete_summary,
+        test_baidu_hot_search_detail_skips_related_news_when_summary_is_complete,
         test_baidu_hot_search_merges_official_images_when_nethot_lacks_media,
         test_baidu_hot_search_replaces_truncated_nethot_summary_with_official_desc,
         test_baidu_hot_search_uses_official_baidu_top_when_tianapi_unavailable,

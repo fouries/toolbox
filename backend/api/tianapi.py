@@ -1187,7 +1187,7 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v14_related_news_keyword_v1_mobile_vsearch_desc_v9_images_short_empty")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v15_no_related_card_mobile_vsearch_desc_v9_images_short_empty")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -1229,37 +1229,36 @@ class TianApiService:
             and (not original_desc_incomplete or official_desc_complete)
         )
         
-        # detail-media 用这组数据同时补视频/图片/相关资讯。
-        # 即使已有百度摘要，也要尝试匹配相关新闻；否则大部分热搜只返回视频，前端看起来“全部没有相关资讯”。
-        # 只抓列表摘要，不提前抓新闻正文，避免回到早期慢加载问题。
-        tasks = [TianApiService.get_info_news(category) for category in ("internet", "esports", "auto")]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, dict) and result.get("code") == 200 and isinstance(result.get("newslist"), list):
-                all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
+        matched: List[Dict[str, Any]] = []
+        if not has_hot_desc:
+            # 相关资讯卡片已下线。只在摘要不完整时保留强匹配资讯查找，
+            # 用于补全正文/提取可信详情图；不再为了展示“相关资讯”额外请求外部来源。
+            tasks = [TianApiService.get_info_news(category) for category in ("internet", "esports", "auto")]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, dict) and result.get("code") == 200 and isinstance(result.get("newslist"), list):
+                    all_news.extend(item for item in result["newslist"] if isinstance(item, dict))
 
-        scored = []
-        for item in all_news:
-            normalized = TianApiService._normalize_related_news(item)
-            if not normalized["title"]:
-                continue
-            scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
+            scored = []
+            for item in all_news:
+                normalized = TianApiService._normalize_related_news(item)
+                if not normalized["title"]:
+                    continue
+                scored.append((TianApiService._score_related_news(keyword, normalized), normalized))
 
-        # 如果有原始desc，要求min_relevance_score=8；如果没有，降低到2
-        min_relevance_score = 8 if has_hot_desc else 2
-        matched = [
-            item
-            for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
-            if score >= min_relevance_score
-        ]
-        if not matched:
-            keyword_news = await TianApiService._fetch_keyword_news(keyword, limit=8)
             matched = [
                 item
-                for item in keyword_news
-                if TianApiService._score_related_news(keyword, item) >= 2
+                for score, item in sorted(scored, key=lambda pair: pair[0], reverse=True)
+                if score >= 2
             ]
-        matched = await TianApiService._materialize_related_news(matched[:8])
+            if not matched:
+                keyword_news = await TianApiService._fetch_keyword_news(keyword, limit=8)
+                matched = [
+                    item
+                    for item in keyword_news
+                    if TianApiService._score_related_news(keyword, item) >= 2
+                ]
+            matched = await TianApiService._materialize_related_news(matched[:8])
         # 视频识别和长图提取都会访问外部页面，彼此不依赖；并发执行可减少首次打开详情的等待时间。
         video_task = TianApiService._fetch_baidu_hot_videos(keyword, source_url=str(url or ""), limit=1) if platform == "baidu" else asyncio.sleep(0, result=[])
         image_task = TianApiService._fetch_hot_detail_images(keyword, matched[:8], limit=3) if is_baidu_source and matched else asyncio.sleep(0, result=[])
@@ -1285,6 +1284,8 @@ class TianApiService:
             videos=videos,
             images=images,
         )
+        if platform == "baidu":
+            data["relatedNews"] = []
         result = {"code": 200, "msg": "success", "data": data}
         
         # 缓存成功的富媒体结果 1 小时；空视频/空图片结果只短缓存，避免百度安全验证等瞬时失败卡住恢复。
