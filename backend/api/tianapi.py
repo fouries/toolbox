@@ -4,7 +4,7 @@ import html
 import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from urllib.parse import quote, urljoin, unquote, urlparse
+from urllib.parse import quote, urljoin, unquote, urlparse, parse_qs
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
 from config import get_settings
@@ -714,6 +714,14 @@ class TianApiService:
                 candidate_pages: List[tuple[str, Dict[str, str], Dict[str, str]]] = []
                 if source_url.startswith("http"):
                     candidate_pages.append((source_url, {}, headers))
+                    parsed_source = urlparse(source_url)
+                    if parsed_source.netloc.endswith("baidu.com") and parsed_source.path == "/s":
+                        source_query = parse_qs(parsed_source.query)
+                        source_word = str((source_query.get("wd") or source_query.get("word") or [keyword])[0] or keyword)
+                        # 有些热搜原链接直接访问会触发安全验证，但同一个百度普通搜索
+                        # 模板（非视频垂搜）可以返回原搜索结果里的好看视频卡片。
+                        # 这里仍限定在百度普通搜索页，不使用 vsearch/外部搜索，避免错配。
+                        candidate_pages.append(("https://www.baidu.com/s", {"wd": source_word, "tn": "baiduhome_pg"}, headers))
                 candidate_pages.append((search_url, {"word": keyword, "sa": "fyb_news"}, headers))
 
                 video_pages: List[str] = []
@@ -865,7 +873,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v7")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8")
         cached = await cache.get(cache_key)
         if cached:
             return cached

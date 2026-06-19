@@ -484,7 +484,18 @@ def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     DummyHttpClient.responses = {}
     DummyHttpClient.text_responses = {
         ('https://www.baidu.com/s?wd=real', None): '<html>百度安全验证</html>',
+        ('https://www.baidu.com/s', None): '''
+        <div class="result" mu="https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912">
+            今年端午60年一遇 普通搜索页视频
+        </div>
+        ''',
         ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
+        ('https://haokan.baidu.com/v?pd=wisenatural&vid=6169387791737944912', None): '''
+        <title>今年端午60年一遇，普通搜索页视频,好看视频</title>
+        <script>{"curVideoMeta":{"title":"今年端午60年一遇，普通搜索页视频","clarityUrl":[
+          {"rank":0,"title":"标清","url":"https:\\/\\/vd5.bdstatic.com\\/mda-demo\\/cae_h264\\/demo.mp4?auth_key=test"}
+        ]}}</script>
+        ''',
     }
 
     result = run(TianApiService.get_hot_search_detail(
@@ -497,9 +508,11 @@ def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     ))
 
     assert result['code'] == 200
-    assert result['data']['videos'] == []
+    assert len(result['data']['videos']) == 1
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd5.bdstatic.com/mda-demo/cae_h264/demo.mp4?auth_key=test'
     calls = {(call[0], tuple(sorted((call[1] or {}).items()))) for call in DummyHttpClient.calls}
     assert ('https://www.baidu.com/s', (('pd', 'video'), ('tn', 'vsearch'), ('wd', '今年端午60年一遇'))) not in calls
+    assert ('https://www.baidu.com/s', (('tn', 'baiduhome_pg'), ('wd', 'real'))) in calls
 
 
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
