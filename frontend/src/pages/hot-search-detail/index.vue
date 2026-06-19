@@ -43,10 +43,10 @@
           </view>
         </view>
 
-        <view class="news-card card" v-if="relatedNews.length">
+        <view class="news-card card" v-if="visibleRelatedNews.length">
           <text class="news-title">相关资讯</text>
           <view class="news-list">
-            <view class="news-item" v-for="(item, index) in relatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
+            <view class="news-item" v-for="(item, index) in visibleRelatedNews" :key="`${index}-${item.title}`" @tap="openNewsDetail(item)">
               <view class="news-main">
                 <text class="news-item-title">{{ item.title }}</text>
                 <view class="news-meta">
@@ -112,6 +112,8 @@ const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentInd
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
+const isFirstHot = computed(() => currentIndex.value === 0)
+const visibleRelatedNews = computed(() => isFirstHot.value ? [] : relatedNews.value)
 const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
 
 const decodeValue = (value: unknown): string => {
