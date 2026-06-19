@@ -1103,8 +1103,9 @@ class TianApiService:
         keyword = str(keyword or "").strip()
         platform = "baidu"
         
-        # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v10_baidu_landing_desc_v9_images")
+        # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
+        # 避免 Redis 长时间返回旧的空视频结果。
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v11_baidu_landing_desc_v9_images_short_empty")
         cached = await cache.get(cache_key)
         if cached:
             return cached
@@ -1204,8 +1205,9 @@ class TianApiService:
         )
         result = {"code": 200, "msg": "success", "data": data}
         
-        # 缓存1小时
-        await cache.set(cache_key, result, ttl=3600)
+        # 缓存成功的富媒体结果 1 小时；空视频/空图片结果只短缓存，避免百度安全验证等瞬时失败卡住恢复。
+        detail_ttl = 600 if not videos and not images else 3600
+        await cache.set(cache_key, result, ttl=detail_ttl)
         return result
 
     @staticmethod
@@ -1221,7 +1223,7 @@ class TianApiService:
         keyword = str(keyword or "").strip()
         platform = "baidu"
 
-        cache_key = make_cache_key("hot_search_detail_basic", platform=platform, keyword=keyword, desc=description, media="basic_v1")
+        cache_key = make_cache_key("hot_search_detail_basic", platform=platform, keyword=keyword, desc=description, media="basic_v2_no_image")
         cached = await cache.get(cache_key)
         if cached:
             return cached

@@ -124,6 +124,8 @@ const relatedNews = computed(() => detail.value?.relatedNews || [])
 const isFirstHot = computed(() => currentIndex.value === 0)
 const visibleRelatedNews = computed(() => isFirstHot.value ? [] : relatedNews.value)
 const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
+const hasLoadedMedia = ref(false)
+const shouldShowFallbackImage = computed(() => hasLoadedMedia.value && !mediaLoading.value)
 
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
@@ -165,7 +167,7 @@ const extractImageFromRaw = () => pickText(parseRawHotData(), ['image', 'img', '
 
 const hotKeyword = computed(() => detail.value?.keyword || keyword.value || extractKeywordFromRaw() || '未知热搜')
 const detailImage = computed(() => detail.value?.image || detail.value?.images?.[0] || '')
-const displayImage = computed(() => detailImage.value || hotImage.value || extractImageFromRaw())
+const displayImage = computed(() => detailImage.value || (shouldShowFallbackImage.value ? (hotImage.value || extractImageFromRaw()) : ''))
 
 const previewHotImage = (currentUrl: string) => {
   const urls = detail.value?.images?.length ? detail.value.images : (currentUrl ? [currentUrl] : [])
@@ -238,6 +240,7 @@ const goNext = () => {
 
 const loadMediaDetail = async () => {
   mediaLoading.value = true
+  hasLoadedMedia.value = false
   mediaError.value = ''
   try {
     const res = await getHotSearchDetailMedia(detailParams())
@@ -249,6 +252,7 @@ const loadMediaDetail = async () => {
   } catch (err: any) {
     mediaError.value = err.message || '视频和相关资讯暂时加载失败'
   } finally {
+    hasLoadedMedia.value = true
     mediaLoading.value = false
   }
 }
@@ -261,6 +265,7 @@ const loadDetail = async () => {
   keyword.value = hotKeyword.value
   loading.value = true
   mediaLoading.value = false
+  hasLoadedMedia.value = false
   error.value = ''
   mediaError.value = ''
   try {
