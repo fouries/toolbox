@@ -26,7 +26,7 @@
 
       <view class="hot-list" v-else>
         <!-- 第一条置顶 -->
-        <view class="hot-card card hot-card-sticky" v-if="displayedHotItems.length > 0" :key="`sticky-${displayedHotItems[0].title}`" @tap="openHotDetail(displayedHotItems[0])">
+        <view class="hot-card card hot-card-sticky" v-if="displayedHotItems.length > 0" :key="`sticky-${displayedHotItems[0].title}`" @tap="openHotDetail(displayedHotItems[0], 0)">
           <text class="hot-rank hot-rank-sticky">⬆️</text>
           <view class="hot-main">
             <text class="hot-title">{{ displayedHotItems[0].title }}</text>
@@ -38,7 +38,7 @@
           <text class="hot-arrow">›</text>
         </view>
         <!-- 后面1-20条 -->
-        <view class="hot-card card" v-for="(item, index) in displayedHotItems.slice(1)" :key="`${index+1}-${item.title}`" @tap="openHotDetail(item)">
+        <view class="hot-card card" v-for="(item, index) in displayedHotItems.slice(1)" :key="`${index+1}-${item.title}`" @tap="openHotDetail(item, index + 1)">
           <text class="hot-rank" :class="{ top: index+1 <= 3 }">{{ index+1 }}</text>
           <view class="hot-main">
             <text class="hot-title">{{ item.title }}</text>
@@ -96,7 +96,7 @@ const fetchHotSearch = async () => {
   }
 }
 
-const openHotDetail = (item: HotSearchItem) => {
+const openHotDetail = (item: HotSearchItem, index: number) => {
   if (!item.title) return
   const params = [
     `platform=${encodeURIComponent('baidu')}`,
@@ -106,7 +106,8 @@ const openHotDetail = (item: HotSearchItem) => {
     `description=${encodeURIComponent(item.description || '')}`,
     `url=${encodeURIComponent(item.url || '')}`,
     `image=${encodeURIComponent(item.image || '')}`,
-    `raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
+    `raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`,
+    `index=${index}`
   ].join('&')
   uni.navigateTo({ url: `/pages/hot-search-detail/index?${params}` })
 }

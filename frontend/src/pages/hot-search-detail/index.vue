@@ -45,6 +45,26 @@
             </view>
           </view>
         </view>
+
+        <!-- 上一篇 / 下一篇导航 -->
+        <view class="neighbor-navigation">
+          <button 
+            class="nav-btn prev-btn" 
+            :disabled="!prevHot" 
+            @tap="goPrev"
+          >
+            <text class="nav-arrow">‹</text>
+            <text class="nav-text">{{ prevHot ? '上一篇' : '已经是第一篇' }}</text>
+          </button>
+          <button 
+            class="nav-btn next-btn" 
+            :disabled="!nextHot" 
+            @tap="goNext"
+          >
+            <text class="nav-text">{{ nextHot ? '下一篇' : '已经是最后一篇' }}</text>
+            <text class="nav-arrow">›</text>
+          </button>
+        </view>
       </view>
     </view>
   </view>
@@ -54,7 +74,10 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getHotSearchDetail, type HotSearchDetailData, type NewsItem } from '@/api'
+import { getHotSearchDetail, type HotSearchDetailData, type HotSearchItem } from '@/api'
+
+// getCurrentPages 是全局可用的
+declare function getCurrentPages(): any[];
 
 const { themeClass } = useTheme()
 
@@ -64,16 +87,26 @@ const description = ref('')
 const sourceUrl = ref('')
 const hotImage = ref('')
 const rawHotData = ref('')
+const currentIndex = ref(-1)     // 当前在热搜列表中的索引
 const loading = ref(false)
 const error = ref('')
 const detail = ref<HotSearchDetailData | null>(null)
+
+// 计算上一篇/下一篇
+const hotList = ref<HotSearchItem[]>([])
+const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentIndex.value - 1] : null)
+const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
 const relatedNews = computed(() => detail.value?.relatedNews || [])
 
 const decodeValue = (value: unknown) => {
   if (typeof value !== 'string') return ''
   try {
-    return decodeURIComponent(value)
+    // 多次解码，处理双重编码
+    while (value.includes('%')) {
+      value = decodeURIComponent(value)
+    }
+    return value
   } catch {
     return value
   }
@@ -122,6 +155,29 @@ const openNewsDetail = (item: NewsItem) => {
   uni.navigateTo({ url: `/pages/news-detail/index?url=${encodeURIComponent(safeUrl)}&localUrl=${encodeURIComponent(item.localUrl || '')}` })
 }
 
+// 跳转到指定热搜
+const navigateToHot = (item: HotSearchItem) => {
+  if (!item.title) {
+    uni.showToast({ title: '链接无效', icon: 'none' })
+    return
+  }
+  uni.redirectTo({
+    url: `/pages/hot-search-detail/index?platform=baidu&title=百度热搜&keyword=${encodeURIComponent(item.title)}&hot=${encodeURIComponent(item.hot || '')}&description=${encodeURIComponent(item.description || '')}&url=${encodeURIComponent(item.url || '')}&image=${encodeURIComponent(item.image || '')}&index=${hotList.value.findIndex(n => n === item)}&raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
+  })
+}
+
+const goPrev = () => {
+  if (prevHot.value) {
+    navigateToHot(prevHot.value)
+  }
+}
+
+const goNext = () => {
+  if (nextHot.value) {
+    navigateToHot(nextHot.value)
+  }
+}
+
 const loadDetail = async () => {
   if (!hotKeyword.value || hotKeyword.value === '未知热搜') {
     error.value = '缺少热搜关键词'
@@ -163,6 +219,32 @@ onLoad((options: any) => {
   sourceUrl.value = decodeValue(options?.url)
   hotImage.value = decodeValue(options?.image)
   rawHotData.value = decodeValue(options?.raw)
+  // 获取索引参数，用于上下篇跳转
+  if (options?.index !== undefined) {
+    currentIndex.value = parseInt(decodeValue(options.index), 10)
+  }
+  // 尝试从页面栈获取热搜列表
+  const pages = getCurrentPages()
+  if (pages.length >= 2 && pages[pages.length - 2]) {
+    // 上一页就是 hot-search 列表页
+    const prevPage = pages[pages.length - 2]
+    if (prevPage && prevPage.vm && prevPage.vm.$setup && prevPage.vm.$setup.hotItems) {
+      hotList.value = prevPage.vm.$setup.hotItems.value || []
+      // 修剪为只显示21条，和列表一致
+      if (hotList.value.length > 21) {
+        hotList.value = hotList.value.slice(0, 21)
+      }
+      console.log('[hot-nav] 从列表页获取热搜列表, length=', hotList.value.length)
+      // 如果索引不正确，根据当前keyword重新查找
+      if (currentIndex.value === -1 || !hotList.value[currentIndex.value] || hotList.value[currentIndex.value].title !== keyword.value) {
+        const foundIndex = hotList.value.findIndex(item => item.title === keyword.value)
+        if (foundIndex >= 0) {
+          currentIndex.value = foundIndex
+          console.log('[hot-nav] 更新索引到: ', foundIndex)
+        }
+      }
+    }
+  }
   if (!keyword.value) {
     keyword.value = extractKeywordFromRaw()
   }
@@ -337,6 +419,50 @@ onLoad((options: any) => {
 .error-text {
   margin-bottom: 18rpx;
   color: #dc2626;
+  font-size: 26rpx;
+}
+
+/* 上一篇下一篇导航 */
+.neighbor-navigation {
+  margin-top: 36rpx;
+  display: flex;
+  gap: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #fed7aa;
+}
+
+.nav-btn {
+  flex: 1;
+  border-radius: 16rpx;
+  padding: 20rpx 16rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+  border: 1rpx solid #e2e8f0;
+  background: #fff7f2;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  color: #94a3b8;
+}
+
+.nav-btn:not(:disabled):active {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #fff;
+  border-color: transparent;
+}
+
+.nav-arrow {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.nav-text {
   font-size: 26rpx;
 }
 </style>
