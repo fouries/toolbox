@@ -820,6 +820,15 @@ class TianApiService:
         compact_keyword = re.sub(r"\s+", "", keyword.lower())
         if compact_keyword and compact_keyword in compact_haystack:
             return True
+        # 百度热搜词和好看视频标题经常是同一事件的不同写法，例如
+        # “顶流演员竟然没戏拍了吗” vs “顶流演员也没戏拍了？...在线求工作”。
+        # 该视频页必须先从热搜原链接/百度普通搜索页抽到；这里再用关键词片段做保守校验。
+        terms = [compact_keyword[i:i + 2] for i in range(max(0, len(compact_keyword) - 1))]
+        stop_terms = {"一个", "这些", "相关", "新闻", "热搜", "了吗", "怎么", "什么", "为何"}
+        terms = [term for term in terms if len(term) == 2 and term not in stop_terms]
+        matched_terms = {term for term in terms if term in compact_haystack}
+        if len(matched_terms) >= 3 and len(matched_terms) >= max(3, len(set(terms)) // 3):
+            return True
         score = 0
         for term in ("今年", "端午", "60年", "六十年"):
             if term in keyword and term.lower() in haystack:
@@ -1059,7 +1068,7 @@ class TianApiService:
         platform = "baidu"
         
         # 先尝试从缓存获取
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v8_desc_v9_images")
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v9_near_match_desc_v9_images")
         cached = await cache.get(cache_key)
         if cached:
             return cached

@@ -604,6 +604,40 @@ def test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source():
     assert ('https://www.baidu.com/s', (('tn', 'baiduhome_pg'), ('wd', 'real'))) in calls
 
 
+def test_baidu_hot_search_detail_accepts_near_match_original_haokan_video():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {}
+    DummyHttpClient.text_responses = {
+        ('https://www.baidu.com/s?wd=real', None): '<html>百度安全验证</html>',
+        ('https://www.baidu.com/s', None): '''
+        <div class="result" mu="https://haokan.baidu.com/v?pd=wisenatural&vid=12641358385028720826">
+            顶流演员竟然没戏拍了吗 百度普通搜索视频
+        </div>
+        ''',
+        ('https://m.baidu.com/s', None): '<html>百度安全验证</html>',
+        ('https://haokan.baidu.com/v?pd=wisenatural&vid=12641358385028720826', None): '''
+        <title>顶流演员也没戏拍了？刘亦菲超900天没进组，董子健刘昊然在线求工作,好看视频</title>
+        <script>{"curVideoMeta":{"title":"顶流演员也没戏拍了？刘亦菲超900天没进组，董子健刘昊然在线求工作","poster":"https:\\/\\/f7.baidu.com\\/poster.jpg","clarityUrl":[
+          {"rank":0,"title":"标清","url":"https:\\/\\/vd2.bdstatic.com\\/mda-demo\\/cae_h264\\/demo.mp4?auth_key=test"}
+        ]}}</script>
+        ''',
+    }
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='baidu',
+        keyword='顶流演员竟然没戏拍了吗',
+        hot='7808291',
+        description='多位有作品、有知名度、有资源的演员集体将颁奖礼变成了大型求职现场。',
+        url='https://www.baidu.com/s?wd=real',
+        raw='{"word":"顶流演员竟然没戏拍了吗","desc":"多位演员集体求职。"}',
+    ))
+
+    assert result['code'] == 200
+    assert len(result['data']['videos']) == 1
+    assert result['data']['videos'][0]['originalUrl'] == 'https://vd2.bdstatic.com/mda-demo/cae_h264/demo.mp4?auth_key=test'
+    assert result['data']['videos'][0]['url'].startswith('https://quan1234.com/api/video-proxy?url=')
+
+
 def test_baidu_empty_hot_search_does_not_show_unavailable_message():
     fallback = TianApiService._empty_hot_search('baidu')
     assert fallback['title'] == '百度热搜榜'
@@ -697,6 +731,7 @@ if __name__ == '__main__':
         test_baidu_hot_search_detail_falls_back_to_haokan_video_pages,
         test_baidu_hot_search_detail_does_not_use_generic_search_video_results,
         test_baidu_hot_search_detail_does_not_use_baidu_video_vertical_as_source,
+        test_baidu_hot_search_detail_accepts_near_match_original_haokan_video,
         test_baidu_empty_hot_search_does_not_show_unavailable_message,
         test_baidu_hot_search_detail_extracts_long_image_from_matching_news_detail,
     ]:
