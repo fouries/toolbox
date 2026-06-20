@@ -31,7 +31,6 @@ const tools: ToolItem[] = [
   { id: 'internet-news', name: '互联网资讯', desc: '互联网、AI 和科技行业动态', icon: '🌐', color: '#2563eb', category: 'news', path: '/pages/info-news/index?category=internet', implemented: true },
   { id: 'esports-news', name: '电竞资讯', desc: '电竞赛事与游戏产业消息', icon: '🎮', color: '#7c3aed', category: 'news', path: '/pages/info-news/index?category=esports', implemented: true },
   { id: 'auto-news', name: '汽车新闻', desc: '新车上市、行业政策和用车资讯', icon: '🚗', color: '#0f766e', category: 'news', path: '/pages/info-news/index?category=auto', implemented: true },
-  { id: 'daily-brief', name: '每日简报', desc: '每天快速了解重要新闻和热点摘要', icon: '🗞️', color: '#4f46e5', category: 'news', path: '/pages/daily-brief/index', implemented: true },
   { id: 'baidu-hot', name: '百度热搜榜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'news', path: '/pages/hot-search/index?platform=baidu', implemented: true },
 ]
 
