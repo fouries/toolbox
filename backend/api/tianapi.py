@@ -818,10 +818,11 @@ class TianApiService:
                 first_candidate = candidates[0]
                 seen_key = first_candidate["src"].split("?", 1)[0]
                 if seen_key not in seen:
+                    poster = TianApiService._normalize_video_poster(value.get("poster") or value.get("cover") or value.get("image"))
                     videos.append({
                         "url": TianApiService._proxy_baidu_video_url(first_candidate["src"]),
                         "originalUrl": first_candidate["src"],
-                        "poster": TianApiService._normalize_video_poster(value.get("poster") or value.get("cover") or value.get("image")),
+                        "poster": TianApiService._proxied_baidu_image_url(poster),
                         "title": candidate_title or first_candidate.get("title") or title,
                     })
                     seen.add(seen_key)
@@ -839,7 +840,12 @@ class TianApiService:
                     candidate_title = TianApiService._strip_html_tags(str(item))[:80]
             seen_key = src.split("?", 1)[0] if src else ""
             if src and seen_key not in seen:
-                videos.append({"url": TianApiService._proxy_baidu_video_url(src), "originalUrl": src, "poster": poster, "title": candidate_title})
+                videos.append({
+                    "url": TianApiService._proxy_baidu_video_url(src),
+                    "originalUrl": src,
+                    "poster": TianApiService._proxied_baidu_image_url(poster),
+                    "title": candidate_title,
+                })
                 seen.add(seen_key)
             for item in value.values():
                 TianApiService._collect_video_candidates(item, videos, seen, candidate_title)
@@ -932,7 +938,7 @@ class TianApiService:
             cards.append({
                 "url": TianApiService._proxy_baidu_video_url(src),
                 "originalUrl": src,
-                "poster": poster,
+                "poster": TianApiService._proxied_baidu_image_url(poster),
                 "title": title,
                 "sourceUrl": source_url,
                 "_context": context,
@@ -1312,7 +1318,8 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        media_version = "douyin_hot_video_v1" if platform == "douyin" else "video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty"
+        # 百度热搜视频仅返回代理播放地址和封面代理地址；服务器按需转发，不下载、不落盘。
+        media_version = "douyin_hot_video_v1" if platform == "douyin" else "baidu_video_proxy_only_v1_images_short_empty"
         cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media=media_version)
         cached = await cache.get(cache_key)
         if cached:

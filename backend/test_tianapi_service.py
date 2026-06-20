@@ -639,7 +639,7 @@ def test_baidu_hot_search_detail_extracts_video_resources_from_search_html():
     assert result['code'] == 200
     assert result['data']['videos'][0]['url'] == 'https://quan1234.com/api/video-proxy?url=https%3A%2F%2Fvd3.bdstatic.com%2Fmda-demo%2F540p%2Fh264%2Fdemo.mp4%3Fauthorization%3Dtest'
     assert result['data']['videos'][0]['originalUrl'] == 'https://vd3.bdstatic.com/mda-demo/540p/h264/demo.mp4?authorization=test'
-    assert result['data']['videos'][0]['poster'] == 'https://t14.baidu.com/poster.jpg'
+    assert result['data']['videos'][0]['poster'] == 'https://quan1234.com/api/image-proxy?url=https%3A%2F%2Ft14.baidu.com%2Fposter.jpg'
 
 
 def test_baidu_hot_search_detail_falls_back_to_haokan_video_pages():
@@ -732,7 +732,7 @@ def test_baidu_hot_search_detail_uses_mobile_vsearch_when_source_hits_safety_che
     assert result['code'] == 200
     assert len(result['data']['videos']) == 1
     assert result['data']['videos'][0]['originalUrl'] == 'https://vd3.bdstatic.com/mda-real/hd/cae_h264/demo.mp4?pd=19&vt=1'
-    assert result['data']['videos'][0]['poster'] == 'http://t15.baidu.com/it/u=480050288,1670784519&fm=225'
+    assert result['data']['videos'][0]['poster'] == 'https://quan1234.com/api/image-proxy?url=http%3A%2F%2Ft15.baidu.com%2Fit%2Fu%3D480050288%2C1670784519%26fm%3D225'
     calls = {(call[0], tuple(sorted((call[1] or {}).items()))) for call in DummyHttpClient.calls}
     assert ('https://m.baidu.com/sf/vsearch', (('atn', 'index'), ('pd', 'video'), ('tn', 'vsearch'), ('word', 'real'))) in calls
 

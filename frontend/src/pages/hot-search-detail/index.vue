@@ -47,7 +47,8 @@
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
                 <text class="video-author" v-if="video.author">@{{ video.author }}</text>
                 <text class="video-stats" v-if="videoStats(video)">{{ videoStats(video) }}</text>
-                <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">去抖音查看原视频</button>
+                <text class="video-proxy-note">{{ videoProxyNote }}</text>
+                <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">{{ videoSourceButtonText }}</button>
               </view>
             </view>
           </view>
@@ -112,6 +113,8 @@ type HotPlatform = keyof typeof hotConfigs
 
 const platform = ref<HotPlatform>('baidu')
 const detailConfig = computed(() => hotConfigs[platform.value])
+const videoSourceButtonText = computed(() => platform.value === 'douyin' ? '去抖音查看原视频' : '查看百度原视频')
+const videoProxyNote = computed(() => platform.value === 'douyin' ? '视频按需代理播放，不下载保存' : '百度视频按需代理播放，不下载保存')
 const keyword = ref('')
 const hot = ref('')
 const description = ref('')
@@ -534,7 +537,8 @@ onLoad((options: any) => {
 
 .video-desc,
 .video-author,
-.video-stats {
+.video-stats,
+.video-proxy-note {
   display: block;
   line-height: 1.5;
 }
@@ -546,10 +550,15 @@ onLoad((options: any) => {
 }
 
 .video-author,
-.video-stats {
+.video-stats,
+.video-proxy-note {
   margin-top: 6rpx;
   color: #9a3412;
   font-size: 23rpx;
+}
+
+.video-proxy-note {
+  color: #78716c;
 }
 
 .video-source-btn {
