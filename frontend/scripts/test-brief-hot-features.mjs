@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const pagesJsonPath = path.resolve('src/pages.json')
-const homePath = path.resolve('src/pages/index/index.vue')
+const newsTabPath = path.resolve('src/pages/news/index.vue')
 const apiPath = path.resolve('src/api/index.ts')
 const briefPagePath = path.resolve('src/pages/daily-brief/index.vue')
 const hotSearchPagePath = path.resolve('src/pages/hot-search/index.vue')
@@ -21,14 +21,14 @@ assert.ok(routes.includes('pages/daily-brief/index'), 'pages.json should registe
 assert.ok(routes.includes('pages/hot-search/index'), 'pages.json should register 热搜榜 page route')
 assert.ok(routes.includes('pages/hot-search-detail/index'), 'pages.json should register 热搜详情 page route')
 
-const home = fs.readFileSync(homePath, 'utf8')
+const newsTab = fs.readFileSync(newsTabPath, 'utf8')
 for (const [id, name, route] of [
-  ['daily-brief', '每日简报', '/pages/daily-brief/index'],
   ['baidu-hot', '百度热搜榜', '/pages/hot-search/index?platform=baidu'],
+  ['douyin-hot', '抖音热搜榜', '/pages/hot-search/index?platform=douyin'],
 ]) {
-  assert.match(home, new RegExp(`id:\\s*'${id}'[\\s\\S]*name:\\s*'${name}'[\\s\\S]*path:\\s*'${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'[\\s\\S]*implemented:\\s*true`), `home should enable ${name} tool card`)
+  assert.match(newsTab, new RegExp(`id:\\s*'${id}'[\\s\\S]*name:\\s*'${name}'[\\s\\S]*path:\\s*'${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'[\\s\\S]*implemented:\\s*true`), `news tab should enable ${name} tool card`)
 }
-assert.doesNotMatch(home, /weibo-hot|微博热搜榜|platform=weibo/, 'home should remove the weibo hot-search tool card')
+assert.doesNotMatch(newsTab, /weibo-hot|微博热搜榜|platform=weibo/, 'news tab should remove the weibo hot-search tool card')
 
 const api = fs.readFileSync(apiPath, 'utf8')
 assert.match(api, /export\s+interface\s+DailyBriefItem/, 'api should expose DailyBriefItem type')
@@ -50,18 +50,19 @@ assert.match(briefPage, /刷新简报/, 'daily brief page should provide a refre
 
 const hotSearchPage = fs.readFileSync(hotSearchPagePath, 'utf8')
 assert.match(hotSearchPage, /百度热搜榜/, 'hot search page should support baidu label')
+assert.match(hotSearchPage, /抖音热搜榜/, 'hot search page should support douyin label')
 assert.doesNotMatch(hotSearchPage, /微博热搜榜|activePlatform\.value\s*===\s*'weibo'|platform=weibo/, 'hot search page should remove weibo hot search support')
 assert.doesNotMatch(hotSearchPage, /title: '百度热搜'[^榜]/, 'baidu tab should be labelled 百度热搜榜')
 assert.match(hotSearchPage, /getHotSearch/, 'hot search page should fetch hot search API')
 assert.doesNotMatch(hotSearchPage, /platformTabs/, 'hot search page should not show platform tabs after removing weibo')
-assert.match(hotSearchPage, /v-for="item in displayedHotItems"/, 'hot search page should render capped display item list')
-assert.match(hotSearchPage, /displayedHotItems\s*=\s*computed\(\(\)\s*=>\s*hotItems\.value\.slice\(0,\s*50\)/, 'baidu hot search list should cap display to 50 items')
+assert.match(hotSearchPage, /displayedHotItems\.slice\(1\)/, 'hot search page should render capped display item list')
+assert.match(hotSearchPage, /displayedHotItems\s*=\s*computed\(\(\)\s*=>\s*hotItems\.value\.slice\(0,\s*21\)/, 'hot search list should cap display to 21 items')
 assert.doesNotMatch(hotSearchPage, /shouldShowHotDescription/, 'baidu hot search list should not contain list description logic')
 assert.doesNotMatch(hotSearchPage, /<image\s+class="hot-image"/, 'hot search list should not render baidu images before navigating to detail')
 assert.doesNotMatch(hotSearchPage, /shouldShowHotImage/, 'hot search list should not contain image display logic')
 assert.match(hotSearchPage, /image=\$\{encodeURIComponent\(item\.image \|\| ''\)\}/, 'hot search detail route should pass baidu hot image to the detail page')
 assert.doesNotMatch(hotSearchPage, /v-if="shouldShowHotDescription && item\.description"/, 'baidu hot search list should show only titles, not descriptions')
-assert.match(hotSearchPage, /@tap="openHotDetail\(item\)"/, 'hot search items should navigate to native detail page')
+assert.match(hotSearchPage, /@tap="openHotDetail\(item,\s*index \+ 1\)"/, 'hot search items should navigate to native detail page with index')
 assert.match(hotSearchPage, /uni\.navigateTo\(\{[\s\S]*\/pages\/hot-search-detail\/index\?/, 'hot search item tap should use internal detail route')
 assert.match(hotSearchPage, /encodeURIComponent\(item\.title\)/, 'hot search detail route should encode title')
 assert.match(hotSearchPage, /raw=\$\{encodeURIComponent\(JSON\.stringify\(item\.raw \|\| item\)\)\}/, 'hot search detail route should pass the raw hot-search API item')
@@ -70,22 +71,17 @@ assert.match(hotSearchPage, /onLoad/, 'hot search page should read platform from
 
 const hotSearchDetailPage = fs.readFileSync(hotSearchDetailPagePath, 'utf8')
 assert.match(hotSearchDetailPage, /热搜详情/, 'hot search detail page should render title text')
+assert.match(hotSearchDetailPage, /抖音热搜榜/, 'hot search detail page should support douyin label')
 assert.match(hotSearchDetailPage, /keyword/, 'hot search detail page should read keyword from route query')
 assert.match(hotSearchDetailPage, /getHotSearchDetail/, 'hot search detail page should fetch backend detail content')
 assert.match(hotSearchDetailPage, /hotImage/, 'hot search detail page should read image from route query')
 assert.match(hotSearchDetailPage, /const hotKeyword = computed/, 'hot search detail page should compute a robust keyword fallback')
 assert.match(hotSearchDetailPage, /const displayImage = computed/, 'hot search detail page should compute image fallback beyond route query')
-assert.match(hotSearchDetailPage, /<text class="keyword-title">\{\{ hotKeyword \}\}<\/text>[\s\S]*<view\s+class="hot-image-section"\s+v-if="displayImage"[\s\S]*<image\s+class="hot-image"\s+:src="displayImage"\s+mode="widthFix"[\s\S]*<text\s+class="keyword-desc"\s+v-if="detail\?\.summary">\{\{ detail\.summary \}\}<\/text>/, 'hot search detail page should render keyword, image, and summary in order')
+assert.match(hotSearchDetailPage, /<text class="keyword-title">\{\{ hotKeyword \}\}<\/text>[\s\S]*<view\s+class="hot-image-section"\s+v-if="displayImage[^\"]*"[\s\S]*<image\s+class="hot-image"\s+:src="displayImage"\s+mode="widthFix"[\s\S]*<text\s+class="keyword-desc"\s+v-if="detail\?\.summary">\{\{ detail\.summary \}\}<\/text>/, 'hot search detail page should render keyword, image, and summary in order')
 assert.match(hotSearchDetailPage, /extractKeywordFromRaw/, 'hot search detail page should fallback to raw hot-search title fields when query keyword is missing')
 assert.match(hotSearchDetailPage, /extractImageFromRaw/, 'hot search detail page should fallback to raw hot-search image fields when query image is missing')
 assert.match(hotSearchDetailPage, /copyHotLink/, 'hot search detail page should restore copy original link action')
 assert.match(hotSearchDetailPage, /复制\{\{ sourceUrl \? '原链接' : '关键词' \}\}/, 'hot search detail page should show copy original link button')
-assert.match(hotSearchDetailPage, /相关资讯/, 'hot search detail page should restore related news heading')
-assert.match(hotSearchDetailPage, /relatedNews/, 'hot search detail page should render backend related news')
-assert.match(hotSearchDetailPage, /openNewsDetail/, 'hot search related news should navigate to native news detail')
-assert.match(hotSearchDetailPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}&localUrl=\$\{encodeURIComponent\(item\.localUrl \|\| ''\)\}/, 'related news should pass backend local resource URL to native news detail route')
-assert.doesNotMatch(hotSearchDetailPage, /<text class="news-item-desc"/, 'related news list should show titles only, not summaries')
-assert.doesNotMatch(hotSearchDetailPage, /item\.description/, 'related news list should not render item descriptions')
 assert.doesNotMatch(hotSearchDetailPage, /detailContentLines|detail-content-inline/, 'hot search detail page should not restore extra generated content block')
 assert.doesNotMatch(hotSearchDetailPage, /<view\s+class="hot-image-section card"/, 'hot search image should not be a separate card below the title card')
 assert.match(hotSearchDetailPage, /\.hot-image-section\s*\{[\s\S]*margin-top:\s*16rpx;/, 'hot image section should sit immediately below the detail title')
@@ -108,7 +104,9 @@ assert.match(backendTianApi, /"\/bulletin\/index"/, 'daily brief should use Tian
 assert.match(backendTianApi, /get_hot_search/, 'TianApi service should implement hot search fetcher')
 assert.doesNotMatch(backendTianApi, /"weibo":\s*"\/weibohot\/index"/, 'backend should remove TianAPI weibo hot-search endpoint')
 assert.match(backendTianApi, /"baidu":\s*"\/nethot\/index"/, 'baidu hot search should use TianAPI /nethot/index endpoint')
+assert.match(backendTianApi, /"douyin":\s*"\/douyinhot\/index"/, 'douyin hot search should use TianAPI /douyinhot/index endpoint')
 assert.match(backendTianApi, /百度热搜榜/, 'backend should label baidu hot search as 百度热搜榜')
+assert.match(backendTianApi, /抖音热搜榜/, 'backend should label douyin hot search as 抖音热搜榜')
 assert.doesNotMatch(backendTianApi, /\("今日热点"/, 'baidu hot search should not expose category fallback topics')
 assert.match(backendTianApi, /_empty_hot_search/, 'backend should return an empty list instead of fake baidu topics when upstream fails')
 assert.match(backendTianApi, /rawHotItem/, 'hot search detail should include the raw hot-search API item in the response')

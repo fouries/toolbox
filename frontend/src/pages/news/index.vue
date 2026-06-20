@@ -23,7 +23,18 @@
 
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
-import type { ToolItem } from '@/types'
+
+interface ToolItem {
+  id: string
+  name: string
+  desc: string
+  icon: string
+  color: string
+  category: string
+  path: string
+  implemented: boolean
+  status?: string
+}
 
 const { themeClass } = useTheme()
 
@@ -32,6 +43,7 @@ const tools: ToolItem[] = [
   { id: 'esports-news', name: '电竞资讯', desc: '电竞赛事与游戏产业消息', icon: '🎮', color: '#7c3aed', category: 'news', path: '/pages/info-news/index?category=esports', implemented: true },
   { id: 'auto-news', name: '汽车新闻', desc: '新车上市、行业政策和用车资讯', icon: '🚗', color: '#0f766e', category: 'news', path: '/pages/info-news/index?category=auto', implemented: true },
   { id: 'baidu-hot', name: '百度热搜榜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'news', path: '/pages/hot-search/index?platform=baidu', implemented: true },
+  { id: 'douyin-hot', name: '抖音热搜榜', desc: '天聚数行 API 抖音热门搜索排行', icon: '🎵', color: '#111827', category: 'news', path: '/pages/hot-search/index?platform=douyin', implemented: true },
 ]
 
 const newsTools = tools.filter(tool => tool.implemented)

@@ -9,7 +9,7 @@
       <view class="toolbar-card card">
         <view>
           <text class="toolbar-label">{{ updateTimeText }}</text>
-          <text class="toolbar-desc">百度实时热点，列表仅显示标题</text>
+          <text class="toolbar-desc">{{ currentConfig.sourceText }}，列表仅显示标题</text>
         </view>
         <button class="refresh-btn" @tap="fetchHotSearch" :disabled="loading">{{ loading ? '刷新中...' : '刷新热搜' }}</button>
       </view>
@@ -64,7 +64,7 @@
 
       <view class="note-card card">
         <text class="note-title">说明</text>
-        <text class="note-text">百度热搜列表共展示 21 条，第一条置顶，后续从 1 到 20 编号；点击标题进入详情页，只展示关键词、图片和摘要。</text>
+        <text class="note-text">{{ currentConfig.title }}列表共展示 21 条，第一条置顶，后续从 1 到 20 编号；点击标题进入详情页，展示关键词、热度和摘要。</text>
       </view>
     </view>
   </view>
@@ -78,7 +78,15 @@ import { getHotSearch, type HotSearchItem } from '@/api'
 
 const { themeClass } = useTheme()
 
-const currentConfig = { id: 'baidu', title: '百度热搜榜', icon: '🔎', desc: '查看百度搜索热点排行' }
+const hotConfigs = {
+  baidu: { id: 'baidu', title: '百度热搜榜', icon: '🔎', desc: '查看百度搜索热点排行', sourceText: '百度实时热点' },
+  douyin: { id: 'douyin', title: '抖音热搜榜', icon: '🎵', desc: '使用天聚数行 API 查看抖音热门搜索排行', sourceText: '天聚数行抖音实时热点' }
+} as const
+
+type HotPlatform = keyof typeof hotConfigs
+
+const activePlatform = ref<HotPlatform>('baidu')
+const currentConfig = computed(() => hotConfigs[activePlatform.value])
 const loading = ref(false)
 const error = ref('')
 const hotItems = ref<HotSearchItem[]>([])
@@ -91,20 +99,20 @@ const fetchHotSearch = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res: any = await getHotSearch('baidu')
+    const res: any = await getHotSearch(activePlatform.value)
     const data = res.data || res.newslist
     if (res.code === 200 && data && Array.isArray(data.items)) {
       hotItems.value = data.items
       // 缓存热搜列表给详情页上下篇导航用
       try {
-        uni.setStorageSync('hot_search_current_list', hotItems.value.slice(0, 21))
+        uni.setStorageSync(`hot_search_current_list_${activePlatform.value}`, hotItems.value.slice(0, 21))
       } catch (e) {
         console.warn('Cache hot search list failed', e)
       }
       updateTime.value = data.updateTime || ''
-      if (!hotItems.value.length) error.value = '暂无百度热搜数据'
+      if (!hotItems.value.length) error.value = `暂无${currentConfig.value.title}数据`
     } else {
-      error.value = res.msg || '百度热搜榜加载失败'
+      error.value = res.msg || `${currentConfig.value.title}加载失败`
     }
   } catch (err: any) {
     error.value = err.message || '网络错误'
@@ -116,8 +124,8 @@ const fetchHotSearch = async () => {
 const openHotDetail = (item: HotSearchItem, index: number) => {
   if (!item.title) return
   const params = [
-    `platform=${encodeURIComponent('baidu')}`,
-    `title=${encodeURIComponent(currentConfig.title)}`,
+    `platform=${encodeURIComponent(activePlatform.value)}`,
+    `title=${encodeURIComponent(currentConfig.value.title)}`,
     `keyword=${encodeURIComponent(item.title)}`,
     `hot=${encodeURIComponent(item.hot || '')}`,
     `description=${encodeURIComponent(item.description || '')}`,
@@ -129,7 +137,9 @@ const openHotDetail = (item: HotSearchItem, index: number) => {
   uni.navigateTo({ url: `/pages/hot-search-detail/index?${params}` })
 }
 
-onLoad(() => {
+onLoad((options: any) => {
+  const platform = String(options?.platform || 'baidu')
+  activePlatform.value = platform === 'douyin' ? 'douyin' : 'baidu'
   fetchHotSearch()
 })
 </script>

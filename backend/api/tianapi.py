@@ -79,7 +79,12 @@ class TianApiService:
 
     @staticmethod
     def _hot_search_title(platform: str) -> str:
-        return "微博热搜榜" if platform == "weibo" else "百度热搜榜"
+        title_map = {
+            "baidu": "百度热搜榜",
+            "douyin": "抖音热搜榜",
+            "weibo": "微博热搜榜",
+        }
+        return title_map.get(platform, "百度热搜榜")
 
     @staticmethod
     def _empty_hot_search(platform: str) -> Dict[str, Any]:
@@ -163,7 +168,7 @@ class TianApiService:
     @staticmethod
     def _normalize_hot_item(item: Dict[str, Any], rank: int, platform: str) -> Dict[str, Any]:
         title = str(item.get("hotword") or item.get("word") or item.get("note") or item.get("title") or item.get("keyword") or "")
-        hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("index") or item.get("num") or item.get("hot") or "")
+        hot = str(item.get("hotwordnum") or item.get("hotScore") or item.get("hotindex") or item.get("index") or item.get("num") or item.get("hot") or "")
         description = TianApiService._clean_hot_description(str(item.get("desc") or item.get("brief") or item.get("description") or ""))
         url = str(item.get("url") or item.get("mobilUrl") or "")
         image = TianApiService._proxied_baidu_image_url(str(item.get("img") or item.get("image") or item.get("pic") or item.get("picUrl") or item.get("avatar") or item.get("cover") or ""))
@@ -172,6 +177,8 @@ class TianApiService:
             url = f"https://s.weibo.com/weibo?q={quote(word)}&t=31&band_rank=12&Refer=top"
         if not url and platform == "baidu" and title:
             url = f"https://m.baidu.com/s?word={quote(title)}&sa=fyb_news"
+        if not url and platform == "douyin" and title:
+            url = f"https://www.douyin.com/search/{quote(title)}"
         return {
             "rank": rank,
             "title": title,
@@ -1022,7 +1029,7 @@ class TianApiService:
     @staticmethod
     def _build_hot_raw_section(platform_name: str, keyword: str, hot: str, desc_text: str, raw_item: Dict[str, Any]) -> Dict[str, str]:
         title = str(raw_item.get("word") or raw_item.get("hotword") or raw_item.get("title") or raw_item.get("keyword") or keyword)
-        heat = str(raw_item.get("hotScore") or raw_item.get("hotwordnum") or raw_item.get("num") or raw_item.get("hot") or hot or "--")
+        heat = str(raw_item.get("hotScore") or raw_item.get("hotwordnum") or raw_item.get("hotindex") or raw_item.get("num") or raw_item.get("hot") or hot or "--")
         raw_desc = TianApiService._clean_hot_description(str(raw_item.get("desc") or raw_item.get("description") or ""))
         desc = TianApiService._prefer_complete_hot_description(raw_desc, desc_text)
         parts = [f"平台：{platform_name}", f"关键词：{title}"]
@@ -1075,7 +1082,7 @@ class TianApiService:
         videos: Optional[List[Dict[str, str]]] = None,
         images: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        platform = platform if platform in {"weibo", "baidu"} else "baidu"
+        platform = platform if platform in {"weibo", "baidu", "douyin"} else "baidu"
         platform_name = TianApiService._hot_search_title(platform)
         related_news = related_news or []
         title = f"{keyword} - 热搜详情" if keyword else "热搜详情"
@@ -1186,18 +1193,35 @@ class TianApiService:
         url: str = "",
         raw: str = "",
     ) -> Dict[str, Any]:
-        """百度热搜详情：生成关键词、图片和摘要所需的结构化内容。"""
+        """热搜详情：生成关键词、图片和摘要所需的结构化内容。"""
         keyword = str(keyword or "").strip()
-        platform = "baidu"
+        requested_platform = str(platform or "baidu").strip().lower()
+        platform = "douyin" if requested_platform == "douyin" else "baidu"
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media="video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty")
+        media_version = "douyin_basic_v1" if platform == "douyin" else "video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty"
+        cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media=media_version)
         cached = await cache.get(cache_key)
         if cached:
             return cached
         
         raw_item_for_desc = TianApiService._parse_hot_raw(raw)
+        if platform == "douyin":
+            data = TianApiService._build_hot_search_detail(
+                platform=platform,
+                keyword=keyword,
+                hot=str(hot or raw_item_for_desc.get("hotindex") or ""),
+                description=str(description or raw_item_for_desc.get("desc") or raw_item_for_desc.get("description") or ""),
+                url=str(url or ""),
+                related_news=[],
+                raw_item=raw_item_for_desc,
+                videos=[],
+                images=[],
+            )
+            result = {"code": 200, "msg": "success", "data": data}
+            await cache.set(cache_key, result, ttl=3600)
+            return result
         raw_desc_for_check = str(raw_item_for_desc.get("brief") or raw_item_for_desc.get("desc") or raw_item_for_desc.get("description") or raw or "")
         is_baidu_source = str(url or "").startswith(("https://www.baidu.com/", "https://m.baidu.com/"))
         original_desc_incomplete = TianApiService._is_incomplete_hot_description(description) or (
@@ -1307,9 +1331,10 @@ class TianApiService:
         url: str = "",
         raw: str = "",
     ) -> Dict[str, Any]:
-        """百度热搜轻详情：只使用列表随带字段，避免阻塞首屏。"""
+        """热搜轻详情：只使用列表随带字段，避免阻塞首屏。"""
         keyword = str(keyword or "").strip()
-        platform = "baidu"
+        requested_platform = str(platform or "baidu").strip().lower()
+        platform = "douyin" if requested_platform == "douyin" else "baidu"
 
         cache_key = make_cache_key("hot_search_detail_basic", platform=platform, keyword=keyword, desc=description, media="basic_v2_no_image")
         cached = await cache.get(cache_key)
@@ -1497,9 +1522,10 @@ class TianApiService:
 
     @staticmethod
     async def get_hot_search(platform: str = "baidu") -> Dict[str, Any]:
-        """百度热搜榜。"""
+        """热搜榜。"""
         endpoint_map = {
             "baidu": "/nethot/index",
+            "douyin": "/douyinhot/index",
         }
         platform = platform if platform in endpoint_map else "baidu"
         if not settings.TIANAPI_KEY:

@@ -120,28 +120,28 @@ async def daily_brief():
     result = await TianApiService.get_daily_brief()
     return result
 
-@app.get("/api/hot-search", summary="百度热搜榜", tags=["天行数据"])
+@app.get("/api/hot-search", summary="热搜榜", tags=["天行数据"])
 async def hot_search(platform: str = "baidu"):
-    """查询百度热搜榜。微博热搜入口已下线，传入其他 platform 时自动返回百度热搜。"""
+    """查询百度热搜榜/抖音热搜榜。微博热搜入口已下线，传入其他 platform 时自动返回百度热搜。"""
     result = await TianApiService.get_hot_search(platform)
     return result
 
-@app.get("/api/hot-search/detail", summary="百度热搜详情", tags=["天行数据"])
+@app.get("/api/hot-search/detail", summary="热搜详情", tags=["天行数据"])
 async def hot_search_detail(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
-    """生成百度热搜完整详情：摘要、视频、图片和相关资讯。"""
-    result = await TianApiService.get_hot_search_detail("baidu", keyword, hot, description, url, raw)
+    """生成热搜完整详情：百度包含摘要/视频/图片，抖音使用榜单字段生成摘要。"""
+    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url, raw)
     return result
 
-@app.get("/api/hot-search/detail-basic", summary="百度热搜轻详情", tags=["天行数据"])
+@app.get("/api/hot-search/detail-basic", summary="热搜轻详情", tags=["天行数据"])
 async def hot_search_detail_basic(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
-    """生成百度热搜轻详情：只返回首屏所需字段，视频/图片/相关资讯由完整详情异步补齐。"""
-    result = await TianApiService.get_hot_search_detail_basic("baidu", keyword, hot, description, url, raw)
+    """生成热搜轻详情：只返回首屏所需字段，视频/图片/相关资讯由完整详情异步补齐。"""
+    result = await TianApiService.get_hot_search_detail_basic(platform, keyword, hot, description, url, raw)
     return result
 
-@app.get("/api/hot-search/detail-media", summary="百度热搜富媒体详情", tags=["天行数据"])
+@app.get("/api/hot-search/detail-media", summary="热搜富媒体详情", tags=["天行数据"])
 async def hot_search_detail_media(platform: str = "baidu", keyword: str = "", hot: str = "", description: str = "", url: str = "", raw: str = ""):
-    """生成百度热搜富媒体详情。当前复用完整详情缓存，供前端异步补齐。"""
-    result = await TianApiService.get_hot_search_detail("baidu", keyword, hot, description, url, raw)
+    """生成热搜富媒体详情。当前复用完整详情缓存，供前端异步补齐。"""
+    result = await TianApiService.get_hot_search_detail(platform, keyword, hot, description, url, raw)
     return result
 
 @app.get("/api/image-proxy", summary="图片代理", tags=["本地工具"])

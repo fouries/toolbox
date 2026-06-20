@@ -2,8 +2,8 @@
   <view :class="['container', themeClass]">
     <view class="page-shell detail-shell">
       <view class="page-header detail-header">
-        <text class="title">🔎 热搜详情</text>
-        <text class="subtitle">百度热搜榜</text>
+        <text class="title">{{ detailConfig.icon }} 热搜详情</text>
+        <text class="subtitle">{{ detailConfig.title }}</text>
       </view>
 
       <view class="loading detail-loading-card card" v-if="loading">
@@ -94,6 +94,15 @@ declare function getCurrentPages(): any[];
 
 const { themeClass } = useTheme()
 
+const hotConfigs = {
+  baidu: { title: '百度热搜榜', icon: '🔎' },
+  douyin: { title: '抖音热搜榜', icon: '🎵' }
+} as const
+
+type HotPlatform = keyof typeof hotConfigs
+
+const platform = ref<HotPlatform>('baidu')
+const detailConfig = computed(() => hotConfigs[platform.value])
 const keyword = ref('')
 const hot = ref('')
 const description = ref('')
@@ -165,7 +174,7 @@ const previewHotImage = (currentUrl: string) => {
 }
 
 const detailParams = () => ({
-  platform: 'baidu',
+  platform: platform.value,
   keyword: keyword.value,
   hot: hot.value,
   description: description.value,
@@ -203,7 +212,7 @@ const navigateToHot = (item: HotSearchItem) => {
   }
   // 直接跳转，索引已经正确，不用获取列表
   uni.redirectTo({
-    url: `/pages/hot-search-detail/index?platform=baidu&title=百度热搜&keyword=${encodeURIComponent(item.title)}&hot=${encodeURIComponent(item.hot || '')}&description=${encodeURIComponent(item.description || '')}&url=${encodeURIComponent(item.url || '')}&image=${encodeURIComponent(item.image || '')}&index=${hotList.value.findIndex(n => n === item)}&raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
+    url: `/pages/hot-search-detail/index?platform=${encodeURIComponent(platform.value)}&title=${encodeURIComponent(detailConfig.value.title)}&keyword=${encodeURIComponent(item.title)}&hot=${encodeURIComponent(item.hot || '')}&description=${encodeURIComponent(item.description || '')}&url=${encodeURIComponent(item.url || '')}&image=${encodeURIComponent(item.image || '')}&index=${hotList.value.findIndex(n => n === item)}&raw=${encodeURIComponent(JSON.stringify(item.raw || item))}`
   })
 }
 
@@ -268,6 +277,8 @@ const loadDetail = async () => {
 }
 
 onLoad((options: any) => {
+  const routePlatform = decodeValue(options?.platform)
+  platform.value = routePlatform === 'douyin' ? 'douyin' : 'baidu'
   keyword.value = decodeValue(options?.keyword || options?.title)
   hot.value = decodeValue(options?.hot)
   description.value = decodeValue(options?.description)
@@ -302,7 +313,7 @@ onLoad((options: any) => {
   // 2. 如果从页面栈获取不到，尝试从uni.getStorageSync获取
   if (!gotList) {
     try {
-      const cached = uni.getStorageSync('hot_search_current_list')
+      const cached = uni.getStorageSync(`hot_search_current_list_${platform.value}`) || uni.getStorageSync('hot_search_current_list')
       if (Array.isArray(cached) && cached.length > 0) {
         hotList.value = cached
         gotList = true

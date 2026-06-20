@@ -187,6 +187,42 @@ def test_hot_search_endpoint_uses_baidu_nethot_and_normalizes_items():
     assert baidu['data']['items'][0]['raw']['index'] == '9999'
 
 
+def test_hot_search_endpoint_uses_douyin_hot_and_normalizes_items():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('/douyinhot/index', None): {"code": 200, "msg": "success", "result": {"list": [{"word": "抖音话题", "hotindex": 9023742, "label": 3}]}},
+    }
+
+    result = run(TianApiService.get_hot_search('douyin'))
+
+    assert [call[0].replace('https://apis.tianapi.com', '') for call in DummyHttpClient.calls] == ['/douyinhot/index']
+    assert result['code'] == 200
+    assert result['data']['platform'] == 'douyin'
+    assert result['data']['title'] == '抖音热搜榜'
+    assert result['data']['items'][0]['title'] == '抖音话题'
+    assert result['data']['items'][0]['hot'] == '9023742'
+    assert result['data']['items'][0]['url'] == 'https://www.douyin.com/search/%E6%8A%96%E9%9F%B3%E8%AF%9D%E9%A2%98'
+    assert result['data']['items'][0]['raw']['label'] == 3
+
+
+def test_douyin_hot_search_detail_keeps_douyin_platform_and_skips_baidu_fetches():
+    DummyHttpClient.calls = []
+    raw = {"word": "抖音话题", "hotindex": 9023742, "label": 3}
+
+    result = run(TianApiService.get_hot_search_detail_basic(
+        platform='douyin',
+        keyword='抖音话题',
+        hot='9023742',
+        raw=json.dumps(raw, ensure_ascii=False),
+    ))
+
+    assert DummyHttpClient.calls == []
+    assert result['code'] == 200
+    assert result['data']['platform'] == 'douyin'
+    assert result['data']['sections'][0]['title'] == '抖音热搜榜返回信息'
+    assert '热度：9023742' in result['data']['sections'][0]['body']
+
+
 def test_hot_search_detail_basic_uses_only_payload_fields_for_fast_first_paint():
     DummyHttpClient.calls = []
     raw = {
