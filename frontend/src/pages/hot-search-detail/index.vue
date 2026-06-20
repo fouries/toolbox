@@ -43,6 +43,9 @@
                 controls
                 object-fit="contain"
                 @error="onVideoError"
+                @fullscreenchange="onVideoFullscreenChange(index, $event)"
+                @touchstart="onVideoTouchStart(index, $event)"
+                @touchend="onVideoTouchEnd(index, $event)"
               ></video>
               <view class="video-meta" v-if="platform === 'douyin' || video.title || video.author || videoStats(video) || video.sourceUrl">
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
@@ -144,6 +147,7 @@ const touchStartY = ref(0)
 const touchStartX = ref(0)
 const touchStartTime = ref(0)
 const swipeNavigating = ref(false)
+const fullscreenVideoIndex = ref(-1)
 
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
@@ -224,12 +228,34 @@ const requestVideoFullscreen = (index: number) => {
     uni.showToast({ title: '当前环境不支持全屏播放', icon: 'none' })
     return
   }
+  fullscreenVideoIndex.value = index
   context.requestFullScreen({
     direction: 0,
     fail: () => {
+      if (fullscreenVideoIndex.value === index) {
+        fullscreenVideoIndex.value = -1
+      }
       uni.showToast({ title: '请先点击视频播放后再全屏', icon: 'none' })
     }
   })
+}
+
+const onVideoFullscreenChange = (index: number, event: any) => {
+  const isFullscreen = Boolean(event?.detail?.fullScreen || event?.detail?.fullscreen)
+  fullscreenVideoIndex.value = isFullscreen ? index : -1
+  if (!isFullscreen) {
+    touchStartTime.value = 0
+  }
+}
+
+const exitFullscreenVideo = () => {
+  const index = fullscreenVideoIndex.value
+  if (index < 0) return
+  const context = uni.createVideoContext(`douyin-hot-video-${index}`) as any
+  if (context?.exitFullScreen) {
+    context.exitFullScreen()
+  }
+  fullscreenVideoIndex.value = -1
 }
 
 const openVideoSource = (url?: string) => {
@@ -293,6 +319,10 @@ const goNext = () => {
 
 const firstTouch = (event: any) => event?.changedTouches?.[0] || event?.touches?.[0]
 
+const resetSwipeTouch = () => {
+  touchStartTime.value = 0
+}
+
 const onTouchStart = (event: any) => {
   if (platform.value !== 'douyin') return
   const touch = firstTouch(event)
@@ -310,7 +340,7 @@ const onTouchEnd = (event: any) => {
   const deltaY = Number(touch.clientY || 0) - touchStartY.value
   const deltaX = Number(touch.clientX || 0) - touchStartX.value
   const duration = Date.now() - touchStartTime.value
-  touchStartTime.value = 0
+  resetSwipeTouch()
   if (duration > 900 || Math.abs(deltaY) < 90 || Math.abs(deltaY) < Math.abs(deltaX) * 1.4) return
   const target = deltaY < 0 ? nextHot.value : prevHot.value
   if (!target) {
@@ -318,7 +348,18 @@ const onTouchEnd = (event: any) => {
     return
   }
   swipeNavigating.value = true
+  exitFullscreenVideo()
   navigateToHot(target)
+}
+
+const onVideoTouchStart = (index: number, event: any) => {
+  if (fullscreenVideoIndex.value !== index) return
+  onTouchStart(event)
+}
+
+const onVideoTouchEnd = (index: number, event: any) => {
+  if (fullscreenVideoIndex.value !== index) return
+  onTouchEnd(event)
 }
 
 const loadMediaDetail = async () => {
