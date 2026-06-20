@@ -43,9 +43,6 @@
                 controls
                 object-fit="contain"
                 @error="onVideoError"
-                @fullscreenchange="onVideoFullscreenChange(index, $event)"
-                @touchstart="onVideoTouchStart(index, $event)"
-                @touchend="onVideoTouchEnd(index, $event)"
               ></video>
               <view class="video-meta" v-if="platform === 'douyin' || video.title || video.author || videoStats(video) || video.sourceUrl">
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
@@ -53,7 +50,7 @@
                 <text class="video-stats" v-if="videoStats(video)">{{ videoStats(video) }}</text>
                 <text class="video-proxy-note">{{ videoProxyNote }}</text>
                 <view class="video-action-row">
-                  <button class="video-fullscreen-btn" v-if="platform === 'douyin'" @tap.stop="requestVideoFullscreen(index)">全屏播放</button>
+                  <button class="video-fullscreen-btn" v-if="platform === 'douyin'" @tap.stop="openImmersiveVideo(index)">全屏播放</button>
                   <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">{{ videoSourceButtonText }}</button>
                 </view>
               </view>
@@ -97,6 +94,42 @@
         </view>
       </view>
     </view>
+
+    <view
+      class="immersive-video-layer"
+      v-if="immersiveVideoVisible && immersiveVideo"
+      @touchstart.stop="onImmersiveTouchStart"
+      @touchend.stop="onImmersiveTouchEnd"
+    >
+      <video
+        :id="`douyin-immersive-video-${immersiveVideoIndex}`"
+        class="immersive-video"
+        :src="immersiveVideo.url"
+        :poster="immersiveVideo.poster || ''"
+        :title="immersiveVideo.title || hotKeyword"
+        controls
+        autoplay
+        object-fit="contain"
+        @error="onVideoError"
+        @touchstart="onImmersiveTouchStart"
+        @touchend="onImmersiveTouchEnd"
+      >
+        <cover-view class="immersive-video-top">
+          <cover-view class="immersive-close" @tap.stop="closeImmersiveVideo">关闭</cover-view>
+          <cover-view class="immersive-title">{{ hotKeyword }}</cover-view>
+        </cover-view>
+        <cover-view class="immersive-video-bottom">
+          <cover-view class="immersive-hint">上滑下一条 · 下滑上一条</cover-view>
+        </cover-view>
+      </video>
+      <view class="immersive-overlay-top">
+        <button class="immersive-close-btn" @tap.stop="closeImmersiveVideo">关闭</button>
+        <text class="immersive-overlay-title">{{ hotKeyword }}</text>
+      </view>
+      <view class="immersive-overlay-bottom">
+        <text class="immersive-overlay-hint">上滑下一条 · 下滑上一条</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -104,7 +137,7 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
-import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem } from '@/api'
+import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem, type HotSearchVideo } from '@/api'
 
 // getCurrentPages 是全局可用的
 declare function getCurrentPages(): any[];
@@ -147,7 +180,12 @@ const touchStartY = ref(0)
 const touchStartX = ref(0)
 const touchStartTime = ref(0)
 const swipeNavigating = ref(false)
-const fullscreenVideoIndex = ref(-1)
+const immersiveVideoVisible = ref(false)
+const immersiveVideoIndex = ref(-1)
+const immersiveVideo = computed<HotSearchVideo | null>(() => {
+  const index = immersiveVideoIndex.value
+  return index >= 0 ? hotVideos.value[index] || null : null
+})
 
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
@@ -220,42 +258,38 @@ const onVideoError = () => {
   uni.showToast({ title: platform.value === 'douyin' ? '视频暂时无法播放，可复制原链接去抖音查看' : '视频暂时无法播放，可点击原链接查看', icon: 'none' })
 }
 
-const requestVideoFullscreen = (index: number) => {
+const pauseInlineVideo = (index: number) => {
+  const context = uni.createVideoContext(`douyin-hot-video-${index}`) as any
+  if (context?.pause) {
+    context.pause()
+  }
+}
+
+const openImmersiveVideo = (index: number) => {
   if (platform.value !== 'douyin') return
-  const videoId = `douyin-hot-video-${index}`
-  const context = uni.createVideoContext(videoId) as any
-  if (!context?.requestFullScreen) {
-    uni.showToast({ title: '当前环境不支持全屏播放', icon: 'none' })
+  if (!hotVideos.value[index]?.url) {
+    uni.showToast({ title: '视频暂时不可播放', icon: 'none' })
     return
   }
-  fullscreenVideoIndex.value = index
-  context.requestFullScreen({
-    direction: 0,
-    fail: () => {
-      if (fullscreenVideoIndex.value === index) {
-        fullscreenVideoIndex.value = -1
-      }
-      uni.showToast({ title: '请先点击视频播放后再全屏', icon: 'none' })
+  pauseInlineVideo(index)
+  resetSwipeTouch()
+  swipeNavigating.value = false
+  immersiveVideoIndex.value = index
+  immersiveVideoVisible.value = true
+}
+
+const closeImmersiveVideo = () => {
+  if (!immersiveVideoVisible.value) return
+  const index = immersiveVideoIndex.value
+  if (index >= 0) {
+    const context = uni.createVideoContext(`douyin-immersive-video-${index}`) as any
+    if (context?.pause) {
+      context.pause()
     }
-  })
-}
-
-const onVideoFullscreenChange = (index: number, event: any) => {
-  const isFullscreen = Boolean(event?.detail?.fullScreen || event?.detail?.fullscreen)
-  fullscreenVideoIndex.value = isFullscreen ? index : -1
-  if (!isFullscreen) {
-    touchStartTime.value = 0
   }
-}
-
-const exitFullscreenVideo = () => {
-  const index = fullscreenVideoIndex.value
-  if (index < 0) return
-  const context = uni.createVideoContext(`douyin-hot-video-${index}`) as any
-  if (context?.exitFullScreen) {
-    context.exitFullScreen()
-  }
-  fullscreenVideoIndex.value = -1
+  immersiveVideoVisible.value = false
+  immersiveVideoIndex.value = -1
+  resetSwipeTouch()
 }
 
 const openVideoSource = (url?: string) => {
@@ -348,17 +382,17 @@ const onTouchEnd = (event: any) => {
     return
   }
   swipeNavigating.value = true
-  exitFullscreenVideo()
+  closeImmersiveVideo()
   navigateToHot(target)
 }
 
-const onVideoTouchStart = (index: number, event: any) => {
-  if (fullscreenVideoIndex.value !== index) return
+const onImmersiveTouchStart = (event: any) => {
+  if (!immersiveVideoVisible.value) return
   onTouchStart(event)
 }
 
-const onVideoTouchEnd = (index: number, event: any) => {
-  if (fullscreenVideoIndex.value !== index) return
+const onImmersiveTouchEnd = (event: any) => {
+  if (!immersiveVideoVisible.value) return
   onTouchEnd(event)
 }
 
@@ -645,6 +679,133 @@ onLoad((options: any) => {
 
 .video-fullscreen-btn {
   background: linear-gradient(135deg, #f97316, #ef4444);
+}
+
+.immersive-video-layer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.immersive-video {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+
+.immersive-overlay-top,
+.immersive-overlay-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 10001;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.immersive-overlay-top {
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: calc(28rpx + env(safe-area-inset-top)) 28rpx 18rpx;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent);
+}
+
+.immersive-overlay-bottom {
+  bottom: 0;
+  padding: 24rpx 28rpx calc(30rpx + env(safe-area-inset-bottom));
+  text-align: center;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent);
+}
+
+.immersive-close-btn {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 22rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  border-radius: 999rpx;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1rpx solid rgba(255, 255, 255, 0.36);
+  font-size: 24rpx;
+  font-weight: 800;
+  pointer-events: auto;
+}
+
+.immersive-overlay-title,
+.immersive-overlay-hint {
+  display: block;
+  color: #fff;
+  text-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.5);
+}
+
+.immersive-overlay-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 28rpx;
+  font-weight: 850;
+}
+
+.immersive-overlay-hint {
+  font-size: 25rpx;
+  font-weight: 760;
+}
+
+.immersive-video-top,
+.immersive-video-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10002;
+  box-sizing: border-box;
+}
+
+.immersive-video-top {
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 48rpx 28rpx 22rpx;
+}
+
+.immersive-video-bottom {
+  bottom: 0;
+  padding: 24rpx 28rpx 42rpx;
+  text-align: center;
+}
+
+.immersive-close {
+  padding: 12rpx 24rpx;
+  border-radius: 999rpx;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.immersive-title {
+  flex: 1;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 850;
+}
+
+.immersive-hint {
+  color: #fff;
+  font-size: 25rpx;
+  font-weight: 760;
 }
 
 .media-loading,
