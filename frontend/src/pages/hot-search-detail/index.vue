@@ -35,6 +35,7 @@
             <text class="video-title">相关视频</text>
             <view class="video-item" v-for="(video, index) in hotVideos" :key="`${index}-${video.url}`">
               <video
+                :id="`douyin-hot-video-${index}`"
                 class="hot-video"
                 :src="video.url"
                 :poster="video.poster || ''"
@@ -43,12 +44,15 @@
                 object-fit="contain"
                 @error="onVideoError"
               ></video>
-              <view class="video-meta" v-if="video.title || video.author || videoStats(video) || video.sourceUrl">
+              <view class="video-meta" v-if="platform === 'douyin' || video.title || video.author || videoStats(video) || video.sourceUrl">
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
                 <text class="video-author" v-if="video.author">@{{ video.author }}</text>
                 <text class="video-stats" v-if="videoStats(video)">{{ videoStats(video) }}</text>
                 <text class="video-proxy-note">{{ videoProxyNote }}</text>
-                <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">{{ videoSourceButtonText }}</button>
+                <view class="video-action-row">
+                  <button class="video-fullscreen-btn" v-if="platform === 'douyin'" @tap.stop="requestVideoFullscreen(index)">全屏播放</button>
+                  <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">{{ videoSourceButtonText }}</button>
+                </view>
               </view>
             </view>
           </view>
@@ -210,6 +214,22 @@ const applyDetail = (data: HotSearchDetailData) => {
 
 const onVideoError = () => {
   uni.showToast({ title: platform.value === 'douyin' ? '视频暂时无法播放，可复制原链接去抖音查看' : '视频暂时无法播放，可点击原链接查看', icon: 'none' })
+}
+
+const requestVideoFullscreen = (index: number) => {
+  if (platform.value !== 'douyin') return
+  const videoId = `douyin-hot-video-${index}`
+  const context = uni.createVideoContext(videoId) as any
+  if (!context?.requestFullScreen) {
+    uni.showToast({ title: '当前环境不支持全屏播放', icon: 'none' })
+    return
+  }
+  context.requestFullScreen({
+    direction: 0,
+    fail: () => {
+      uni.showToast({ title: '请先点击视频播放后再全屏', icon: 'none' })
+    }
+  })
 }
 
 const openVideoSource = (url?: string) => {
@@ -561,9 +581,16 @@ onLoad((options: any) => {
   color: #78716c;
 }
 
-.video-source-btn {
+.video-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
   margin-top: 14rpx;
-  margin-left: 0;
+}
+
+.video-source-btn,
+.video-fullscreen-btn {
+  margin: 0;
   padding: 0 20rpx;
   width: fit-content;
   height: 58rpx;
@@ -573,6 +600,10 @@ onLoad((options: any) => {
   background: linear-gradient(135deg, #111827, #ef4444);
   font-size: 23rpx;
   font-weight: 700;
+}
+
+.video-fullscreen-btn {
+  background: linear-gradient(135deg, #f97316, #ef4444);
 }
 
 .media-loading,
