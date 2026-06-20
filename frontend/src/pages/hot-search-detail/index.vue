@@ -1,5 +1,5 @@
 <template>
-  <view :class="['container', themeClass]">
+  <view :class="['container', themeClass]" @touchstart="onTouchStart" @touchend="onTouchEnd">
     <view class="page-shell detail-shell">
       <view class="page-header detail-header">
         <text class="title">{{ detailConfig.icon }} 热搜详情</text>
@@ -26,6 +26,9 @@
 
       <view v-else>
         <view class="keyword-card card">
+          <view class="douyin-swipe-hint" v-if="platform === 'douyin' && hotList.length > 1">
+            <text>上滑下一条，下滑上一条</text>
+          </view>
           <text class="keyword-label">热搜关键词</text>
           <text class="keyword-title">{{ hotKeyword }}</text>
           <view class="video-section" v-if="hotVideos.length">
@@ -130,6 +133,10 @@ const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? h
 const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, platform.value === 'douyin' ? 3 : 1))
 const hasLoadedMedia = ref(false)
 const shouldShowFallbackImage = computed(() => hasLoadedMedia.value && !mediaLoading.value)
+const touchStartY = ref(0)
+const touchStartX = ref(0)
+const touchStartTime = ref(0)
+const swipeNavigating = ref(false)
 
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
@@ -259,6 +266,36 @@ const goNext = () => {
   if (nextHot.value) {
     navigateToHot(nextHot.value)
   }
+}
+
+const firstTouch = (event: any) => event?.changedTouches?.[0] || event?.touches?.[0]
+
+const onTouchStart = (event: any) => {
+  if (platform.value !== 'douyin') return
+  const touch = firstTouch(event)
+  if (!touch) return
+  touchStartY.value = Number(touch.clientY || 0)
+  touchStartX.value = Number(touch.clientX || 0)
+  touchStartTime.value = Date.now()
+  swipeNavigating.value = false
+}
+
+const onTouchEnd = (event: any) => {
+  if (platform.value !== 'douyin' || loading.value || swipeNavigating.value) return
+  const touch = firstTouch(event)
+  if (!touch || !touchStartTime.value) return
+  const deltaY = Number(touch.clientY || 0) - touchStartY.value
+  const deltaX = Number(touch.clientX || 0) - touchStartX.value
+  const duration = Date.now() - touchStartTime.value
+  touchStartTime.value = 0
+  if (duration > 900 || Math.abs(deltaY) < 90 || Math.abs(deltaY) < Math.abs(deltaX) * 1.4) return
+  const target = deltaY < 0 ? nextHot.value : prevHot.value
+  if (!target) {
+    uni.showToast({ title: deltaY < 0 ? '已经是最后一条' : '已经是第一条', icon: 'none' })
+    return
+  }
+  swipeNavigating.value = true
+  navigateToHot(target)
 }
 
 const loadMediaDetail = async () => {
@@ -426,6 +463,18 @@ onLoad((options: any) => {
 .keyword-label {
   color: #c2410c;
   font-size: 24rpx;
+  font-weight: 700;
+}
+
+.douyin-swipe-hint {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 18rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  color: #9a3412;
+  background: #ffedd5;
+  font-size: 22rpx;
   font-weight: 700;
 }
 

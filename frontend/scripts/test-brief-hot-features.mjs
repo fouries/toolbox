@@ -114,5 +114,8 @@ assert.match(backendTianApi, /DOUYIN_HOT_VIDEO_API/, 'douyin hot detail should f
 assert.match(backendTianApi, /hot\/search\/video\/list/, 'douyin hot detail should use the hot-search video list endpoint')
 assert.match(hotSearchDetailPage, /platform\.value === 'douyin' \? 3 : 1/, 'douyin detail should allow multiple related short videos')
 assert.match(hotSearchDetailPage, /去抖音查看原视频/, 'douyin videos should expose original video link action')
+assert.match(hotSearchDetailPage, /@touchstart="onTouchStart"\s+@touchend="onTouchEnd"/, 'douyin detail should listen for vertical swipe gestures')
+assert.match(hotSearchDetailPage, /上滑下一条，下滑上一条/, 'douyin detail should show swipe navigation hint')
+assert.match(hotSearchDetailPage, /deltaY < 0 \? nextHot\.value : prevHot\.value/, 'vertical swipe should map up to next hot item and down to previous hot item')
 
 console.log('daily brief and hot search features are valid')
