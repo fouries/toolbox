@@ -107,6 +107,12 @@ export interface HotSearchVideo {
   originalUrl?: string
   poster?: string
   title?: string
+  sourceUrl?: string
+  author?: string
+  awemeId?: string
+  likeCount?: string
+  commentCount?: string
+  shareCount?: string
 }
 
 export interface HotSearchDetailData {

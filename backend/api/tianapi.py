@@ -14,6 +14,7 @@ settings = get_settings()
 
 TIANAPI_BASE = "https://apis.tianapi.com"
 BAIDU_TOP_API = "https://top.baidu.com/api/board"
+DOUYIN_HOT_VIDEO_API = "https://aweme-lq.snssdk.com/aweme/v1/hot/search/video/list/"
 
 class TianApiService:
     """天行数据API聚合服务"""
@@ -661,10 +662,121 @@ class TianApiService:
 
 
     @staticmethod
-    def _proxy_baidu_video_url(video_url: str) -> str:
+    def _proxy_hot_video_url(video_url: str) -> str:
         if not video_url:
             return ""
         return f"https://quan1234.com/api/video-proxy?url={quote(video_url, safe='')}"
+
+    @staticmethod
+    def _proxy_baidu_video_url(video_url: str) -> str:
+        return TianApiService._proxy_hot_video_url(video_url)
+
+    @staticmethod
+    def _normalize_douyin_media_url(value: Any, require_video: bool = False) -> str:
+        if isinstance(value, dict):
+            url_list = value.get("url_list") or value.get("urlList") or []
+            if isinstance(url_list, list):
+                for item in url_list:
+                    url = TianApiService._normalize_douyin_media_url(item, require_video=require_video)
+                    if url:
+                        return url
+            value = value.get("url") or value.get("uri") or ""
+        url = html.unescape(str(value or "")).replace("\\/", "/").strip()
+        if not url:
+            return ""
+        try:
+            url = unquote(url)
+        except Exception:
+            pass
+        if url.startswith("//"):
+            url = f"https:{url}"
+        if not re.match(r"^https?://", url, flags=re.IGNORECASE):
+            return ""
+        parsed = urlparse(url)
+        allowed_suffixes = ("douyinvod.com", "douyinpic.com", "byteimg.com", "snssdk.com", "amemv.com", "iesdouyin.com", "douyin.com")
+        if not any(parsed.netloc == suffix or parsed.netloc.endswith(f".{suffix}") for suffix in allowed_suffixes):
+            return ""
+        if require_video and not re.search(r"(?:mime_type=video_|\.(?:mp4|m3u8)(?:\?|$))", url, flags=re.IGNORECASE):
+            return ""
+        return url
+
+    @staticmethod
+    def _normalize_douyin_hot_video_item(item: Dict[str, Any]) -> Dict[str, str]:
+        raw_video = item.get("video")
+        raw_author = item.get("author")
+        raw_statistics = item.get("statistics")
+        video: Dict[str, Any] = raw_video if isinstance(raw_video, dict) else {}
+        author: Dict[str, Any] = raw_author if isinstance(raw_author, dict) else {}
+        statistics: Dict[str, Any] = raw_statistics if isinstance(raw_statistics, dict) else {}
+        video_url = ""
+        for key in ("play_addr", "play_addr_lowbr", "download_addr"):
+            video_url = TianApiService._normalize_douyin_media_url(video.get(key), require_video=True)
+            if video_url:
+                break
+        poster = ""
+        for key in ("cover", "origin_cover", "dynamic_cover"):
+            poster = TianApiService._normalize_douyin_media_url(video.get(key), require_video=False)
+            if poster:
+                break
+        title = TianApiService._strip_html_tags(str(item.get("desc") or "")).strip()
+        aweme_id = str(item.get("aweme_id") or "").strip()
+        share_url = str(item.get("share_url") or "").strip()
+        if not share_url and aweme_id:
+            share_url = f"https://www.douyin.com/video/{aweme_id}"
+        result = {
+            "url": TianApiService._proxy_hot_video_url(video_url),
+            "originalUrl": video_url,
+            "poster": TianApiService._proxied_baidu_image_url(poster),
+            "title": title,
+            "sourceUrl": share_url,
+            "author": str(author.get("nickname") or ""),
+            "awemeId": aweme_id,
+            "likeCount": str(statistics.get("digg_count") or ""),
+            "commentCount": str(statistics.get("comment_count") or ""),
+            "shareCount": str(statistics.get("share_count") or ""),
+        }
+        return {key: value for key, value in result.items() if value}
+
+    @staticmethod
+    async def _fetch_douyin_hot_videos(keyword: str, limit: int = 3) -> List[Dict[str, str]]:
+        keyword = str(keyword or "").strip()
+        if not keyword:
+            return []
+        headers = {
+            "User-Agent": "okhttp/3.10.0.1",
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip",
+        }
+        params = {
+            "hotword": keyword,
+            "offset": "0",
+            "count": str(max(limit, 1)),
+            "source": "trending_page",
+            "aid": "1128",
+            "version_code": "880",
+        }
+        try:
+            async with HttpClient(timeout=15, follow_redirects=True) as client:
+                result = await client.get(DOUYIN_HOT_VIDEO_API, params=params, headers=headers)
+        except Exception:
+            return []
+        if not isinstance(result, dict) or result.get("status_code") not in (None, 0):
+            return []
+        videos: List[Dict[str, str]] = []
+        seen = set()
+        for item in result.get("aweme_list") or []:
+            if not isinstance(item, dict):
+                continue
+            video = TianApiService._normalize_douyin_hot_video_item(item)
+            video_url = str(video.get("url") or "")
+            seen_key = video_url.split("?", 1)[0]
+            if not video_url or seen_key in seen:
+                continue
+            seen.add(seen_key)
+            videos.append(video)
+            if len(videos) >= limit:
+                break
+        return videos
 
     @staticmethod
     def _normalize_video_poster(value: Any) -> str:
@@ -1200,7 +1312,7 @@ class TianApiService:
         
         # 先尝试从缓存获取。media 版本号需要在视频/图片提取或缓存策略变化时递增，
         # 避免 Redis 长时间返回旧的空视频结果。
-        media_version = "douyin_basic_v1" if platform == "douyin" else "video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty"
+        media_version = "douyin_hot_video_v1" if platform == "douyin" else "video_sources_v16_android_vsearch_no_related_card_desc_v9_images_short_empty"
         cache_key = make_cache_key("hot_search_detail", platform=platform, keyword=keyword, media=media_version)
         cached = await cache.get(cache_key)
         if cached:
@@ -1208,6 +1320,7 @@ class TianApiService:
         
         raw_item_for_desc = TianApiService._parse_hot_raw(raw)
         if platform == "douyin":
+            videos = await TianApiService._fetch_douyin_hot_videos(keyword, limit=3)
             data = TianApiService._build_hot_search_detail(
                 platform=platform,
                 keyword=keyword,
@@ -1216,11 +1329,11 @@ class TianApiService:
                 url=str(url or ""),
                 related_news=[],
                 raw_item=raw_item_for_desc,
-                videos=[],
+                videos=videos,
                 images=[],
             )
             result = {"code": 200, "msg": "success", "data": data}
-            await cache.set(cache_key, result, ttl=3600)
+            await cache.set(cache_key, result, ttl=3600 if videos else 600)
             return result
         raw_desc_for_check = str(raw_item_for_desc.get("brief") or raw_item_for_desc.get("desc") or raw_item_for_desc.get("description") or raw or "")
         is_baidu_source = str(url or "").startswith(("https://www.baidu.com/", "https://m.baidu.com/"))

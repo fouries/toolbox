@@ -43,7 +43,7 @@ class DummyHttpClient:
     async def get(self, url, params=None, headers=None):
         self.__class__.calls.append((url, params or {}))
         path = url.replace('https://apis.tianapi.com', '')
-        key = (path, (params or {}).get('code'))
+        key = (path, (params or {}).get('code') or (params or {}).get('hotword'))
         return self.__class__.responses.get(key) or self.__class__.responses.get((path, None)) or {"code": 404, "msg": "missing mock"}
 
     async def get_text(self, url, params=None, headers=None):
@@ -221,6 +221,46 @@ def test_douyin_hot_search_detail_keeps_douyin_platform_and_skips_baidu_fetches(
     assert result['data']['platform'] == 'douyin'
     assert result['data']['sections'][0]['title'] == '抖音热搜榜返回信息'
     assert '热度：9023742' in result['data']['sections'][0]['body']
+
+
+def test_douyin_hot_search_detail_fetches_related_short_videos():
+    DummyHttpClient.calls = []
+    DummyHttpClient.responses = {
+        ('https://aweme-lq.snssdk.com/aweme/v1/hot/search/video/list/', '抖音话题'): {
+            "status_code": 0,
+            "aweme_list": [{
+                "aweme_id": "7653060402208574761",
+                "desc": "这是一条抖音话题相关短视频 #抖音话题",
+                "share_url": "https://www.iesdouyin.com/share/video/7653060402208574761/",
+                "author": {"nickname": "测试作者"},
+                "statistics": {"digg_count": 12345, "comment_count": 234, "share_count": 56},
+                "video": {
+                    "play_addr": {"url_list": ["https://v11.douyinvod.com/video/tos/test.mp4?mime_type=video_mp4"]},
+                    "cover": {"url_list": ["https://p3-sign.douyinpic.com/tos-cn/test.jpeg"]},
+                },
+            }],
+        }
+    }
+    raw = {"word": "抖音话题", "hotindex": 9023742, "label": 3}
+
+    result = run(TianApiService.get_hot_search_detail(
+        platform='douyin',
+        keyword='抖音话题',
+        hot='9023742',
+        raw=json.dumps(raw, ensure_ascii=False),
+    ))
+
+    assert DummyHttpClient.calls[0][0] == 'https://aweme-lq.snssdk.com/aweme/v1/hot/search/video/list/'
+    assert DummyHttpClient.calls[0][1]['hotword'] == '抖音话题'
+    assert result['code'] == 200
+    assert result['data']['platform'] == 'douyin'
+    assert result['data']['videos'][0]['url'].startswith('https://quan1234.com/api/video-proxy?url=')
+    assert result['data']['videos'][0]['originalUrl'].startswith('https://v11.douyinvod.com/')
+    assert result['data']['videos'][0]['poster'].startswith('https://quan1234.com/api/image-proxy?url=')
+    assert result['data']['videos'][0]['title'] == '这是一条抖音话题相关短视频 #抖音话题'
+    assert result['data']['videos'][0]['sourceUrl'].startswith('https://www.iesdouyin.com/share/video/')
+    assert result['data']['videos'][0]['author'] == '测试作者'
+    assert result['data']['videos'][0]['likeCount'] == '12345'
 
 
 def test_hot_search_detail_basic_uses_only_payload_fields_for_fast_first_paint():

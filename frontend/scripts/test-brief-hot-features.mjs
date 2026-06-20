@@ -110,5 +110,9 @@ assert.match(backendTianApi, /抖音热搜榜/, 'backend should label douyin hot
 assert.doesNotMatch(backendTianApi, /\("今日热点"/, 'baidu hot search should not expose category fallback topics')
 assert.match(backendTianApi, /_empty_hot_search/, 'backend should return an empty list instead of fake baidu topics when upstream fails')
 assert.match(backendTianApi, /rawHotItem/, 'hot search detail should include the raw hot-search API item in the response')
+assert.match(backendTianApi, /DOUYIN_HOT_VIDEO_API/, 'douyin hot detail should fetch actual hotword video items')
+assert.match(backendTianApi, /hot\/search\/video\/list/, 'douyin hot detail should use the hot-search video list endpoint')
+assert.match(hotSearchDetailPage, /platform\.value === 'douyin' \? 3 : 1/, 'douyin detail should allow multiple related short videos')
+assert.match(hotSearchDetailPage, /去抖音查看原视频/, 'douyin videos should expose original video link action')
 
 console.log('daily brief and hot search features are valid')

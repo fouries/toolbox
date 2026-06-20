@@ -40,6 +40,12 @@
                 object-fit="contain"
                 @error="onVideoError"
               ></video>
+              <view class="video-meta" v-if="video.title || video.author || videoStats(video) || video.sourceUrl">
+                <text class="video-desc" v-if="video.title">{{ video.title }}</text>
+                <text class="video-author" v-if="video.author">@{{ video.author }}</text>
+                <text class="video-stats" v-if="videoStats(video)">{{ videoStats(video) }}</text>
+                <button class="video-source-btn" v-if="video.sourceUrl" @tap="openVideoSource(video.sourceUrl)">去抖音查看原视频</button>
+              </view>
             </view>
           </view>
           <view class="hot-image-section" v-if="displayImage && !hotVideos.length">
@@ -121,7 +127,7 @@ const hotList = ref<HotSearchItem[]>([])
 const prevHot = computed(() => currentIndex.value > 0 ? hotList.value[currentIndex.value - 1] : null)
 const nextHot = computed(() => currentIndex.value < hotList.value.length - 1 ? hotList.value[currentIndex.value + 1] : null)
 
-const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, 1))
+const hotVideos = computed(() => (detail.value?.videos?.filter(item => item?.url) || []).slice(0, platform.value === 'douyin' ? 3 : 1))
 const hasLoadedMedia = ref(false)
 const shouldShowFallbackImage = computed(() => hasLoadedMedia.value && !mediaLoading.value)
 
@@ -193,7 +199,34 @@ const applyDetail = (data: HotSearchDetailData) => {
 }
 
 const onVideoError = () => {
-  uni.showToast({ title: '视频暂时无法播放，可点击原链接查看', icon: 'none' })
+  uni.showToast({ title: platform.value === 'douyin' ? '视频暂时无法播放，可复制原链接去抖音查看' : '视频暂时无法播放，可点击原链接查看', icon: 'none' })
+}
+
+const openVideoSource = (url?: string) => {
+  if (!url) return
+  // #ifdef H5
+  window.open(url, '_blank')
+  // #endif
+  // #ifndef H5
+  uni.setClipboardData({ data: url })
+  uni.showToast({ title: '原链接已复制', icon: 'none' })
+  // #endif
+}
+
+const formatCount = (value?: string) => {
+  const num = Number(value || 0)
+  if (!Number.isFinite(num) || num <= 0) return ''
+  if (num >= 10000) return `${(num / 10000).toFixed(num >= 100000 ? 0 : 1)}万`
+  return String(num)
+}
+
+const videoStats = (video: { likeCount?: string; commentCount?: string; shareCount?: string }) => {
+  const parts = [
+    formatCount(video.likeCount) ? `赞 ${formatCount(video.likeCount)}` : '',
+    formatCount(video.commentCount) ? `评 ${formatCount(video.commentCount)}` : '',
+    formatCount(video.shareCount) ? `转 ${formatCount(video.shareCount)}` : ''
+  ].filter(Boolean)
+  return parts.join(' · ')
 }
 
 const copyHotLink = () => {
@@ -433,6 +466,9 @@ onLoad((options: any) => {
 
 .video-item {
   margin-top: 16rpx;
+  padding: 18rpx;
+  border-radius: 22rpx;
+  background: #fff7ed;
 }
 
 .hot-video {
@@ -441,6 +477,44 @@ onLoad((options: any) => {
   border-radius: 20rpx;
   overflow: hidden;
   background: #0f172a;
+}
+
+.video-meta {
+  margin-top: 14rpx;
+}
+
+.video-desc,
+.video-author,
+.video-stats {
+  display: block;
+  line-height: 1.5;
+}
+
+.video-desc {
+  color: #17233d;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.video-author,
+.video-stats {
+  margin-top: 6rpx;
+  color: #9a3412;
+  font-size: 23rpx;
+}
+
+.video-source-btn {
+  margin-top: 14rpx;
+  margin-left: 0;
+  padding: 0 20rpx;
+  width: fit-content;
+  height: 58rpx;
+  line-height: 58rpx;
+  border-radius: 999rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #111827, #ef4444);
+  font-size: 23rpx;
+  font-weight: 700;
 }
 
 .media-loading,
