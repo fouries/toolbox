@@ -73,11 +73,8 @@
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
-              <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] === false" @tap="toggleHotVideoPlayback(index)">
-                <cover-view class="hot-video-pause-icon">
-                  <cover-view class="hot-video-pause-bar"></cover-view>
-                  <cover-view class="hot-video-pause-bar"></cover-view>
-                </cover-view>
+              <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
+                <cover-view class="hot-video-pause-triangle"></cover-view>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
@@ -734,20 +731,13 @@ onLoad((options: any) => {
   background: rgba(15, 23, 42, 0.28);
 }
 
-.hot-video-pause-icon {
-  width: 58rpx;
-  height: 66rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14rpx;
-}
-
-.hot-video-pause-bar {
-  width: 14rpx;
-  height: 54rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.84);
+.hot-video-pause-triangle {
+  width: 0;
+  height: 0;
+  margin-left: 10rpx;
+  border-top: 30rpx solid transparent;
+  border-bottom: 30rpx solid transparent;
+  border-left: 46rpx solid rgba(255, 255, 255, 0.76);
 }
 
 .video-meta {

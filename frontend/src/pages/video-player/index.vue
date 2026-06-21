@@ -44,10 +44,7 @@
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
     <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-      <cover-view class="player-pause-icon">
-        <cover-view class="player-pause-bar"></cover-view>
-        <cover-view class="player-pause-bar"></cover-view>
-      </cover-view>
+      <cover-view class="player-pause-triangle"></cover-view>
     </cover-view>
     <cover-view class="player-top">
       <cover-view class="player-close" @tap="goBack">退出播放</cover-view>
@@ -187,20 +184,13 @@ onLoad((options: any) => {
   background: rgba(0, 0, 0, 0.26);
 }
 
-.player-pause-icon {
-  width: 76rpx;
-  height: 86rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18rpx;
-}
-
-.player-pause-bar {
-  width: 18rpx;
-  height: 72rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.82);
+.player-pause-triangle {
+  width: 0;
+  height: 0;
+  margin-left: 14rpx;
+  border-top: 40rpx solid transparent;
+  border-bottom: 40rpx solid transparent;
+  border-left: 62rpx solid rgba(255, 255, 255, 0.74);
 }
 
 .player-top,
