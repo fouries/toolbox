@@ -41,6 +41,11 @@
                 :poster="video.poster || ''"
                 :title="video.title || hotKeyword"
                 controls
+                show-fullscreen-btn
+                show-center-play-btn
+                enable-play-gesture
+                enable-progress-gesture
+                vslide-gesture-in-fullscreen
                 object-fit="contain"
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
@@ -102,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, getCurrentInstance, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useTheme } from '@/utils/theme'
 import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailData, type HotSearchItem, type HotSearchVideo } from '@/api'
@@ -111,6 +116,19 @@ import { getHotSearchDetailBasic, getHotSearchDetailMedia, type HotSearchDetailD
 declare function getCurrentPages(): any[];
 
 const { themeClass } = useTheme()
+const componentInstance = getCurrentInstance()
+
+const getVideoContext = (index: number) => {
+  const videoId = `douyin-hot-video-${index}`
+  // 微信小程序里动态 id 的 video 在组件作用域内，传入当前实例可避免拿不到上下文。
+  // H5 端不需要实例；保留 fallback 保证两端都可用。
+  try {
+    if (componentInstance?.proxy) {
+      return uni.createVideoContext(videoId, componentInstance.proxy as any) as any
+    }
+  } catch {}
+  return uni.createVideoContext(videoId) as any
+}
 
 const hotConfigs = {
   baidu: { title: '百度热搜榜', icon: '🔎' },
@@ -230,7 +248,7 @@ const openImmersiveVideo = (index: number) => {
   resetSwipeTouch()
   swipeNavigating.value = false
   fullscreenVideoIndex.value = index
-  const context = uni.createVideoContext(`douyin-hot-video-${index}`) as any
+  const context = getVideoContext(index)
   if (context?.requestFullScreen) {
     context.requestFullScreen({
       direction: 0,
@@ -248,7 +266,7 @@ const openImmersiveVideo = (index: number) => {
 const exitFullscreenVideo = () => {
   const index = fullscreenVideoIndex.value
   if (index >= 0) {
-    const context = uni.createVideoContext(`douyin-hot-video-${index}`) as any
+    const context = getVideoContext(index)
     if (context?.exitFullScreen) {
       context.exitFullScreen()
     }
