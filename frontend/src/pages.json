@@ -11,7 +11,7 @@
     {
       "path": "pages/news/index",
       "style": {
-        "navigationBarTitleText": "资讯",
+        "navigationBarTitleText": "热榜",
         "navigationBarBackgroundColor": "#ffffff",
         "navigationBarTextStyle": "black"
       }
@@ -158,7 +158,7 @@
       },
       {
         "pagePath": "pages/news/index",
-        "text": "资讯",
+        "text": "热榜",
         "iconPath": "static/tab-news.png",
         "selectedIconPath": "static/tab-news-active.png"
       },

@@ -38,7 +38,7 @@
       },
       {
         "pagePath": "pages/news/index",
-        "text": "资讯",
+        "text": "热榜",
         "iconPath": "static/tab-news.png",
         "selectedIconPath": "static/tab-news-active.png"
       },

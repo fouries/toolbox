@@ -2,12 +2,18 @@
   <view :class="['container', themeClass]">
     <view class="page-shell home-shell">
       <view class="hero-section">
+        <view class="hero-content">
+          <text class="hero-kicker">小巧的工具箱</text>
+          <text class="hero-title">常用工具、热榜资讯，一页直达</text>
+          <text class="hero-subtitle">搜索工具名称或关键词，也可以从最近使用和今日速览快速进入。</text>
+        </view>
+
         <view class="tool-search-wrap">
           <view class="search-box tool-search">
             <uni-icons type="search" size="18" color="#8a96a8"></uni-icons>
             <input
               class="search-input"
-              placeholder="搜索"
+              placeholder="搜索工具、热搜、资讯..."
               confirm-type="search"
               v-model="searchText"
               @confirm="submitSearch"
@@ -15,6 +21,48 @@
             <text class="clear-search" v-if="searchText" @click="clearSearch">清空</text>
             <button class="search-submit" @click="submitSearch">搜索</button>
           </view>
+        </view>
+
+        <view class="overview-panel">
+          <view
+            class="overview-card"
+            v-for="item in todayOverview"
+            :key="item.id"
+            @click="goToOverview(item)"
+          >
+            <view class="overview-icon" :style="{ background: item.color }">
+              <text>{{ item.icon }}</text>
+            </view>
+            <view class="overview-info">
+              <text class="overview-label">{{ item.label }}</text>
+              <text class="overview-value">{{ item.value }}</text>
+              <text class="overview-desc">{{ item.desc }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="quick-panel" v-if="recentTools.length">
+          <view class="quick-panel-title">
+            <text class="quick-panel-title-text">最近使用</text>
+            <text class="quick-panel-title-icon">🕘</text>
+          </view>
+          <scroll-view class="quick-tool-scroll" scroll-x="true" show-scrollbar="false">
+            <view class="quick-tool-list">
+              <view
+                class="quick-tool-card"
+                @click="goToTool(tool)"
+                v-for="tool in recentTools"
+                :key="tool.id"
+              >
+                <view class="quick-tool-icon" :style="{ background: tool.color }">
+                  <text class="quick-icon-text">{{ tool.icon }}</text>
+                </view>
+                <view class="quick-tool-info">
+                  <text class="quick-tool-name">{{ tool.name }}</text>
+                </view>
+              </view>
+            </view>
+          </scroll-view>
         </view>
 
         <view class="quick-panel">
@@ -43,6 +91,14 @@
         </view>
 
         <view class="main-panel">
+          <view class="panel-header">
+            <view>
+              <text class="section-kicker">TOOLS</text>
+              <text class="section-title">全部工具</text>
+            </view>
+            <text class="section-count">{{ filteredTools.length }} 个</text>
+          </view>
+
           <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
             <view class="category-list">
               <view
@@ -80,7 +136,7 @@
           <view class="empty-state" v-else>
             <text class="empty-icon">🔎</text>
             <text class="empty-title">没有找到相关工具</text>
-            <text class="empty-desc">试试搜索：天气、油价、二维码、黄历</text>
+            <text class="empty-desc">试试搜索：天气、油价、二维码、热搜</text>
             <button class="empty-btn" @click="clearSearch">清空搜索</button>
           </view>
         </view>
@@ -104,6 +160,7 @@ import { getPopularTools, recordToolClick, type ToolPopularityItem } from '@/api
 import { ref, computed, onMounted } from 'vue'
 
 const { themeClass } = useTheme()
+const RECENT_TOOLS_KEY = 'toolbox_recent_tools'
 
 interface CategoryItem {
   id: string
@@ -120,27 +177,58 @@ interface ToolItem {
   path: string
   implemented: boolean
   status?: string
+  keywords?: string[]
+}
+
+interface OverviewItem {
+  id: string
+  label: string
+  value: string
+  desc: string
+  icon: string
+  color: string
+  path: string
+  tab?: boolean
 }
 
 const searchText = ref('')
 const activeCategory = ref('all')
 const toolClickCounts = ref<Record<string, number>>({})
+const recentToolIds = ref<string[]>([])
 
 const categories = ref<CategoryItem[]>([
-  { id: 'life', name: '生活服务' },
+  { id: 'life', name: '生活查询' },
   { id: 'market', name: '市场行情' },
-  { id: 'code', name: '编码转换' },
-  { id: 'other', name: '其他工具' },
+  { id: 'utility', name: '实用工具' },
+  { id: 'calendar', name: '日历文化' },
+  { id: 'news', name: '热榜资讯' }
 ])
 
 const tools = ref<ToolItem[]>([
-  { id: 'oil-price', name: '油价查询', desc: '全国各省今日汽柴油和原油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true },
-  { id: 'weather', name: '天气预报', desc: '查询城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true },
-  { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'life', path: '/pages/calendar/index', implemented: true },
-  { id: 'gold-price', name: '黄金行情', desc: '黄金价格与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true },
-  { id: 'crude-oil', name: '原油价格', desc: '国际原油市场最新价格', icon: '🛢️', color: '#b45309', category: 'market', path: '', implemented: false },
-  { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'other', path: '/pages/qrcode/index', implemented: true },
+  { id: 'weather', name: '天气预报', desc: '城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true, keywords: ['天气', '预报', '城市'] },
+  { id: 'oil-price', name: '油价查询', desc: '全国各省汽柴油价格', icon: '⛽', color: '#ff6b6b', category: 'life', path: '/pages/oil-price/index', implemented: true, keywords: ['油价', '汽油', '柴油'] },
+  { id: 'gold-price', name: '黄金行情', desc: '黄金与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true, keywords: ['黄金', '金价', '行情'] },
+  { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'utility', path: '/pages/qrcode/index', implemented: true, keywords: ['二维码', '网址', '文本'] },
+  { id: 'password', name: '密码生成器', desc: '生成安全随机密码', icon: '🔐', color: '#6366f1', category: 'utility', path: '/pages/password/index', implemented: true, keywords: ['密码', '随机', '安全'] },
+  { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'calendar', path: '/pages/calendar/index', implemented: true, keywords: ['黄历', '农历', '日历'] },
+  { id: 'history-today', name: '历史上的今天', desc: '查看今日历史事件', icon: '📜', color: '#b45309', category: 'calendar', path: '/pages/history-today/index', implemented: true, keywords: ['历史', '今天'] },
+  { id: 'solar-terms', name: '二十四节气', desc: '节气日期与传统知识', icon: '🌿', color: '#16a34a', category: 'calendar', path: '/pages/solar-terms/index', implemented: true, keywords: ['节气', '二十四节气'] },
+  { id: 'baidu-hot', name: '百度热搜榜', desc: '查看百度搜索热点排行', icon: '🔎', color: '#2563eb', category: 'news', path: '/pages/hot-search/index?platform=baidu', implemented: true, keywords: ['百度', '热搜', '热榜'] },
+  { id: 'douyin-hot', name: '抖音热搜榜', desc: '查看抖音热门搜索排行', icon: '🎵', color: '#111827', category: 'news', path: '/pages/hot-search/index?platform=douyin', implemented: true, keywords: ['抖音', '热搜', '视频'] },
+  { id: 'daily-brief', name: '每日简报', desc: '每日热点简明速览', icon: '📰', color: '#4f46e5', category: 'news', path: '/pages/daily-brief/index', implemented: true, keywords: ['简报', '新闻', '热点'] },
+  { id: 'info-news', name: '资讯查询', desc: '互联网、AI、汽车与电竞资讯', icon: '🌐', color: '#0ea5e9', category: 'news', path: '/pages/info-news/index?category=internet', implemented: true, keywords: ['资讯', '新闻', '互联网', 'AI'] }
 ])
+
+const todayOverview = computed<OverviewItem[]>(() => {
+  const date = new Date()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return [
+    { id: 'today', label: '今日', value: `${month}月${day}日`, desc: '黄历、节气、历史事件', icon: '📅', color: '#f97316', path: '/pages/calendar/index' },
+    { id: 'hot', label: '热榜', value: '百度 / 抖音', desc: '热点内容集中查看', icon: '🔥', color: '#ef4444', path: '/pages/news/index', tab: true },
+    { id: 'tools', label: '工具', value: `${tools.value.filter(tool => tool.implemented).length} 个可用`, desc: '生活查询和实用工具', icon: '🧰', color: '#2563eb', path: '' }
+  ]
+})
 
 const popularTools = computed(() => {
   const rankedTools = tools.value
@@ -155,6 +243,14 @@ const popularTools = computed(() => {
   return rankedTools.slice(0, 10)
 })
 
+const recentTools = computed(() => {
+  const available = tools.value.filter(tool => tool.implemented)
+  return recentToolIds.value
+    .map(id => available.find(tool => tool.id === id))
+    .filter((tool): tool is ToolItem => Boolean(tool))
+    .slice(0, 10)
+})
+
 const filteredTools = computed(() => {
   let list = tools.value
 
@@ -164,11 +260,10 @@ const filteredTools = computed(() => {
 
   const keyword = searchText.value.trim().toLowerCase()
   if (keyword) {
-    list = list.filter(t =>
-      t.name.toLowerCase().includes(keyword) ||
-      t.desc.toLowerCase().includes(keyword) ||
-      t.id.toLowerCase().includes(keyword)
-    )
+    list = list.filter(t => {
+      const keywordText = [t.id, t.name, t.desc, t.category, ...(t.keywords || [])].join(' ').toLowerCase()
+      return keywordText.includes(keyword)
+    })
   }
 
   return list
@@ -201,6 +296,25 @@ const loadPopularTools = async () => {
   }
 }
 
+const loadRecentTools = () => {
+  try {
+    const stored = uni.getStorageSync(RECENT_TOOLS_KEY)
+    recentToolIds.value = Array.isArray(stored) ? stored.filter(item => typeof item === 'string') : []
+  } catch (error) {
+    console.warn('加载最近使用失败', error)
+  }
+}
+
+const saveRecentTool = (toolId: string) => {
+  const next = [toolId, ...recentToolIds.value.filter(id => id !== toolId)].slice(0, 10)
+  recentToolIds.value = next
+  try {
+    uni.setStorageSync(RECENT_TOOLS_KEY, next)
+  } catch (error) {
+    console.warn('保存最近使用失败', error)
+  }
+}
+
 const refreshClickedTool = (toolId: string, clicks: number) => {
   toolClickCounts.value = {
     ...toolClickCounts.value,
@@ -220,13 +334,31 @@ const trackToolClick = async (toolId: string) => {
   }
 }
 
+const openPath = (path: string, tab = false) => {
+  if (!path) return
+  if (tab) {
+    uni.switchTab({ url: path })
+    return
+  }
+  uni.navigateTo({ url: path })
+}
+
+const goToOverview = (item: OverviewItem) => {
+  if (item.id === 'tools') {
+    activeCategory.value = 'all'
+    return
+  }
+  openPath(item.path, item.tab)
+}
+
 const goToTool = (tool: ToolItem) => {
   if (!tool.implemented) {
     uni.showToast({ title: `${tool.name}${tool.status || '开发中'}`, icon: 'none' })
     return
   }
 
-  uni.navigateTo({ url: tool.path })
+  saveRecentTool(tool.id)
+  openPath(tool.path)
   void trackToolClick(tool.id)
 }
 
@@ -238,6 +370,7 @@ const navigateToBeian = () => {
 }
 
 onMounted(() => {
+  loadRecentTools()
   loadPopularTools()
 })
 </script>
@@ -247,6 +380,7 @@ onMounted(() => {
   min-height: 100vh;
   background: linear-gradient(180deg, #eef5ff 0%, #f7f9fc 42%, #ffffff 100%);
   padding: 24rpx;
+  box-sizing: border-box;
 }
 
 .home-shell {
@@ -262,12 +396,14 @@ onMounted(() => {
   padding: 30rpx;
   margin-bottom: 24rpx;
   border-radius: 34rpx;
-  background: var(--theme-surface, rgba(255, 255, 255, 0.88)) !important;
+  background: var(--theme-surface, rgba(255, 255, 255, 0.9)) !important;
   border: 2rpx solid var(--theme-border, rgba(255, 255, 255, 0.74));
   box-shadow: 0 18rpx 50rpx rgba(20, 35, 90, 0.08);
 }
 
 .hero-content,
+.tool-search-wrap,
+.overview-panel,
 .quick-panel,
 .main-panel {
   position: relative;
@@ -277,40 +413,31 @@ onMounted(() => {
 .hero-content {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
-}
-
-.hero-copy {
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-heading {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14rpx;
+  gap: 12rpx;
 }
 
 .hero-kicker {
-  display: inline-flex;
-  flex-shrink: 0;
   width: fit-content;
   padding: 8rpx 18rpx;
   border-radius: 999rpx;
   background: var(--theme-primary-soft, #eef5ff);
-  font-size: 24rpx;
   color: var(--theme-primary, #1677ff);
-  font-weight: 700;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.hero-title {
+  font-size: 44rpx;
+  line-height: 1.22;
+  color: var(--theme-text, #17233d);
+  font-weight: 900;
 }
 
 .hero-subtitle {
-  margin-top: 18rpx;
-  max-width: 720px;
-  font-size: 28rpx;
+  max-width: 760px;
+  font-size: 26rpx;
   color: var(--theme-text-secondary, #667085);
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .search-box {
@@ -318,13 +445,8 @@ onMounted(() => {
   align-items: center;
   background: var(--theme-primary-soft, rgba(246, 248, 251, 0.92));
   border-radius: 999rpx;
-  padding: 20rpx 28rpx;
+  padding: 18rpx 24rpx;
   border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.9));
-}
-
-.tool-search-wrap {
-  display: none;
-  margin: 0;
 }
 
 .tool-search {
@@ -332,6 +454,19 @@ onMounted(() => {
   background: linear-gradient(135deg, var(--theme-primary-soft, #eef5ff) 0%, var(--theme-surface, #ffffff) 100%);
   border-color: var(--theme-border, rgba(226, 232, 240, 0.9));
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.58), 0 10rpx 24rpx rgba(20, 35, 90, 0.05);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  color: var(--theme-text, #243044);
+}
+
+.clear-search {
+  font-size: 24rpx;
+  color: var(--theme-primary, #1677ff);
+  font-weight: 700;
 }
 
 .search-submit {
@@ -347,126 +482,69 @@ onMounted(() => {
   font-weight: 800;
 }
 
-.search-submit::after {
+.search-submit::after,
+.empty-btn::after {
   border: 0;
 }
 
-.theme-night .tool-search {
-  background: rgba(15, 23, 42, 0.62);
-  border-color: rgba(148, 163, 184, 0.26);
-  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.04), 0 10rpx 24rpx rgba(0, 0, 0, 0.16);
+.overview-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14rpx;
 }
 
-.search-input {
-  flex: 1;
-  margin-left: 15rpx;
-  font-size: 28rpx;
-  color: var(--theme-text, #243044);
-}
-
-.clear-search {
-  margin-left: 16rpx;
-  font-size: 24rpx;
-  color: var(--theme-primary, #1677ff);
-  font-weight: 700;
-}
-
-.hero-meta-row {
+.overview-card {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10rpx;
-}
-
-.hero-meta-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
+  gap: 12rpx;
   min-width: 0;
-  padding: 8rpx 12rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.58);
-  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.6));
-  box-shadow: 0 6rpx 16rpx rgba(20, 35, 90, 0.04);
+  padding: 18rpx 16rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,251,255,0.9));
+  border: 2rpx solid var(--theme-border, rgba(226, 232, 240, 0.86));
+  box-shadow: 0 8rpx 22rpx rgba(20, 35, 90, 0.045);
 }
 
-.meta-icon {
-  width: 34rpx;
-  height: 34rpx;
-  border-radius: 999rpx;
+.overview-icon {
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.58), 0 4rpx 10rpx rgba(20, 35, 90, 0.06);
+  color: #fff;
+  font-size: 32rpx;
 }
 
-.meta-icon-free {
-  background: linear-gradient(135deg, #ff9f43 0%, #ff6b6b 100%);
+.overview-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
 }
 
-.meta-icon-tools {
-  background: linear-gradient(135deg, #4ecdc4 0%, #00b894 100%);
-}
-
-.meta-icon-cross {
-  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
-}
-
-.meta-icon-text {
-  font-size: 20rpx;
-  line-height: 1;
-}
-
-.meta-label {
-  display: block;
-  font-size: 21rpx;
+.overview-label {
   color: var(--theme-text-secondary, #667085);
-  line-height: 1.2;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.overview-value {
+  color: var(--theme-text, #17233d);
+  font-size: 24rpx;
+  font-weight: 900;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.theme-light .hero-meta-card,
-.theme-warm .hero-meta-card,
-.theme-fresh .hero-meta-card,
-.theme-minimal .hero-meta-card,
-.theme-light .quick-tool-card,
-.theme-warm .quick-tool-card,
-.theme-fresh .quick-tool-card,
-.theme-minimal .quick-tool-card,
-.theme-light .tool-search,
-.theme-warm .tool-search,
-.theme-fresh .tool-search,
-.theme-minimal .tool-search {
-  background: linear-gradient(135deg, var(--theme-primary-soft, #eef5ff) 0%, var(--theme-surface, #ffffff) 100%) !important;
-  border-color: var(--theme-border, rgba(226, 232, 240, 0.9)) !important;
-}
-
-.theme-light .hero-meta-card,
-.theme-warm .hero-meta-card,
-.theme-fresh .hero-meta-card,
-.theme-minimal .hero-meta-card,
-.theme-light .quick-tool-card,
-.theme-warm .quick-tool-card,
-.theme-fresh .quick-tool-card,
-.theme-minimal .quick-tool-card {
-  box-shadow: 0 10rpx 24rpx rgba(20, 35, 90, 0.04) !important;
-}
-
-.theme-night .quick-tool-card,
-.theme-night .hero-meta-card {
-  background: rgba(30, 41, 59, 0.86);
-  border-color: rgba(148, 163, 184, 0.3);
-  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.2);
-}
-
-.theme-night .hero-meta-card {
-  background: rgba(15, 23, 42, 0.62);
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.16);
-}
-
-.theme-night .meta-label {
-  color: #d5deec;
+.overview-desc {
+  color: var(--theme-text-muted, #8a96a8);
+  font-size: 20rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .quick-panel {
@@ -477,17 +555,31 @@ onMounted(() => {
   box-shadow: 0 12rpx 34rpx rgba(20, 35, 90, 0.06);
 }
 
-.main-panel {
-  padding-top: 6rpx;
-}
-
-.quick-panel-header,
+.quick-panel-title,
 .panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 18rpx;
-  margin-bottom: 22rpx;
+  margin-bottom: 18rpx;
+}
+
+.quick-panel-title {
+  justify-content: flex-start;
+  gap: 8rpx;
+}
+
+.quick-panel-title-text,
+.section-title {
+  font-size: 32rpx;
+  line-height: 1.2;
+  color: var(--theme-text, #243044);
+  font-weight: 900;
+}
+
+.quick-panel-title-icon {
+  font-size: 32rpx;
+  line-height: 1;
 }
 
 .section-kicker,
@@ -500,14 +592,7 @@ onMounted(() => {
   margin-bottom: 6rpx;
   font-size: 22rpx;
   color: var(--theme-primary, #1677ff);
-  font-weight: 700;
-}
-
-.section-title {
-  font-size: 34rpx;
-  color: var(--theme-text, #243044);
   font-weight: 800;
-  line-height: 1.2;
 }
 
 .section-count {
@@ -517,26 +602,7 @@ onMounted(() => {
   background: var(--theme-primary-soft, #eef5ff);
   color: var(--theme-primary, #1677ff);
   font-size: 22rpx;
-  font-weight: 700;
-}
-
-.quick-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-bottom: 18rpx;
-}
-
-.quick-panel-title-text {
-  font-size: 32rpx;
-  line-height: 1.2;
-  color: var(--theme-text, #243044);
   font-weight: 800;
-}
-
-.quick-panel-title-icon {
-  font-size: 32rpx;
-  line-height: 1;
 }
 
 .quick-tool-scroll {
@@ -548,7 +614,7 @@ onMounted(() => {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  gap: 8rpx;
+  gap: 10rpx;
 }
 
 .quick-tool-card {
@@ -556,26 +622,25 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 112rpx;
+  flex: 0 0 118rpx;
   min-width: 0;
-  min-height: 88rpx;
-  gap: 6rpx;
-  padding: 10rpx 6rpx;
-  border-radius: 16rpx;
+  min-height: 92rpx;
+  gap: 7rpx;
+  padding: 12rpx 8rpx;
+  border-radius: 18rpx;
   background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
   box-shadow: 0 6rpx 18rpx rgba(20, 35, 90, 0.04);
 }
 
 .quick-tool-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 42rpx;
+  height: 42rpx;
   border-radius: 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--theme-hero, linear-gradient(135deg, #1677ff 0%, #31c48d 100%));
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.42), 0 6rpx 14rpx rgba(20, 35, 90, 0.07);
 }
 
@@ -586,17 +651,18 @@ onMounted(() => {
 .quick-tool-info {
   width: 100%;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .quick-tool-name {
+  display: block;
   font-size: 20rpx;
   line-height: 1.2;
   color: var(--theme-text, #243044);
   font-weight: 800;
   text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .main-panel {
@@ -639,7 +705,7 @@ onMounted(() => {
 
 .tool-item {
   position: relative;
-  min-height: 156rpx;
+  min-height: 166rpx;
   background: rgba(255, 255, 255, 0.94);
   border-radius: 22rpx;
   padding: 22rpx 18rpx 20rpx;
@@ -667,7 +733,7 @@ onMounted(() => {
 
 .tool-name {
   font-size: 28rpx;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--theme-text, #243044);
   margin-bottom: 6rpx;
   line-height: 1.2;
@@ -707,7 +773,7 @@ onMounted(() => {
 }
 
 .empty-icon { font-size: 76rpx; margin-bottom: 16rpx; }
-.empty-title { font-size: 30rpx; color: var(--theme-text, #243044); font-weight: 800; }
+.empty-title { font-size: 30rpx; color: var(--theme-text, #243044); font-weight: 900; }
 .empty-desc { margin: 12rpx 0 24rpx; font-size: 24rpx; color: var(--theme-text-secondary, #7a869a); }
 
 .empty-btn {
@@ -742,40 +808,39 @@ onMounted(() => {
 }
 
 .icp-beian:active,
+.overview-card:active,
 .quick-tool-card:active,
-.tool-item:active { opacity: 0.72; }
+.tool-item:active,
+.category-item:active { opacity: 0.72; }
+
+.theme-night .tool-search,
+.theme-night .quick-panel,
+.theme-night .overview-card,
+.theme-night .tool-item {
+  background: rgba(30, 41, 59, 0.86);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.2);
+}
+
+.theme-night .overview-label,
+.theme-night .overview-desc,
+.theme-night .tool-desc,
+.theme-night .hero-subtitle {
+  color: #d5deec;
+}
 
 @media (min-width: 768px) {
   .container { padding: 32px 24px; }
 
   .hero-section {
-    display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
-    align-items: stretch;
     gap: 24px;
     padding: 36px;
     border-radius: 28px;
   }
 
-  .hero-subtitle { font-size: 18px; }
-  .hero-heading {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .hero-meta-row { gap: 8px; }
-  .hero-meta-card {
-    gap: 6px;
-    padding: 5px 9px;
-    border-radius: 999px;
-  }
-  .meta-icon { width: 20px; height: 20px; }
-  .meta-icon-text { font-size: 13px; }
-  .meta-label { font-size: 13px; }
+  .hero-title { font-size: 34px; }
+  .hero-subtitle { font-size: 16px; }
   .search-box { padding: 14px 20px; }
-  .tool-search-wrap { margin: 0; }
-  .tool-search { max-width: none; }
   .search-input { font-size: 16px; }
   .search-submit {
     height: 34px;
@@ -783,21 +848,23 @@ onMounted(() => {
     padding: 0 18px;
     font-size: 14px;
   }
+
+  .overview-panel { gap: 16px; }
+  .overview-card {
+    padding: 18px;
+    border-radius: 18px;
+    cursor: pointer;
+  }
+  .overview-icon { width: 44px; height: 44px; border-radius: 14px; font-size: 22px; }
+  .overview-label, .overview-desc { font-size: 13px; }
+  .overview-value { font-size: 17px; }
+
   .quick-panel {
-    grid-column: 1 / -1;
     padding: 28px;
     border-radius: 24px;
   }
 
-  .main-panel {
-    grid-column: 1 / -1;
-    padding-top: 4px;
-  }
-
-  .quick-tool-list {
-    gap: 8px;
-  }
-
+  .quick-tool-list { gap: 8px; }
   .quick-tool-card {
     flex-basis: 92px;
     min-height: 60px;
@@ -806,21 +873,9 @@ onMounted(() => {
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
-
-  .quick-tool-icon {
-    width: 26px;
-    height: 26px;
-    border-radius: 9px;
-  }
-
+  .quick-tool-icon { width: 26px; height: 26px; border-radius: 9px; }
   .quick-icon-text { font-size: 14px; }
   .quick-tool-name { font-size: 12px; }
-
-  .quick-tool-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(22, 119, 255, 0.24);
-    box-shadow: 0 12px 28px rgba(20, 35, 90, 0.08);
-  }
 
   .tool-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -828,29 +883,30 @@ onMounted(() => {
   }
 
   .tool-item {
-    min-height: 136px;
+    min-height: 146px;
     padding: 20px 18px 18px;
     border-radius: 18px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     cursor: pointer;
   }
 
-  .tool-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    margin-bottom: 12px;
-  }
-
+  .tool-icon { width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; }
   .icon-text { font-size: 22px; }
-
   .tool-name { font-size: 16px; }
   .tool-desc { font-size: 13px; }
 
+  .overview-card:hover,
+  .quick-tool-card:hover,
   .tool-item:hover {
     transform: translateY(-2px);
     border-color: rgba(22, 119, 255, 0.24);
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  }
+}
+
+@media (max-width: 420px) {
+  .overview-panel {
+    grid-template-columns: 1fr;
   }
 }
 </style>
