@@ -1,5 +1,10 @@
 <template>
+  <!-- #ifdef MP-WEIXIN -->
+  <view :class="['container', themeClass]">
+  <!-- #endif -->
+  <!-- #ifndef MP-WEIXIN -->
   <view :class="['container', themeClass]" @touchstart="onTouchStart" @touchend="onTouchEnd">
+  <!-- #endif -->
     <view class="page-shell detail-shell">
       <view class="page-header detail-header">
         <text class="title">{{ detailConfig.icon }} 热搜详情</text>
