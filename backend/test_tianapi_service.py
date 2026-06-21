@@ -62,6 +62,29 @@ def run(coro):
     return asyncio.run(coro)
 
 
+def test_proxy_target_preserves_nested_signed_media_query():
+    from main import _extract_proxy_target_from_query
+
+    signed_url = (
+        "https://v5.douyinvod.com/video/tos/demo/?a=1128&mime_type=video_mp4"
+        "&x-signature=A+B/C=&l=20260621202955"
+    )
+
+    assert _extract_proxy_target_from_query(
+        "https://v5.douyinvod.com/video/tos/demo/?a=1128",
+        f"url={signed_url}",
+    ) == signed_url
+
+
+def test_proxy_target_decodes_encoded_media_query_without_plus_to_space():
+    from urllib.parse import quote
+    from main import _extract_proxy_target_from_query
+
+    signed_url = "https://p3-sign.douyinpic.com/tos-cn/demo.jpeg?x-signature=A+B/C=&from=hot"
+
+    assert _extract_proxy_target_from_query("", f"url={quote(signed_url, safe='')}") == signed_url
+
+
 def setup_module(module):
     import api.tianapi as tianapi
 

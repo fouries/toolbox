@@ -50,12 +50,18 @@ const poster = ref('')
 const title = ref('')
 const sourceUrl = ref('')
 
+const isProxyMediaValue = (value: string) => /\/api\/(?:image|video)-proxy\?url=/.test(value)
+
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
   let decoded = value
   try {
     while (decoded.includes('%')) {
-      decoded = decodeURIComponent(decoded)
+      const next = decodeURIComponent(decoded)
+      decoded = next
+      // Keep nested proxy target URLs encoded so signed video/poster query
+      // strings are not split into the proxy endpoint's own parameters.
+      if (isProxyMediaValue(decoded)) break
     }
   } catch {}
   return decoded

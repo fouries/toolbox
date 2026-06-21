@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from starlette.background import BackgroundTask
 import asyncio
 import re
@@ -18,6 +18,30 @@ from api.location import LocationService
 from api.tool_stats import get_tool_stats_service
 
 settings = get_settings()
+
+
+def _extract_proxy_target_from_query(url: str, raw_query: str) -> str:
+    """Return the full proxied target URL, preserving its nested query string.
+
+    Mini-program/H5 media components may request `/api/*-proxy?url=https://...?...&x=...`
+    when a proxy URL was over-decoded on the client. FastAPI then binds only the
+    part before the first `&` to `url`, so recover the complete value from the
+    raw query string. Use `unquote` (not `unquote_plus`) because signed media
+    URLs can contain literal `+` characters.
+    """
+    raw_query = str(raw_query or "")
+    if raw_query.startswith("url="):
+        raw_target = raw_query[len("url="):]
+        if raw_target:
+            try:
+                return unquote(raw_target)
+            except Exception:
+                return raw_target
+    return str(url or "")
+
+
+def _extract_proxy_target_url(url: str, request: Request) -> str:
+    return _extract_proxy_target_from_query(url, str(request.url.query or ""))
 
 class ToolClickRequest(BaseModel):
     tool_id: str
@@ -145,15 +169,21 @@ async def hot_search_detail_media(platform: str = "baidu", keyword: str = "", ho
     return result
 
 @app.get("/api/image-proxy", summary="图片代理", tags=["本地工具"])
-async def image_proxy(url: str):
+async def image_proxy(url: str, request: Request):
     """代理热搜图片，便于小程序通过本站 HTTPS 域名加载缩略图。"""
+    url = _extract_proxy_target_url(url, request)
     parsed = urlparse(url)
     allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com", "douyinpic.com", "byteimg.com")
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):
         raise HTTPException(status_code=400, detail="Unsupported image host")
+    is_douyin_image = any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in ("douyinpic.com", "byteimg.com"))
+    referer = "https://www.douyin.com/" if is_douyin_image else "https://m.baidu.com/"
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        response.raise_for_status()
+        try:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0", "Referer": referer, "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"})
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"图片读取失败: {exc}")
     content_type = response.headers.get("content-type", "image/jpeg")
     if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="URL is not an image")
@@ -163,6 +193,7 @@ async def image_proxy(url: str):
 @app.get("/api/video-proxy", summary="视频代理", tags=["本地工具"])
 async def video_proxy(url: str, request: Request):
     """代理热搜视频，避免直连视频资源时被防盗链/CORS/小程序域名限制拦截。"""
+    url = _extract_proxy_target_url(url, request)
     parsed = urlparse(url)
     allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com", "douyinvod.com")
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):

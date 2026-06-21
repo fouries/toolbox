@@ -218,13 +218,19 @@ const touchStartTime = ref(0)
 const swipeNavigating = ref(false)
 const fullscreenVideoIndex = ref(-1)
 
+const isProxyMediaValue = (value: string) => /\/api\/(?:image|video)-proxy\?url=/.test(value)
+
 const decodeValue = (value: unknown): string => {
   if (typeof value !== 'string') return ''
   let decoded = value
   try {
     // 多次解码，处理双重编码
     while (decoded.includes('%')) {
-      decoded = decodeURIComponent(decoded)
+      const next = decodeURIComponent(decoded)
+      decoded = next
+      // 代理图片/视频的 url 参数本身必须继续保持编码；否则小程序媒体组件会把内层
+      // &x-signature / &mime_type 等参数拆成代理接口自己的参数，导致 400/500。
+      if (isProxyMediaValue(decoded)) break
     }
     return decoded
   } catch {
