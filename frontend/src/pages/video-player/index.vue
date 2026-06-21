@@ -7,12 +7,14 @@
       :src="videoUrl"
       :poster="poster"
       :title="title"
-      :controls="false"
+      controls
       autoplay
+      :show-play-btn="false"
+      :show-progress="true"
       :show-fullscreen-btn="false"
       :show-center-play-btn="false"
       :enable-play-gesture="false"
-      :enable-progress-gesture="false"
+      :enable-progress-gesture="true"
       :vslide-gesture-in-fullscreen="true"
       object-fit="contain"
       @tap="togglePlayback"
