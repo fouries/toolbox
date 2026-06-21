@@ -1,28 +1,33 @@
 <template>
-  <view class="player-page" :style="playerSizeStyle">
+  <view class="player-page">
     <!-- #ifdef MP-WEIXIN -->
-    <video
-      id="toolbox-video-player"
-      class="player-video"
-      :src="videoUrl"
-      :poster="poster"
-      :title="title"
-      controls
-      autoplay
-      :show-play-btn="false"
-      :show-progress="true"
-      :show-fullscreen-btn="false"
-      :show-center-play-btn="false"
-      :enable-play-gesture="false"
-      :enable-progress-gesture="true"
-      :vslide-gesture-in-fullscreen="true"
-      object-fit="contain"
-      @tap="togglePlayback"
-      @play="isPlaying = true"
-      @pause="isPlaying = false"
-      @ended="isPlaying = false"
-      @error="onVideoError"
-    ></video>
+    <view class="player-stage" :style="playerSizeStyle">
+      <video
+        id="toolbox-video-player"
+        class="player-video"
+        :src="videoUrl"
+        :poster="poster"
+        :title="title"
+        controls
+        autoplay
+        :show-play-btn="false"
+        :show-progress="true"
+        :show-fullscreen-btn="false"
+        :show-center-play-btn="false"
+        :enable-play-gesture="false"
+        :enable-progress-gesture="true"
+        :vslide-gesture-in-fullscreen="true"
+        object-fit="contain"
+        @tap="togglePlayback"
+        @play="isPlaying = true"
+        @pause="isPlaying = false"
+        @ended="isPlaying = false"
+        @error="onVideoError"
+      ></video>
+      <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
+        <cover-view class="player-pause-triangle"></cover-view>
+      </cover-view>
+    </view>
     <!-- #endif -->
     <!-- #ifndef MP-WEIXIN -->
     <video
@@ -43,10 +48,7 @@
     ></video>
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
-    <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-      <cover-view class="player-pause-triangle"></cover-view>
-    </cover-view>
-    <cover-view class="player-top player-top-mini">
+    <cover-view class="player-title-overlay">
       <cover-view class="player-title player-title-mini">{{ title || '视频播放' }}</cover-view>
     </cover-view>
     <!-- #endif -->
@@ -76,10 +78,13 @@ const sourceUrl = ref('')
 const isPlaying = ref(true)
 const screenWidth = ref(0)
 const screenHeight = ref(0)
+const videoTopOffset = ref(0)
 
 const playerSizeStyle = computed(() => {
   if (!screenWidth.value || !screenHeight.value) return ''
-  return `width: ${screenWidth.value}px; height: ${screenHeight.value}px; min-height: ${screenHeight.value}px;`
+  const top = videoTopOffset.value
+  const height = Math.max(screenHeight.value - top, 1)
+  return `width: ${screenWidth.value}px; height: ${height}px; min-height: ${height}px; top: ${top}px;`
 })
 
 const updatePlayerSize = () => {
@@ -90,8 +95,13 @@ const updatePlayerSize = () => {
       : uni.getSystemInfoSync()
     const width = Number(info?.windowWidth || info?.screenWidth)
     const height = Number(info?.windowHeight || info?.screenHeight)
+    const menuButton = typeof uniAny.getMenuButtonBoundingClientRect === 'function'
+      ? uniAny.getMenuButtonBoundingClientRect()
+      : null
+    const menuTop = Number(menuButton?.top)
     if (width > 0) screenWidth.value = width
     if (height > 0) screenHeight.value = height
+    videoTopOffset.value = menuTop > 0 ? menuTop : Math.max(Number(info?.statusBarHeight) || 0, 0)
   } catch {}
 }
 
@@ -169,6 +179,14 @@ onLoad((options: any) => {
   overflow: hidden;
 }
 
+.player-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #000;
+  overflow: hidden;
+}
+
 .player-video {
   width: 100%;
   height: 100%;
@@ -176,7 +194,7 @@ onLoad((options: any) => {
 }
 
 .player-pause-overlay {
-  position: fixed;
+  position: absolute;
   left: 50%;
   top: 50%;
   z-index: 4;
@@ -219,12 +237,19 @@ onLoad((options: any) => {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent);
 }
 
-.player-top-mini {
-  top: 34rpx;
-  padding: 30rpx 36rpx 24rpx;
+.player-title-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
   justify-content: flex-start;
-  align-items: flex-start;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent);
+  padding: 90rpx 36rpx 92rpx;
+  box-sizing: border-box;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.58), transparent);
 }
 
 .player-bottom {
