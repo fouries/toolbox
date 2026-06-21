@@ -34,6 +34,7 @@
           <view class="video-section" v-if="hotVideos.length">
             <text class="video-title">相关视频</text>
             <view class="video-item" v-for="(video, index) in hotVideos" :key="`${index}-${video.url}`">
+              <!-- #ifdef MP-WEIXIN -->
               <video
                 :id="`douyin-hot-video-${index}`"
                 class="hot-video"
@@ -41,17 +42,36 @@
                 :poster="video.poster || ''"
                 :title="video.title || hotKeyword"
                 controls
-                show-fullscreen-btn
-                show-center-play-btn
-                enable-play-gesture
-                enable-progress-gesture
-                vslide-gesture-in-fullscreen
+                :show-fullscreen-btn="true"
+                :show-center-play-btn="true"
+                :enable-play-gesture="true"
+                :enable-progress-gesture="true"
+                :vslide-gesture-in-fullscreen="true"
+                object-fit="contain"
+                @error="onVideoError"
+                @fullscreenchange="onVideoFullscreenChange(index, $event)"
+              ></video>
+              <!-- #endif -->
+              <!-- #ifndef MP-WEIXIN -->
+              <video
+                :id="`douyin-hot-video-${index}`"
+                class="hot-video"
+                :src="video.url"
+                :poster="video.poster || ''"
+                :title="video.title || hotKeyword"
+                controls
+                :show-fullscreen-btn="true"
+                :show-center-play-btn="true"
+                :enable-play-gesture="true"
+                :enable-progress-gesture="true"
+                :vslide-gesture-in-fullscreen="true"
                 object-fit="contain"
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
                 @touchstart="onFullscreenVideoTouchStart(index, $event)"
                 @touchend="onFullscreenVideoTouchEnd(index, $event)"
               ></video>
+              <!-- #endif -->
               <view class="video-meta" v-if="platform === 'douyin' || video.title || video.author || videoStats(video) || video.sourceUrl">
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
                 <text class="video-author" v-if="video.author">@{{ video.author }}</text>
@@ -118,16 +138,20 @@ declare function getCurrentPages(): any[];
 const { themeClass } = useTheme()
 const componentInstance = getCurrentInstance()
 
-const getVideoContext = (index: number) => {
+const getVideoContexts = (index: number) => {
   const videoId = `douyin-hot-video-${index}`
-  // 微信小程序里动态 id 的 video 在组件作用域内，传入当前实例可避免拿不到上下文。
-  // H5 端不需要实例；保留 fallback 保证两端都可用。
+  const contexts: any[] = []
+  // 微信小程序里 createVideoContext 对页面/组件作用域比较敏感：
+  // 先取页面级上下文，再取组件实例上下文，避免某一端拿到空上下文导致 requestFullScreen 无效。
+  try {
+    contexts.push(uni.createVideoContext(videoId) as any)
+  } catch {}
   try {
     if (componentInstance?.proxy) {
-      return uni.createVideoContext(videoId, componentInstance.proxy as any) as any
+      contexts.push(uni.createVideoContext(videoId, componentInstance.proxy as any) as any)
     }
   } catch {}
-  return uni.createVideoContext(videoId) as any
+  return contexts.filter(Boolean)
 }
 
 const hotConfigs = {
@@ -248,13 +272,17 @@ const openImmersiveVideo = (index: number) => {
   resetSwipeTouch()
   swipeNavigating.value = false
   fullscreenVideoIndex.value = index
-  const context = getVideoContext(index)
-  if (context?.requestFullScreen) {
-    context.requestFullScreen({
-      direction: 0,
-      fail: () => {
-        fullscreenVideoIndex.value = -1
-        uni.showToast({ title: '当前环境不支持全屏播放', icon: 'none' })
+  const contexts = getVideoContexts(index)
+  const hasFullscreenContext = contexts.some(context => typeof context?.requestFullScreen === 'function')
+  if (hasFullscreenContext) {
+    contexts.forEach(context => {
+      if (typeof context?.requestFullScreen === 'function') {
+        context.requestFullScreen({
+          direction: 0,
+          fail: () => {
+            fullscreenVideoIndex.value = -1
+          }
+        })
       }
     })
     return
@@ -266,10 +294,11 @@ const openImmersiveVideo = (index: number) => {
 const exitFullscreenVideo = () => {
   const index = fullscreenVideoIndex.value
   if (index >= 0) {
-    const context = getVideoContext(index)
-    if (context?.exitFullScreen) {
-      context.exitFullScreen()
-    }
+    getVideoContexts(index).forEach(context => {
+      if (typeof context?.exitFullScreen === 'function') {
+        context.exitFullScreen()
+      }
+    })
   }
   fullscreenVideoIndex.value = -1
   resetSwipeTouch()
