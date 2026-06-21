@@ -197,7 +197,8 @@ onLoad((options: any) => {
 .player-top-mini {
   top: 34rpx;
   padding: 30rpx 36rpx 24rpx;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent);
 }
 
@@ -236,8 +237,15 @@ onLoad((options: any) => {
 
 .player-title-mini {
   flex: none;
-  max-width: 86vw;
-  text-align: center;
+  width: 86vw;
+  max-height: 82rpx;
+  display: -webkit-box;
+  overflow: hidden;
+  text-align: left;
+  white-space: normal;
+  word-break: break-all;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   font-size: 28rpx;
   line-height: 1.45;
   text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.48);
