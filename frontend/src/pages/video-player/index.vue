@@ -20,10 +20,7 @@
     <cover-view class="player-top">
       <cover-view class="player-close" @tap="goBack">退出播放</cover-view>
       <cover-view class="player-title">{{ title || '视频播放' }}</cover-view>
-    </cover-view>
-    <cover-view class="player-bottom">
-      <cover-view class="player-hint">点击退出播放返回详情，上下滑在详情文字区使用</cover-view>
-      <cover-view class="player-link" v-if="sourceUrl" @tap="copySource">复制原链接</cover-view>
+      <cover-view class="player-fullscreen" @tap="requestFullscreen">全屏</cover-view>
     </cover-view>
     <!-- #endif -->
     <!-- #ifndef MP-WEIXIN -->
@@ -40,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 declare function getCurrentPages(): any[];
@@ -84,6 +81,22 @@ const copySource = () => {
   if (!sourceUrl.value) return
   uni.setClipboardData({ data: sourceUrl.value })
   uni.showToast({ title: '原链接已复制', icon: 'none' })
+}
+
+const requestFullscreen = () => {
+  nextTick(() => {
+    const context = uni.createVideoContext('toolbox-video-player') as any
+    if (typeof context?.requestFullScreen !== 'function') {
+      uni.showToast({ title: '当前环境不支持视频全屏', icon: 'none' })
+      return
+    }
+    context.requestFullScreen({
+      direction: 0,
+      fail: () => {
+        uni.showToast({ title: '全屏打开失败，请先点视频播放后再试', icon: 'none' })
+      }
+    })
+  })
 }
 
 onLoad((options: any) => {
@@ -138,7 +151,8 @@ onLoad((options: any) => {
 }
 
 .player-close,
-.player-link {
+.player-link,
+.player-fullscreen {
   margin: 0;
   padding: 0 22rpx;
   height: 58rpx;
@@ -161,6 +175,10 @@ onLoad((options: any) => {
   color: #fff;
   font-size: 26rpx;
   font-weight: 700;
+}
+
+.player-fullscreen {
+  background: rgba(37, 99, 235, 0.92);
 }
 
 .player-hint {
