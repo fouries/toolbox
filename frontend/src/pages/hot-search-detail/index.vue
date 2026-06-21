@@ -73,6 +73,12 @@
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
+              <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] === false" @tap="toggleHotVideoPlayback(index)">
+                <cover-view class="hot-video-pause-icon">
+                  <cover-view class="hot-video-pause-bar"></cover-view>
+                  <cover-view class="hot-video-pause-bar"></cover-view>
+                </cover-view>
+              </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
               <video
@@ -697,6 +703,7 @@ onLoad((options: any) => {
 }
 
 .video-item {
+  position: relative;
   margin-top: 16rpx;
   padding: 18rpx;
   border-radius: 22rpx;
@@ -709,6 +716,38 @@ onLoad((options: any) => {
   border-radius: 20rpx;
   overflow: hidden;
   background: #0f172a;
+}
+
+.hot-video-pause-overlay {
+  position: absolute;
+  left: 50%;
+  top: 228rpx;
+  z-index: 3;
+  width: 118rpx;
+  height: 118rpx;
+  margin-left: -59rpx;
+  margin-top: -59rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.hot-video-pause-icon {
+  width: 58rpx;
+  height: 66rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+}
+
+.hot-video-pause-bar {
+  width: 14rpx;
+  height: 54rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.84);
 }
 
 .video-meta {
