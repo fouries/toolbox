@@ -46,10 +46,8 @@
     <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
       <cover-view class="player-pause-triangle"></cover-view>
     </cover-view>
-    <cover-view class="player-top">
-      <cover-view class="player-close" @tap="goBack">退出播放</cover-view>
-      <cover-view class="player-title">{{ title || '视频播放' }}</cover-view>
-      <cover-view class="player-fullscreen" @tap="requestFullscreen">全屏</cover-view>
+    <cover-view class="player-top player-top-mini">
+      <cover-view class="player-title player-title-mini">{{ title || '视频播放' }}</cover-view>
     </cover-view>
     <!-- #endif -->
     <!-- #ifndef MP-WEIXIN -->
@@ -66,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 declare function getCurrentPages(): any[];
@@ -124,22 +122,6 @@ const togglePlayback = () => {
   }
   context.play?.()
   isPlaying.value = true
-}
-
-const requestFullscreen = () => {
-  nextTick(() => {
-    const context = getPlayerContext()
-    if (typeof context?.requestFullScreen !== 'function') {
-      uni.showToast({ title: '当前环境不支持视频全屏', icon: 'none' })
-      return
-    }
-    context.requestFullScreen({
-      direction: 0,
-      fail: () => {
-        uni.showToast({ title: '全屏打开失败，请先点视频播放后再试', icon: 'none' })
-      }
-    })
-  })
 }
 
 onLoad((options: any) => {
@@ -212,6 +194,13 @@ onLoad((options: any) => {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent);
 }
 
+.player-top-mini {
+  top: 34rpx;
+  padding: 30rpx 36rpx 24rpx;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.46), transparent);
+}
+
 .player-bottom {
   bottom: 0;
   justify-content: space-between;
@@ -243,6 +232,15 @@ onLoad((options: any) => {
   color: #fff;
   font-size: 26rpx;
   font-weight: 700;
+}
+
+.player-title-mini {
+  flex: none;
+  max-width: 86vw;
+  text-align: center;
+  font-size: 28rpx;
+  line-height: 1.45;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.48);
 }
 
 .player-fullscreen {
