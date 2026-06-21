@@ -1,5 +1,5 @@
 <template>
-  <view class="player-page">
+  <view class="player-page" :style="playerSizeStyle">
     <!-- #ifdef MP-WEIXIN -->
     <video
       id="toolbox-video-player"
@@ -64,8 +64,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad, onResize } from '@dcloudio/uni-app'
 
 declare function getCurrentPages(): any[];
 
@@ -74,6 +74,26 @@ const poster = ref('')
 const title = ref('')
 const sourceUrl = ref('')
 const isPlaying = ref(true)
+const screenWidth = ref(0)
+const screenHeight = ref(0)
+
+const playerSizeStyle = computed(() => {
+  if (!screenWidth.value || !screenHeight.value) return ''
+  return `width: ${screenWidth.value}px; height: ${screenHeight.value}px; min-height: ${screenHeight.value}px;`
+})
+
+const updatePlayerSize = () => {
+  try {
+    const uniAny = uni as any
+    const info = typeof uniAny.getWindowInfo === 'function'
+      ? uniAny.getWindowInfo()
+      : uni.getSystemInfoSync()
+    const width = Number(info?.windowWidth || info?.screenWidth)
+    const height = Number(info?.windowHeight || info?.screenHeight)
+    if (width > 0) screenWidth.value = width
+    if (height > 0) screenHeight.value = height
+  } catch {}
+}
 
 const isProxyMediaValue = (value: string) => /\/api\/(?:image|video)-proxy\?url=/.test(value)
 
@@ -124,7 +144,12 @@ const togglePlayback = () => {
   isPlaying.value = true
 }
 
+onResize(() => {
+  updatePlayerSize()
+})
+
 onLoad((options: any) => {
+  updatePlayerSize()
   videoUrl.value = decodeValue(options?.url)
   poster.value = decodeValue(options?.poster)
   title.value = decodeValue(options?.title)
@@ -145,8 +170,8 @@ onLoad((options: any) => {
 }
 
 .player-video {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background: #000;
 }
 
