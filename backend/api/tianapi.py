@@ -1475,6 +1475,8 @@ class TianApiService:
             videos=[],
             images=[],
         )
+        # 轻详情用于首屏快速渲染，summary 保持列表随带摘要，不追加热度后缀。
+        data["summary"] = quick_description
         result = {"code": 200, "msg": "success", "data": data}
         await cache.set(cache_key, result, ttl=3600)
         return result

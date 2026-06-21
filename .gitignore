@@ -40,6 +40,8 @@ logs/
 
 # 运行时数据
 backend/data/news_detail/
+backend/data/*.db
+backend/data/*.db-*
 
 # ==============
 # 打包文件

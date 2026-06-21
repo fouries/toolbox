@@ -1,59 +1,55 @@
-import json
-import threading
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from db.repositories import ToolStatsRepository
+from db.session import session_scope
+
+logger = logging.getLogger(__name__)
 
 KNOWN_TOOLS = [
     "oil-price",
     "weather",
     "calendar",
+    "gold-price",
+    "qrcode",
+    "password",
+    "history-today",
+    "solar-terms",
+    "baidu-hot",
+    "douyin-hot",
+    "daily-brief",
+    "info-news",
+    # legacy ids kept so old counters are not lost
     "internet-news",
     "esports-news",
     "auto-news",
-    "gold-price",
-    "qrcode",
 ]
 
 
 class ToolStatsService:
-    """全站工具点击统计服务。使用服务端 JSON 文件持久化点击次数。"""
-
-    _lock = threading.Lock()
+    """全站工具点击统计服务。默认使用数据库，启动时可从旧 JSON 迁移。"""
 
     def __init__(self, storage_path: Optional[Path] = None):
         self.storage_path = storage_path or Path(__file__).resolve().parents[1] / "data" / "tool_clicks.json"
 
-    def _read_counts(self) -> Dict[str, int]:
-        if not self.storage_path.exists():
-            return {}
-        try:
-            data = json.loads(self.storage_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return {}
-        if not isinstance(data, dict):
-            return {}
-        return {tool_id: int(count) for tool_id, count in data.items() if tool_id in KNOWN_TOOLS and isinstance(count, int)}
-
-    def _write_counts(self, counts: Dict[str, int]) -> None:
-        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        self.storage_path.write_text(json.dumps(counts, ensure_ascii=False, indent=2), encoding="utf-8")
+    def migrate_legacy_json(self) -> None:
+        with session_scope() as session:
+            ToolStatsRepository(session).migrate_from_json(self.storage_path, KNOWN_TOOLS)
 
     def record_click(self, tool_id: str) -> Dict[str, Any]:
         if tool_id not in KNOWN_TOOLS:
             return {"code": 400, "msg": "未知工具"}
 
-        with self._lock:
-            counts = self._read_counts()
-            counts[tool_id] = counts.get(tool_id, 0) + 1
-            self._write_counts(counts)
-            clicks = counts[tool_id]
+        with session_scope() as session:
+            clicks = ToolStatsRepository(session).increment(tool_id)
 
         return {"code": 200, "msg": "success", "data": {"id": tool_id, "clicks": clicks}}
 
     def get_popular(self, limit: int = 4) -> List[Dict[str, Any]]:
         limit = max(1, min(int(limit or 4), len(KNOWN_TOOLS)))
-        counts = self._read_counts()
+        with session_scope() as session:
+            counts = ToolStatsRepository(session).get_counts()
         ranked = sorted(
             KNOWN_TOOLS,
             key=lambda tool_id: (-counts.get(tool_id, 0), KNOWN_TOOLS.index(tool_id)),
