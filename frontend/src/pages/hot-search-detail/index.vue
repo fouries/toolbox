@@ -114,6 +114,7 @@
         @touchstart="onImmersiveTouchStart"
         @touchend="onImmersiveTouchEnd"
       >
+        <!-- #ifdef MP-WEIXIN -->
         <cover-view class="immersive-video-top">
           <cover-view class="immersive-close" @tap.stop="closeImmersiveVideo">关闭</cover-view>
           <cover-view class="immersive-title">{{ hotKeyword }}</cover-view>
@@ -121,7 +122,9 @@
         <cover-view class="immersive-video-bottom">
           <cover-view class="immersive-hint">上滑下一条 · 下滑上一条</cover-view>
         </cover-view>
+        <!-- #endif -->
       </video>
+      <!-- #ifndef MP-WEIXIN -->
       <view class="immersive-overlay-top">
         <button class="immersive-close-btn" @tap.stop="closeImmersiveVideo">关闭</button>
         <text class="immersive-overlay-title">{{ hotKeyword }}</text>
@@ -129,6 +132,7 @@
       <view class="immersive-overlay-bottom">
         <text class="immersive-overlay-hint">上滑下一条 · 下滑上一条</text>
       </view>
+      <!-- #endif -->
     </view>
   </view>
 </template>
