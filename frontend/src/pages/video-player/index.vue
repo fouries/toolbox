@@ -8,7 +8,7 @@
       :title="title"
       controls
       autoplay
-      :show-fullscreen-btn="true"
+      :show-fullscreen-btn="false"
       :show-center-play-btn="true"
       :enable-play-gesture="true"
       :enable-progress-gesture="true"
