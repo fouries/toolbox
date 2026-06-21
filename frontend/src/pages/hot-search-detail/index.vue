@@ -80,22 +80,30 @@
               <!-- #ifndef MP-WEIXIN -->
               <video
                 :id="`douyin-hot-video-${index}`"
-                class="hot-video"
+                class="hot-video h5-click-video"
                 :src="video.url"
                 :poster="video.poster || ''"
                 :title="video.title || hotKeyword"
                 controls
+                :show-play-btn="false"
                 :show-fullscreen-btn="true"
-                :show-center-play-btn="true"
-                :enable-play-gesture="true"
+                :show-center-play-btn="false"
+                :enable-play-gesture="false"
                 :enable-progress-gesture="true"
                 :vslide-gesture-in-fullscreen="true"
                 object-fit="contain"
+                @click.prevent="toggleHotVideoPlayback(index)"
+                @play="setHotVideoPlaying(index, true)"
+                @pause="setHotVideoPlaying(index, false)"
+                @ended="setHotVideoPlaying(index, false)"
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
                 @touchstart="onFullscreenVideoTouchStart(index, $event)"
                 @touchend="onFullscreenVideoTouchEnd(index, $event)"
               ></video>
+              <view class="hot-video-pause-overlay hot-video-pause-overlay-h5" v-if="hotVideoPlaying[index] !== true" @click.stop="toggleHotVideoPlayback(index)">
+                <view class="hot-video-pause-triangle"></view>
+              </view>
               <!-- #endif -->
               <view class="video-meta" v-if="platform === 'douyin' || video.title || video.author || videoStats(video) || video.sourceUrl">
                 <text class="video-desc" v-if="video.title">{{ video.title }}</text>
@@ -729,6 +737,20 @@ onLoad((options: any) => {
   justify-content: center;
   border-radius: 999rpx;
   background: rgba(15, 23, 42, 0.28);
+}
+
+.hot-video-pause-overlay-h5 {
+  cursor: pointer;
+}
+
+.h5-click-video,
+.h5-click-video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+.h5-click-video {
+  display: block !important;
+  cursor: pointer;
 }
 
 .hot-video-pause-triangle {

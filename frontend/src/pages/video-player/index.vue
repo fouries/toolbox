@@ -30,22 +30,32 @@
     </view>
     <!-- #endif -->
     <!-- #ifndef MP-WEIXIN -->
-    <video
-      id="toolbox-video-player"
-      class="player-video"
-      :src="videoUrl"
-      :poster="poster"
-      :title="title"
-      controls
-      autoplay
-      :show-fullscreen-btn="false"
-      :show-center-play-btn="true"
-      :enable-play-gesture="true"
-      :enable-progress-gesture="true"
-      :vslide-gesture-in-fullscreen="true"
-      object-fit="contain"
-      @error="onVideoError"
-    ></video>
+    <view class="player-stage player-stage-h5">
+      <video
+        id="toolbox-video-player"
+        class="player-video h5-click-video"
+        :src="videoUrl"
+        :poster="poster"
+        :title="title"
+        controls
+        autoplay
+        :show-play-btn="false"
+        :show-fullscreen-btn="false"
+        :show-center-play-btn="false"
+        :enable-play-gesture="false"
+        :enable-progress-gesture="true"
+        :vslide-gesture-in-fullscreen="true"
+        object-fit="contain"
+        @click.prevent="togglePlayback"
+        @play="isPlaying = true"
+        @pause="isPlaying = false"
+        @ended="isPlaying = false"
+        @error="onVideoError"
+      ></video>
+      <view class="player-pause-overlay player-pause-overlay-h5" v-if="!isPlaying" @click.stop="togglePlayback">
+        <view class="player-pause-triangle"></view>
+      </view>
+    </view>
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
     <cover-view class="player-title-overlay">
@@ -187,6 +197,13 @@ onLoad((options: any) => {
   overflow: hidden;
 }
 
+.player-stage-h5 {
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .player-video {
   width: 100%;
   height: 100%;
@@ -207,6 +224,21 @@ onLoad((options: any) => {
   justify-content: center;
   border-radius: 999rpx;
   background: rgba(0, 0, 0, 0.26);
+}
+
+.player-pause-overlay-h5 {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.h5-click-video,
+.h5-click-video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+.h5-click-video {
+  display: block !important;
+  cursor: pointer;
 }
 
 .player-pause-triangle {
