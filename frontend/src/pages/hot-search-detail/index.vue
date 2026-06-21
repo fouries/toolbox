@@ -31,11 +31,22 @@
 
       <view v-else>
         <view class="keyword-card card">
+          <!-- #ifdef MP-WEIXIN -->
+          <view class="douyin-swipe-touch-zone" @touchstart="onTouchStart" @touchend="onTouchEnd">
+            <view class="douyin-swipe-hint" v-if="platform === 'douyin' && hotList.length > 1">
+              <text>文字区域上滑下一条，下滑上一条</text>
+            </view>
+            <text class="keyword-label">热搜关键词</text>
+            <text class="keyword-title">{{ hotKeyword }}</text>
+          </view>
+          <!-- #endif -->
+          <!-- #ifndef MP-WEIXIN -->
           <view class="douyin-swipe-hint" v-if="platform === 'douyin' && hotList.length > 1">
             <text>上滑下一条，下滑上一条</text>
           </view>
           <text class="keyword-label">热搜关键词</text>
           <text class="keyword-title">{{ hotKeyword }}</text>
+          <!-- #endif -->
           <view class="video-section" v-if="hotVideos.length">
             <text class="video-title">相关视频</text>
             <view class="video-item" v-for="(video, index) in hotVideos" :key="`${index}-${video.url}`">
@@ -100,10 +111,20 @@
             </view>
           </view>
           <text class="media-error" v-if="mediaError">{{ mediaError }}</text>
+          <!-- #ifdef MP-WEIXIN -->
+          <view class="douyin-swipe-touch-zone" @touchstart="onTouchStart" @touchend="onTouchEnd">
+            <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
+            <view class="action-row">
+              <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
+            </view>
+          </view>
+          <!-- #endif -->
+          <!-- #ifndef MP-WEIXIN -->
           <text class="keyword-desc" v-if="detail?.summary">{{ detail.summary }}</text>
           <view class="action-row">
             <button class="copy-btn" @tap="copyHotLink">复制{{ sourceUrl ? '原链接' : '关键词' }}</button>
           </view>
+          <!-- #endif -->
         </view>
 
         <!-- 上一篇 / 下一篇导航 -->
@@ -270,13 +291,24 @@ const onVideoError = () => {
 
 const openImmersiveVideo = (index: number) => {
   if (platform.value !== 'douyin') return
-  if (!hotVideos.value[index]?.url) {
+  const video = hotVideos.value[index]
+  if (!video?.url) {
     uni.showToast({ title: '视频暂时不可播放', icon: 'none' })
     return
   }
   resetSwipeTouch()
   swipeNavigating.value = false
   fullscreenVideoIndex.value = index
+  // #ifdef MP-WEIXIN
+  const params = [
+    `url=${encodeURIComponent(video.url)}`,
+    `poster=${encodeURIComponent(video.poster || '')}`,
+    `title=${encodeURIComponent(video.title || hotKeyword.value)}`,
+    `sourceUrl=${encodeURIComponent(video.sourceUrl || '')}`
+  ].join('&')
+  uni.navigateTo({ url: `/pages/video-player/index?${params}` })
+  return
+  // #endif
   const contexts = getVideoContexts(index)
   const hasFullscreenContext = contexts.some(context => typeof context?.requestFullScreen === 'function')
   if (hasFullscreenContext) {

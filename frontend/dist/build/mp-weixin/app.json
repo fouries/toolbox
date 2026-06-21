@@ -15,7 +15,8 @@
     "pages/gold-price/index",
     "pages/daily-brief/index",
     "pages/hot-search/index",
-    "pages/hot-search-detail/index"
+    "pages/hot-search-detail/index",
+    "pages/video-player/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",
