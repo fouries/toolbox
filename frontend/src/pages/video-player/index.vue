@@ -1,5 +1,28 @@
 <template>
   <view class="player-page">
+    <!-- #ifdef MP-WEIXIN -->
+    <video
+      id="toolbox-video-player"
+      class="player-video"
+      :src="videoUrl"
+      :poster="poster"
+      :title="title"
+      :controls="false"
+      autoplay
+      :show-fullscreen-btn="false"
+      :show-center-play-btn="false"
+      :enable-play-gesture="false"
+      :enable-progress-gesture="false"
+      :vslide-gesture-in-fullscreen="true"
+      object-fit="contain"
+      @tap="togglePlayback"
+      @play="isPlaying = true"
+      @pause="isPlaying = false"
+      @ended="isPlaying = false"
+      @error="onVideoError"
+    ></video>
+    <!-- #endif -->
+    <!-- #ifndef MP-WEIXIN -->
     <video
       id="toolbox-video-player"
       class="player-video"
@@ -16,6 +39,7 @@
       object-fit="contain"
       @error="onVideoError"
     ></video>
+    <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
     <cover-view class="player-top">
       <cover-view class="player-close" @tap="goBack">退出播放</cover-view>
@@ -46,6 +70,7 @@ const videoUrl = ref('')
 const poster = ref('')
 const title = ref('')
 const sourceUrl = ref('')
+const isPlaying = ref(true)
 
 const isProxyMediaValue = (value: string) => /\/api\/(?:image|video)-proxy\?url=/.test(value)
 
@@ -83,9 +108,22 @@ const copySource = () => {
   uni.showToast({ title: '原链接已复制', icon: 'none' })
 }
 
+const getPlayerContext = () => uni.createVideoContext('toolbox-video-player') as any
+
+const togglePlayback = () => {
+  const context = getPlayerContext()
+  if (isPlaying.value) {
+    context.pause?.()
+    isPlaying.value = false
+    return
+  }
+  context.play?.()
+  isPlaying.value = true
+}
+
 const requestFullscreen = () => {
   nextTick(() => {
-    const context = uni.createVideoContext('toolbox-video-player') as any
+    const context = getPlayerContext()
     if (typeof context?.requestFullScreen !== 'function') {
       uni.showToast({ title: '当前环境不支持视频全屏', icon: 'none' })
       return

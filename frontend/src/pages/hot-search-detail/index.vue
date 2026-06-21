@@ -57,13 +57,17 @@
                 :src="video.url"
                 :poster="video.poster || ''"
                 :title="video.title || hotKeyword"
-                controls
+                :controls="false"
                 :show-fullscreen-btn="false"
-                :show-center-play-btn="true"
-                :enable-play-gesture="true"
-                :enable-progress-gesture="true"
+                :show-center-play-btn="false"
+                :enable-play-gesture="false"
+                :enable-progress-gesture="false"
                 :vslide-gesture-in-fullscreen="true"
                 object-fit="contain"
+                @tap="toggleHotVideoPlayback(index)"
+                @play="setHotVideoPlaying(index, true)"
+                @pause="setHotVideoPlaying(index, false)"
+                @ended="setHotVideoPlaying(index, false)"
                 @error="onVideoError"
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
@@ -217,6 +221,7 @@ const touchStartX = ref(0)
 const touchStartTime = ref(0)
 const swipeNavigating = ref(false)
 const fullscreenVideoIndex = ref(-1)
+const hotVideoPlaying = ref<Record<number, boolean>>({})
 
 const isProxyMediaValue = (value: string) => /\/api\/(?:image|video)-proxy\?url=/.test(value)
 
@@ -293,6 +298,23 @@ const applyDetail = (data: HotSearchDetailData) => {
 
 const onVideoError = () => {
   uni.showToast({ title: platform.value === 'douyin' ? '视频暂时无法播放，可复制原链接去抖音查看' : '视频暂时无法播放，可点击原链接查看', icon: 'none' })
+}
+
+const setHotVideoPlaying = (index: number, playing: boolean) => {
+  hotVideoPlaying.value = { ...hotVideoPlaying.value, [index]: playing }
+}
+
+const toggleHotVideoPlayback = (index: number) => {
+  const contexts = getVideoContexts(index)
+  const playing = Boolean(hotVideoPlaying.value[index])
+  contexts.forEach(context => {
+    if (playing) {
+      context.pause?.()
+    } else {
+      context.play?.()
+    }
+  })
+  setHotVideoPlaying(index, !playing)
 }
 
 const openImmersiveVideo = (index: number) => {
