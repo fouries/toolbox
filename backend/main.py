@@ -1,6 +1,7 @@
 import logging
+from io import BytesIO
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
@@ -17,6 +18,7 @@ from core.middleware import RequestLoggingMiddleware
 from core.responses import error, normalize_response, success
 from db.session import init_db
 from utils.cache import cache
+from api.document_converter import get_document_converter_service
 from api.tianapi import TianApiService
 from api.news_detail import NewsDetailService
 from api.tools import ToolsService
@@ -81,6 +83,12 @@ class ReminderRequest(BaseModel):
     title: str = ""
     reminder_time: str
     enabled: bool = True
+
+
+class DocumentConvertBase64Request(BaseModel):
+    filename: str
+    content_base64: str
+    target_format: str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -390,6 +398,40 @@ async def generate_qrcode(text: str, size: int = 256):
     """生成二维码图片（base64格式）"""
     result = ToolsService.generate_qrcode(text, size)
     return normalize_response(result)
+
+@app.post("/api/documents/convert", summary="文档格式转换", tags=["本地工具"])
+async def convert_document(file: UploadFile = File(...), target_format: str = Form(...)):
+    """常见文档格式互转：TXT、HTML、DOCX、PDF。转换结果直接下载，不长期保存。"""
+    result = await get_document_converter_service().convert(file, target_format)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "文档转换失败"))
+    return Response(
+        content=result["content"],
+        media_type=result["media_type"],
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{result['filename']}",
+            "Cache-Control": "no-store",
+        },
+    )
+
+@app.post("/api/documents/convert-base64", summary="文档格式转换（Base64）", tags=["本地工具"])
+async def convert_document_base64(payload: DocumentConvertBase64Request):
+    """小程序/H5 兼容接口：接收 base64 文件内容，返回 base64 转换结果。"""
+    import base64
+
+    try:
+        raw = base64.b64decode(payload.content_base64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="文件内容不是有效的 Base64")
+    upload = UploadFile(filename=payload.filename, file=BytesIO(raw))
+    result = await get_document_converter_service().convert(upload, payload.target_format)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "文档转换失败"))
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
 
 @app.get("/api/password", summary="随机密码", tags=["本地工具"])
 async def generate_password(length: int = 16, 

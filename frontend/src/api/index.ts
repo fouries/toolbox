@@ -222,6 +222,12 @@ export interface ReminderSubscription {
   updated_at?: string
 }
 
+export interface DocumentConvertResult {
+  filename: string
+  media_type: string
+  base64: string
+}
+
 function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
 
@@ -442,6 +448,18 @@ export const disableReminderSubscription = (userKey: string, reminderType: strin
   })
 }
 
+export const convertDocumentBase64 = (payload: {
+  filename: string
+  content_base64: string
+  target_format: string
+}) => {
+  return request<DocumentConvertResult>('/api/documents/convert-base64', {
+    method: 'POST',
+    timeout: 60000,
+    data: payload
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -471,5 +489,6 @@ export default {
   getFeedbackList,
   getReminderSubscriptions,
   saveReminderSubscription,
-  disableReminderSubscription
+  disableReminderSubscription,
+  convertDocumentBase64
 }

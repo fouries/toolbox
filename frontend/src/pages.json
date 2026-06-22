@@ -41,6 +41,14 @@
       }
     },
     {
+      "path": "pages/document-converter/index",
+      "style": {
+        "navigationBarTitleText": "文档转换",
+        "navigationBarBackgroundColor": "#1677ff",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/password/index",
       "style": {
         "navigationBarTitleText": "密码生成器",

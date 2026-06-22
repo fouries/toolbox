@@ -13,6 +13,7 @@ KNOWN_TOOLS = [
     "calendar",
     "gold-price",
     "qrcode",
+    "document-converter",
     "password",
     "history-today",
     "solar-terms",
