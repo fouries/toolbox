@@ -31,13 +31,23 @@
               <text class="menu-arrow">></text>
             </view>
           </view>
-          <view class="menu-item" @click="focusFeedback">
+          <view class="menu-item" @click="openFeedbackPanel">
             <view class="menu-left">
               <text class="menu-icon">💬</text>
               <text class="menu-name">反馈建议</text>
             </view>
             <view class="menu-right">
               <text class="menu-hint">在线提交</text>
+              <text class="menu-arrow">></text>
+            </view>
+          </view>
+          <view class="menu-item" @click="openReminderPanel">
+            <view class="menu-left">
+              <text class="menu-icon">🔔</text>
+              <text class="menu-name">订阅提醒</text>
+            </view>
+            <view class="menu-right">
+              <text class="menu-hint">{{ enabledReminderCount ? `${enabledReminderCount} 个已开启` : '未开启' }}</text>
               <text class="menu-arrow">></text>
             </view>
           </view>
@@ -54,73 +64,78 @@
         </view>
       </view>
 
-      <view id="feedback-form" class="settings-card engagement-card feedback-form">
-        <view class="card-header">
-          <view>
-            <text class="card-title">反馈建议</text>
-            <text class="card-desc">遇到问题、内容错误或想要新功能，都可以直接告诉我。</text>
-          </view>
-          <text class="card-icon">💬</text>
-        </view>
-
-        <view class="form-row">
-          <text class="form-label">反馈类型</text>
-          <picker :range="feedbackCategoryLabels" :value="feedbackCategoryIndex" @change="changeFeedbackCategory">
-            <view class="picker-value">{{ feedbackCategoryLabels[feedbackCategoryIndex] }} ></view>
-          </picker>
-        </view>
-        <view class="form-row form-row-block">
-          <text class="form-label">反馈内容</text>
-          <textarea
-            v-model="feedbackForm.content"
-            class="feedback-textarea"
-            maxlength="1000"
-            placeholder="请描述你遇到的问题或建议，至少 5 个字"
-            :show-confirm-bar="false"
-          />
-        </view>
-        <view class="form-row form-row-block">
-          <text class="form-label">联系方式（选填）</text>
-          <input v-model="feedbackForm.contact" class="text-input" maxlength="128" placeholder="微信/邮箱，便于需要时联系你" />
-        </view>
-        <button class="primary-button" :disabled="submittingFeedback" @click="submitFeedbackForm">
-          {{ submittingFeedback ? '提交中...' : '提交反馈' }}
-        </button>
-
-        <view v-if="feedbackList.length" class="feedback-history">
-          <text class="section-title">我的反馈记录</text>
-          <view v-for="item in feedbackList" :key="item.id" class="history-item">
-            <view class="history-top">
-              <text class="history-tag">{{ feedbackCategoryMap[item.category] || item.category }}</text>
-              <text class="history-status">{{ item.status === 'submitted' ? '已提交' : item.status }}</text>
+      <view v-if="activePanel" class="panel-mask" @click="closeActivePanel">
+        <view class="panel-sheet" @click.stop>
+          <view class="sheet-handle"></view>
+          <view v-if="activePanel === 'feedback'" id="feedback-form" class="engagement-card feedback-form">
+            <view class="card-header">
+              <view>
+                <text class="card-title">反馈建议</text>
+                <text class="card-desc">遇到问题、内容错误或想要新功能，都可以直接告诉我。</text>
+              </view>
+              <text class="card-icon">💬</text>
             </view>
-            <text class="history-content">{{ item.content }}</text>
-          </view>
-        </view>
-      </view>
 
-      <view class="settings-card engagement-card reminder-card">
-        <view class="card-header">
-          <view>
-            <text class="card-title">订阅提醒</text>
-            <text class="card-desc">先保存提醒偏好，后续可按这些配置推送每日简报、天气等消息。</text>
-          </view>
-          <text class="card-icon">🔔</text>
-        </view>
+            <view class="form-row">
+              <text class="form-label">反馈类型</text>
+              <picker :range="feedbackCategoryLabels" :value="feedbackCategoryIndex" @change="changeFeedbackCategory">
+                <view class="picker-value">{{ feedbackCategoryLabels[feedbackCategoryIndex] }} ></view>
+              </picker>
+            </view>
+            <view class="form-row form-row-block">
+              <text class="form-label">反馈内容</text>
+              <textarea
+                v-model="feedbackForm.content"
+                class="feedback-textarea"
+                maxlength="1000"
+                placeholder="请描述你遇到的问题或建议，至少 5 个字"
+                :show-confirm-bar="false"
+              />
+            </view>
+            <view class="form-row form-row-block">
+              <text class="form-label">联系方式（选填）</text>
+              <input v-model="feedbackForm.contact" class="text-input" maxlength="128" placeholder="微信/邮箱，便于需要时联系你" />
+            </view>
+            <button class="primary-button" :disabled="submittingFeedback" @click="submitFeedbackForm">
+              {{ submittingFeedback ? '提交中...' : '提交反馈' }}
+            </button>
 
-        <view v-for="option in reminderOptions" :key="option.type" class="reminder-item">
-          <view class="reminder-main">
-            <text class="reminder-icon">{{ option.icon }}</text>
-            <view class="reminder-text">
-              <text class="reminder-title">{{ option.title }}</text>
-              <text class="reminder-desc">{{ option.desc }}</text>
+            <view v-if="feedbackList.length" class="feedback-history">
+              <text class="section-title">我的反馈记录</text>
+              <view v-for="item in feedbackList" :key="item.id" class="history-item">
+                <view class="history-top">
+                  <text class="history-tag">{{ feedbackCategoryMap[item.category] || item.category }}</text>
+                  <text class="history-status">{{ item.status === 'submitted' ? '已提交' : item.status }}</text>
+                </view>
+                <text class="history-content">{{ item.content }}</text>
+              </view>
             </view>
           </view>
-          <view class="reminder-actions">
-            <picker mode="time" :value="getReminderTime(option.type)" @change="changeReminderTime(option, $event)">
-              <view class="time-pill">{{ getReminderTime(option.type) }}</view>
-            </picker>
-            <switch :checked="isReminderEnabled(option.type)" color="#2563eb" @change="toggleReminder(option, $event)" />
+
+          <view v-else class="engagement-card reminder-card">
+            <view class="card-header">
+              <view>
+                <text class="card-title">订阅提醒</text>
+                <text class="card-desc">先保存提醒偏好，后续可按这些配置推送每日简报、天气等消息。</text>
+              </view>
+              <text class="card-icon">🔔</text>
+            </view>
+
+            <view v-for="option in reminderOptions" :key="option.type" class="reminder-item">
+              <view class="reminder-main">
+                <text class="reminder-icon">{{ option.icon }}</text>
+                <view class="reminder-text">
+                  <text class="reminder-title">{{ option.title }}</text>
+                  <text class="reminder-desc">{{ option.desc }}</text>
+                </view>
+              </view>
+              <view class="reminder-actions">
+                <picker mode="time" :value="getReminderTime(option.type)" @change="changeReminderTime(option, $event)">
+                  <view class="time-pill">{{ getReminderTime(option.type) }}</view>
+                </picker>
+                <switch :checked="isReminderEnabled(option.type)" color="#2563eb" @change="toggleReminder(option, $event)" />
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -162,6 +177,7 @@ const feedbackCategoryMap: Record<string, string> = {
 const feedbackCategories = Object.keys(feedbackCategoryMap)
 const feedbackCategoryLabels = feedbackCategories.map(key => feedbackCategoryMap[key])
 const feedbackCategoryIndex = ref(1)
+const activePanel = ref<'feedback' | 'reminders' | ''>('')
 const submittingFeedback = ref(false)
 const feedbackList = ref<FeedbackResult[]>([])
 const reminderSubscriptions = ref<ReminderSubscription[]>([])
@@ -186,6 +202,8 @@ const reminderMap = computed(() => {
   })
   return map
 })
+
+const enabledReminderCount = computed(() => reminderSubscriptions.value.filter(item => item.enabled).length)
 
 const ensureUserKey = () => {
   try {
@@ -307,8 +325,16 @@ const changeReminderTime = async (option: typeof reminderOptions[number], event:
   }
 }
 
-const focusFeedback = () => {
-  uni.showToast({ title: '请在下方提交反馈', icon: 'none' })
+const openFeedbackPanel = () => {
+  activePanel.value = 'feedback'
+}
+
+const openReminderPanel = () => {
+  activePanel.value = 'reminders'
+}
+
+const closeActivePanel = () => {
+  activePanel.value = ''
 }
 
 const clearRecentTools = () => {
@@ -472,6 +498,35 @@ onMounted(() => {
 .menu-arrow {
   font-size: 28rpx;
   color: var(--theme-text-muted, #9aa6b8);
+}
+
+.panel-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24rpx;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.panel-sheet {
+  width: 100%;
+  max-height: 84vh;
+  overflow-y: auto;
+  border-radius: 34rpx 34rpx 24rpx 24rpx;
+  background: var(--theme-surface, #ffffff);
+  box-shadow: 0 -20rpx 70rpx rgba(15, 23, 42, 0.18);
+}
+
+.sheet-handle {
+  width: 78rpx;
+  height: 8rpx;
+  margin: 18rpx auto 0;
+  border-radius: 999rpx;
+  background: var(--theme-border, #d7deea);
 }
 
 .engagement-card {
