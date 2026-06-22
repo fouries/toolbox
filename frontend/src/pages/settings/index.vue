@@ -51,6 +51,16 @@
               <text class="menu-arrow">></text>
             </view>
           </view>
+          <view class="menu-item" @click="openCustomerServicePanel">
+            <view class="menu-left">
+              <text class="menu-icon">👩‍💻</text>
+              <text class="menu-name">联系客服</text>
+            </view>
+            <view class="menu-right">
+              <text class="menu-hint">微信沟通</text>
+              <text class="menu-arrow">></text>
+            </view>
+          </view>
           <view class="menu-item" @click="showAbout">
             <view class="menu-left">
               <text class="menu-icon">ℹ️</text>
@@ -112,7 +122,7 @@
             </view>
           </view>
 
-          <view v-else class="engagement-card reminder-card">
+          <view v-else-if="activePanel === 'reminders'" class="engagement-card reminder-card">
             <view class="card-header">
               <view>
                 <text class="card-title">订阅提醒</text>
@@ -136,6 +146,30 @@
                 <switch :checked="isReminderEnabled(option.type)" color="#2563eb" @change="toggleReminder(option, $event)" />
               </view>
             </view>
+          </view>
+
+          <view v-else class="engagement-card customer-service-card">
+            <view class="card-header">
+              <view>
+                <text class="card-title">联系客服</text>
+                <text class="card-desc">有疑问、建议或需要更快回复，可以通过微信联系我。</text>
+              </view>
+              <text class="card-icon">👩‍💻</text>
+            </view>
+
+            <!-- #ifdef MP-WEIXIN -->
+            <button class="primary-button customer-contact-button" open-type="contact">
+              打开微信客服
+            </button>
+            <text class="customer-tip">会话由微信小程序官方客服能力提供。</text>
+            <!-- #endif -->
+
+            <!-- #ifdef H5 -->
+            <view class="wechat-qr-wrap">
+              <image class="wechat-qr" src="/static/customer-service-wechat.jpg" mode="widthFix" @click="previewCustomerQr" />
+              <text class="customer-tip">长按或点击放大二维码，添加时请备注：小巧的工具箱反馈。</text>
+            </view>
+            <!-- #endif -->
           </view>
         </view>
       </view>
@@ -177,7 +211,7 @@ const feedbackCategoryMap: Record<string, string> = {
 const feedbackCategories = Object.keys(feedbackCategoryMap)
 const feedbackCategoryLabels = feedbackCategories.map(key => feedbackCategoryMap[key])
 const feedbackCategoryIndex = ref(1)
-const activePanel = ref<'feedback' | 'reminders' | ''>('')
+const activePanel = ref<'feedback' | 'reminders' | 'customerService' | ''>('')
 const submittingFeedback = ref(false)
 const feedbackList = ref<FeedbackResult[]>([])
 const reminderSubscriptions = ref<ReminderSubscription[]>([])
@@ -333,6 +367,10 @@ const openReminderPanel = () => {
   activePanel.value = 'reminders'
 }
 
+const openCustomerServicePanel = () => {
+  activePanel.value = 'customerService'
+}
+
 const closeActivePanel = () => {
   activePanel.value = ''
 }
@@ -364,6 +402,12 @@ const navigateToBeian = () => {
   // #ifdef H5
   const opened = window.open('https://beian.miit.gov.cn/', '_blank', 'noopener,noreferrer')
   if (opened) opened.opener = null
+  // #endif
+}
+
+const previewCustomerQr = () => {
+  // #ifdef H5
+  uni.previewImage({ urls: ['/static/customer-service-wechat.jpg'] })
   // #endif
 }
 
@@ -672,6 +716,38 @@ onMounted(() => {
   color: var(--theme-text, #17233d);
   font-size: 28rpx;
   font-weight: 800;
+}
+
+.customer-service-card {
+  align-items: stretch;
+}
+
+.customer-contact-button {
+  margin-top: 8rpx;
+}
+
+.wechat-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 0 4rpx;
+}
+
+.wechat-qr {
+  width: 420rpx;
+  max-width: 76%;
+  border-radius: 26rpx;
+  border: 2rpx solid var(--theme-border, #e5eaf3);
+  background: #fff;
+  box-shadow: 0 16rpx 44rpx rgba(15, 23, 42, 0.12);
+}
+
+.customer-tip {
+  color: var(--theme-text-muted, #7a869a);
+  font-size: 24rpx;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .beian-card {
