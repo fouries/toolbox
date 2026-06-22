@@ -6,16 +6,20 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from docx import Document
+from docx.shared import Inches
 from fastapi import UploadFile
+from PIL import Image, ImageOps
 from pypdf import PdfReader
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
 
-SUPPORTED_INPUTS = {"txt", "html", "htm", "docx", "pdf"}
+IMAGE_INPUTS = {"jpg", "jpeg", "png", "webp"}
+SUPPORTED_INPUTS = {"txt", "html", "htm", "docx", "pdf", *IMAGE_INPUTS}
 SUPPORTED_TARGETS = {"txt", "html", "docx", "pdf"}
 TARGET_ALIASES = {"word": "docx", "text": "txt", "htm": "html"}
 OUTPUT_MIME_TYPES = {
@@ -63,11 +67,13 @@ class DocumentConverterService:
         target = TARGET_ALIASES.get(str(target_format or "").lower().strip(), str(target_format or "").lower().strip())
 
         if source_ext not in SUPPORTED_INPUTS:
-            return {"code": 400, "msg": "暂时支持 TXT、HTML、DOCX、PDF 文件"}
+            return {"code": 400, "msg": "暂时支持 TXT、HTML、DOCX、PDF、JPG、PNG、WEBP 文件"}
         if target not in SUPPORTED_TARGETS:
             return {"code": 400, "msg": "目标格式支持 txt、html、docx、pdf"}
         if source_ext == target:
             return {"code": 400, "msg": "请选择不同的目标格式"}
+        if source_ext in IMAGE_INPUTS and target not in {"pdf", "docx"}:
+            return {"code": 400, "msg": "图片转换暂时支持转 PDF 或 Word"}
 
         content = await upload.read()
         if not content:
@@ -76,10 +82,13 @@ class DocumentConverterService:
             return {"code": 400, "msg": f"文件大小不能超过 {self.max_file_size // 1024 // 1024}MB"}
 
         try:
-            text = self._extract_text(content, source_ext)
-            if not text.strip():
-                return {"code": 400, "msg": "未能从文档中提取到文本内容，扫描版 PDF 暂不支持"}
-            output = self._render(text, target, source_name.stem or "document")
+            if source_ext in IMAGE_INPUTS:
+                output = self._render_image(content, target, source_name.stem or "image")
+            else:
+                text = self._extract_text(content, source_ext)
+                if not text.strip():
+                    return {"code": 400, "msg": "未能从文档中提取到文本内容，扫描版 PDF 暂不支持"}
+                output = self._render(text, target, source_name.stem or "document")
         except Exception as exc:  # pragma: no cover - defensive API guard
             return {"code": 400, "msg": f"文档转换失败：{exc}"}
 
@@ -149,6 +158,61 @@ class DocumentConverterService:
             story.append(Paragraph(escaped, body_style))
             story.append(Spacer(1, 6))
         doc.build(story or [Paragraph(" ", body_style)])
+        return buf.getvalue()
+
+    def _render_image(self, content: bytes, target: str, title: str) -> bytes:
+        image = self._open_image(content)
+        if target == "pdf":
+            return self._image_to_pdf(image, title)
+        if target == "docx":
+            return self._image_to_docx(image, title)
+        raise ValueError("图片转换暂时支持转 PDF 或 Word")
+
+    @staticmethod
+    def _open_image(content: bytes) -> Image.Image:
+        image = Image.open(BytesIO(content))
+        image = ImageOps.exif_transpose(image)
+        if image.mode in {"RGBA", "LA", "P"}:
+            bg = Image.new("RGB", image.size, "white")
+            if image.mode == "P":
+                image = image.convert("RGBA")
+            bg.paste(image, mask=image.split()[-1] if image.mode in {"RGBA", "LA"} else None)
+            return bg
+        return image.convert("RGB")
+
+    def _image_to_pdf(self, image: Image.Image, title: str) -> bytes:
+        buf = BytesIO()
+        page_width, page_height = A4
+        margin = 36
+        draw_width = page_width - margin * 2
+        draw_height = page_height - margin * 2
+        ratio = min(draw_width / image.width, draw_height / image.height)
+        width = image.width * ratio
+        height = image.height * ratio
+        x = (page_width - width) / 2
+        y = (page_height - height) / 2
+        from reportlab.pdfgen import canvas
+
+        page = canvas.Canvas(buf, pagesize=A4)
+        page.setTitle(title)
+        image_buffer = BytesIO()
+        image.save(image_buffer, format="JPEG", quality=92)
+        image_buffer.seek(0)
+        page.drawImage(ImageReader(image_buffer), x, y, width=width, height=height, preserveAspectRatio=True, mask="auto")
+        page.showPage()
+        page.save()
+        return buf.getvalue()
+
+    @staticmethod
+    def _image_to_docx(image: Image.Image, title: str) -> bytes:
+        buf = BytesIO()
+        doc = Document()
+        doc.add_heading(title, level=1)
+        image_buffer = BytesIO()
+        image.save(image_buffer, format="JPEG", quality=92)
+        image_buffer.seek(0)
+        doc.add_picture(image_buffer, width=Inches(6))
+        doc.save(buf)
         return buf.getvalue()
 
     @staticmethod

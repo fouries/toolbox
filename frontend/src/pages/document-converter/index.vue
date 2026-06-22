@@ -3,7 +3,7 @@
     <view class="page-shell document-shell">
       <view class="page-header hero-card">
         <text class="title">📄 文档转换</text>
-        <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，转换后直接下载，不长期保存</text>
+        <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，也支持图片转 PDF / Word，转换后直接下载，不长期保存</text>
       </view>
 
       <view class="card upload-card">
@@ -23,8 +23,8 @@
         </view>
         <view class="tips-box">
           <text class="tips-title">支持格式</text>
-          <text class="tips-text">源文件：TXT、HTML、DOCX、PDF</text>
-          <text class="tips-text">目标格式：TXT、HTML、DOCX、PDF</text>
+          <text class="tips-text">源文件：TXT、HTML、DOCX、PDF、JPG、PNG、WEBP</text>
+          <text class="tips-text">目标格式：TXT、HTML、DOCX、PDF；图片支持转 PDF / Word</text>
           <text class="tips-text">说明：PDF 转换提取可选中文本，扫描件图片 PDF 暂不做 OCR。</text>
         </view>
       </view>
@@ -39,7 +39,7 @@
             v-for="item in targetFormats"
             :key="item.value"
             class="format-item"
-            :class="{ active: targetFormat === item.value, disabled: sourceExt === item.value }"
+            :class="{ active: targetFormat === item.value, disabled: isTargetDisabled(item.value) }"
             @click="selectTargetFormat(item.value)"
           >
             <text class="format-icon">{{ item.icon }}</text>
@@ -71,6 +71,8 @@
           <view class="scene-item">DOCX → TXT：提取 Word 文档纯文本</view>
           <view class="scene-item">HTML → DOCX：网页片段转成可编辑文档</view>
           <view class="scene-item">PDF → TXT：提取可复制 PDF 中的文字</view>
+          <view class="scene-item">图片 → PDF：把照片、截图整理成单页 PDF</view>
+          <view class="scene-item">图片 → Word：把图片插入可继续编辑的 Word 文档</view>
         </view>
       </view>
     </view>
@@ -106,20 +108,31 @@ const targetFormats = [
   { value: 'html', label: 'HTML', icon: '🌐', desc: '网页格式' }
 ]
 
+const imageExts = ['jpg', 'jpeg', 'png', 'webp']
+const documentExts = ['txt', 'html', 'docx', 'pdf']
+
 const sourceExt = computed(() => {
   const name = selectedFile.value?.name || ''
   const ext = name.split('.').pop()?.toLowerCase() || ''
   return ext === 'htm' ? 'html' : ext
 })
 
+const isImageSource = computed(() => imageExts.includes(sourceExt.value))
 const sourceFormatLabel = computed(() => sourceExt.value ? sourceExt.value.toUpperCase() : '未知格式')
-const sourceIcon = computed(() => targetFormats.find(item => item.value === sourceExt.value)?.icon || '📎')
+const sourceIcon = computed(() => isImageSource.value ? '🖼️' : targetFormats.find(item => item.value === sourceExt.value)?.icon || '📎')
 const fileSizeLabel = computed(() => {
   const size = selectedFile.value?.size || 0
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(2)} MB`
   return `${Math.max(1, Math.round(size / 1024))} KB`
 })
-const canConvert = computed(() => Boolean(selectedFile.value && sourceExt.value && sourceExt.value !== targetFormat.value))
+
+const isTargetDisabled = (format: string) => {
+  if (!sourceExt.value) return false
+  if (isImageSource.value) return !['pdf', 'docx'].includes(format)
+  return sourceExt.value === format
+}
+
+const canConvert = computed(() => Boolean(selectedFile.value && sourceExt.value && !isTargetDisabled(targetFormat.value)))
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let binary = ''
@@ -138,12 +151,12 @@ const base64ToArrayBuffer = (base64: string) => {
   return bytes.buffer
 }
 
-const isSupportedSource = (ext: string) => ['txt', 'html', 'docx', 'pdf'].includes(ext)
+const isSupportedSource = (ext: string) => [...documentExts, ...imageExts].includes(ext)
 
 const setPickedFile = (file: PickedFile) => {
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace('htm', 'html')
   if (!isSupportedSource(ext)) {
-    uni.showToast({ title: '仅支持 TXT/HTML/DOCX/PDF', icon: 'none' })
+    uni.showToast({ title: '仅支持文档或图片格式', icon: 'none' })
     return
   }
   if (file.size > MAX_FILE_SIZE) {
@@ -152,7 +165,9 @@ const setPickedFile = (file: PickedFile) => {
   }
   selectedFile.value = file
   convertedFile.value = null
-  if (targetFormat.value === ext) {
+  if (imageExts.includes(ext)) {
+    targetFormat.value = ['pdf', 'docx'].includes(targetFormat.value) ? targetFormat.value : 'pdf'
+  } else if (targetFormat.value === ext) {
     targetFormat.value = targetFormats.find(item => item.value !== ext)?.value || 'pdf'
   }
 }
@@ -162,7 +177,7 @@ const chooseDocumentFile = () => {
   wx.chooseMessageFile({
     count: 1,
     type: 'file',
-    extension: ['txt', 'html', 'htm', 'docx', 'pdf'],
+    extension: ['txt', 'html', 'htm', 'docx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'],
     success: (res: any) => {
       const file = res.tempFiles?.[0]
       if (!file) return
@@ -175,7 +190,7 @@ const chooseDocumentFile = () => {
   // #ifdef H5
   uni.chooseFile({
     count: 1,
-    extension: ['.txt', '.html', '.htm', '.docx', '.pdf'],
+    extension: ['.txt', '.html', '.htm', '.docx', '.pdf', '.jpg', '.jpeg', '.png', '.webp'],
     success: async (res: any) => {
       const file = res.tempFiles?.[0]
       if (!file) return
@@ -188,8 +203,8 @@ const chooseDocumentFile = () => {
 }
 
 const selectTargetFormat = (format: string) => {
-  if (format === sourceExt.value) {
-    uni.showToast({ title: '请选择不同的目标格式', icon: 'none' })
+  if (isTargetDisabled(format)) {
+    uni.showToast({ title: isImageSource.value ? '图片仅支持转 PDF 或 Word' : '请选择不同的目标格式', icon: 'none' })
     return
   }
   targetFormat.value = format
@@ -238,7 +253,7 @@ const convertDocument = async () => {
     return
   }
   if (!canConvert.value) {
-    uni.showToast({ title: '请选择不同的目标格式', icon: 'none' })
+    uni.showToast({ title: isImageSource.value ? '图片仅支持转 PDF 或 Word' : '请选择不同的目标格式', icon: 'none' })
     return
   }
 

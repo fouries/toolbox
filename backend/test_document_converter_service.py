@@ -2,6 +2,7 @@ import asyncio
 from io import BytesIO
 
 from docx import Document
+from PIL import Image
 from fastapi import UploadFile
 from pypdf import PdfReader
 from reportlab.lib.pagesizes import A4
@@ -33,6 +34,31 @@ def _make_pdf(text: str) -> bytes:
     page.drawString(72, 760, text)
     page.save()
     return buf.getvalue()
+
+
+def _make_png() -> bytes:
+    buf = BytesIO()
+    image = Image.new("RGB", (320, 180), "#2f80ed")
+    image.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_image_can_convert_to_pdf_and_word():
+    service = DocumentConverterService(max_file_size=1024 * 1024)
+
+    image_pdf = asyncio.run(_upload_file("photo.png", _make_png(), "image/png"))
+    pdf = _convert(service, image_pdf, "pdf")
+    assert pdf["code"] == 200
+    assert pdf["filename"] == "photo.pdf"
+    assert pdf["media_type"] == "application/pdf"
+    assert len(PdfReader(BytesIO(pdf["content"])).pages) == 1
+
+    image_word = asyncio.run(_upload_file("photo.png", _make_png(), "image/png"))
+    docx = _convert(service, image_word, "word")
+    assert docx["code"] == 200
+    assert docx["filename"] == "photo.docx"
+    doc = Document(BytesIO(docx["content"]))
+    assert doc.inline_shapes
 
 
 def test_txt_can_convert_to_html_docx_and_pdf():
@@ -94,6 +120,10 @@ def test_converter_rejects_unsupported_format_and_too_large_file():
     result = _convert(service, too_large, "pdf")
     assert result["code"] == 400
     assert "大小" in result["msg"]
+    bad_image_target = asyncio.run(_upload_file("photo.jpg", _make_png(), "image/jpeg"))
+    result = _convert(service, bad_image_target, "txt")
+    assert result["code"] == 400
+    assert "图片" in result["msg"]
 
 
 def test_same_format_is_rejected_to_avoid_empty_work():
