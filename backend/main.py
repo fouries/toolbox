@@ -33,6 +33,7 @@ from api.tools import ToolsService
 from api.location import LocationService
 from api.tool_stats import get_tool_stats_service
 from api.user_engagement import get_user_engagement_service
+from api.wechat_subscribe import get_wechat_subscribe_service
 from api.user_favorites import get_user_favorites_service
 from services.content_service import ContentService
 
@@ -91,6 +92,13 @@ class ReminderRequest(BaseModel):
     title: str = ""
     reminder_time: str
     enabled: bool = True
+    wx_template_id: str = ""
+    wx_subscribe_enabled: bool = False
+
+
+class WechatLoginRequest(BaseModel):
+    user_key: str
+    code: str
 
 
 class DocumentConvertBase64Request(BaseModel):
@@ -238,6 +246,15 @@ def _run_media_conversion_task(task_id: str) -> None:
             "updated_at": _media_task_now(),
         })
 
+async def _wechat_reminder_loop():
+    while True:
+        try:
+            await get_wechat_subscribe_service().send_due_reminders()
+        except Exception as exc:
+            logger.warning("wechat_reminder_loop_failed error=%s", exc)
+        await asyncio.sleep(60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
@@ -246,9 +263,17 @@ async def lifespan(app: FastAPI):
     _cleanup_media_tasks()
     get_tool_stats_service().migrate_legacy_json()
     await cache.init()
-    yield
-    # 关闭时：清理资源
-    await cache.close()
+    reminder_task = asyncio.create_task(_wechat_reminder_loop())
+    try:
+        yield
+    finally:
+        reminder_task.cancel()
+        try:
+            await reminder_task
+        except asyncio.CancelledError:
+            pass
+        # 关闭时：清理资源
+        await cache.close()
 
 app = FastAPI(
     title="小巧的工具箱 API",
@@ -522,16 +547,41 @@ async def list_reminders(user_key: str):
 
 @app.post("/api/reminders", summary="保存订阅提醒", tags=["反馈订阅"])
 async def upsert_reminder(payload: ReminderRequest):
+    configured_template = get_wechat_subscribe_service().template_id_for(payload.reminder_type)
+    wx_template_id = payload.wx_template_id or configured_template
+    wx_subscribe_enabled = bool(payload.enabled and wx_template_id and payload.wx_subscribe_enabled)
     result = get_user_engagement_service().upsert_reminder(
         payload.user_key,
         payload.reminder_type,
         payload.title,
         payload.reminder_time,
         payload.enabled,
+        wx_template_id=wx_template_id,
+        wx_subscribe_enabled=wx_subscribe_enabled,
     )
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "保存提醒失败"))
     return normalize_response(result)
+
+
+@app.get("/api/wechat/subscribe-config", summary="获取微信订阅消息模板配置", tags=["反馈订阅"])
+async def get_wechat_subscribe_config():
+    templates = get_wechat_subscribe_service().configured_templates()
+    return success({
+        "enabled": bool(settings.WECHAT_SUBSCRIBE_ENABLED and settings.WECHAT_MINI_APP_ID),
+        "templates": templates,
+    })
+
+
+@app.post("/api/wechat/login", summary="绑定微信小程序 openid", tags=["反馈订阅"])
+async def bind_wechat_login(payload: WechatLoginRequest):
+    result = await get_wechat_subscribe_service().bind_openid(payload.user_key, payload.code)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "微信登录失败"))
+    if result.get("code") == 503:
+        raise HTTPException(status_code=503, detail=result.get("msg", "微信配置缺失"))
+    return normalize_response(result)
+
 
 @app.delete("/api/reminders", summary="关闭订阅提醒", tags=["反馈订阅"])
 async def disable_reminder(payload: ReminderRequest):

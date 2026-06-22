@@ -126,9 +126,13 @@
             <view class="card-header">
               <view>
                 <text class="card-title">订阅提醒</text>
-                <text class="card-desc">先保存提醒偏好，后续可按这些配置推送每日简报、天气等消息。</text>
+                <text class="card-desc">微信小程序端开启时会申请订阅消息授权，到点后通过微信服务通知提醒。</text>
               </view>
               <text class="card-icon">🔔</text>
+            </view>
+
+            <view class="wechat-subscribe-tip">
+              <text>微信订阅消息：{{ wechatSubscribeReady ? '已配置，可授权接收服务通知' : '模板待配置，当前仅保存提醒偏好' }}</text>
             </view>
 
             <view v-for="option in reminderOptions" :key="option.type" class="reminder-item">
@@ -186,13 +190,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  bindWechatLogin,
   disableReminderSubscription,
   getFeedbackList,
   getReminderSubscriptions,
+  getWechatSubscribeConfig,
   saveReminderSubscription,
   submitFeedback,
   type FeedbackResult,
-  type ReminderSubscription
+  type ReminderSubscription,
+  type WechatSubscribeConfig
 } from '@/api'
 import { useTheme } from '@/utils/theme'
 
@@ -215,6 +222,7 @@ const activePanel = ref<'feedback' | 'reminders' | 'customerService' | ''>('')
 const submittingFeedback = ref(false)
 const feedbackList = ref<FeedbackResult[]>([])
 const reminderSubscriptions = ref<ReminderSubscription[]>([])
+const wechatSubscribeConfig = ref<WechatSubscribeConfig>({ enabled: false, templates: {} })
 
 const feedbackForm = reactive({
   category: 'idea',
@@ -238,6 +246,7 @@ const reminderMap = computed(() => {
 })
 
 const enabledReminderCount = computed(() => reminderSubscriptions.value.filter(item => item.enabled).length)
+const wechatSubscribeReady = computed(() => Boolean(wechatSubscribeConfig.value.enabled && Object.values(wechatSubscribeConfig.value.templates || {}).some(Boolean)))
 
 const ensureUserKey = () => {
   try {
@@ -270,6 +279,8 @@ const loadEngagementData = async () => {
     ])
     if (feedbackRes.code === 200 && Array.isArray(feedbackRes.data)) feedbackList.value = feedbackRes.data
     if (reminderRes.code === 200 && Array.isArray(reminderRes.data)) reminderSubscriptions.value = reminderRes.data
+    const subscribeConfig = await getWechatSubscribeConfig()
+    if (subscribeConfig.code === 200 && subscribeConfig.data) wechatSubscribeConfig.value = subscribeConfig.data
   } catch (err) {
     console.warn('load engagement data failed', err)
   }
@@ -314,13 +325,56 @@ const getReminderTime = (type: string) => {
 
 const isReminderEnabled = (type: string) => Boolean(reminderMap.value[type]?.enabled)
 
-const saveReminder = async (option: typeof reminderOptions[number], enabled: boolean, time = getReminderTime(option.type)) => {
+
+const requestWechatSubscribe = async (option: typeof reminderOptions[number]) => {
+  const templateId = wechatSubscribeConfig.value.templates?.[option.type] || ''
+  if (!templateId) return { accepted: false, templateId: '' }
+
+  // #ifdef MP-WEIXIN
+  try {
+    const subscribeResult = await new Promise<Record<string, string>>((resolve, reject) => {
+      uni.requestSubscribeMessage({
+        tmplIds: [templateId],
+        success: (res) => resolve(res as unknown as Record<string, string>),
+        fail: (err) => reject(err)
+      })
+    })
+    if (subscribeResult[templateId] !== 'accept') {
+      uni.showToast({ title: '未授权微信提醒，仅保存偏好', icon: 'none' })
+      return { accepted: false, templateId }
+    }
+    const loginResult = await new Promise<{ code?: string }>((resolve, reject) => {
+      uni.login({
+        provider: 'weixin',
+        success: (res) => resolve(res),
+        fail: (err) => reject(err)
+      })
+    })
+    if (loginResult.code) {
+      await bindWechatLogin({ user_key: ensureUserKey(), code: loginResult.code })
+    }
+    return { accepted: true, templateId }
+  } catch (err) {
+    console.warn('wechat subscribe failed', err)
+    uni.showToast({ title: '微信授权失败，仅保存偏好', icon: 'none' })
+    return { accepted: false, templateId }
+  }
+  // #endif
+
+  // #ifndef MP-WEIXIN
+  return { accepted: false, templateId }
+  // #endif
+}
+
+const saveReminder = async (option: typeof reminderOptions[number], enabled: boolean, time = getReminderTime(option.type), wxSubscribe = { accepted: false, templateId: '' }) => {
   const result = await saveReminderSubscription({
     user_key: ensureUserKey(),
     reminder_type: option.type,
     title: option.title,
     reminder_time: time,
-    enabled
+    enabled,
+    wx_template_id: wxSubscribe.templateId,
+    wx_subscribe_enabled: wxSubscribe.accepted
   })
   if (result.code !== 200 || !result.data) throw new Error(result.msg || '保存失败')
   const next = reminderSubscriptions.value.filter(item => item.reminder_type !== option.type)
@@ -331,8 +385,9 @@ const toggleReminder = async (option: typeof reminderOptions[number], event: any
   const enabled = Boolean(event?.detail?.value)
   try {
     if (enabled) {
-      await saveReminder(option, true)
-      uni.showToast({ title: '已开启提醒', icon: 'success' })
+      const wxSubscribe = await requestWechatSubscribe(option)
+      await saveReminder(option, true, getReminderTime(option.type), wxSubscribe)
+      uni.showToast({ title: wxSubscribe.accepted ? '已开启微信提醒' : '已开启提醒', icon: 'success' })
     } else {
       const result = await disableReminderSubscription(ensureUserKey(), option.type)
       if (result.code === 200 && result.data) {
@@ -351,7 +406,7 @@ const toggleReminder = async (option: typeof reminderOptions[number], event: any
 const changeReminderTime = async (option: typeof reminderOptions[number], event: any) => {
   const time = String(event?.detail?.value || getReminderTime(option.type))
   try {
-    await saveReminder(option, true, time)
+    await saveReminder(option, true, time, { accepted: isReminderEnabled(option.type) && Boolean(reminderMap.value[option.type]?.wx_subscribe_enabled), templateId: reminderMap.value[option.type]?.has_wechat_template ? (wechatSubscribeConfig.value.templates?.[option.type] || '') : '' })
     uni.showToast({ title: '提醒时间已保存', icon: 'success' })
   } catch (err) {
     console.warn('change reminder time failed', err)
@@ -699,6 +754,15 @@ onMounted(() => {
   color: var(--theme-text, #243044);
   font-size: 25rpx;
   line-height: 1.55;
+}
+
+.wechat-subscribe-tip {
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  font-size: 24rpx;
+  line-height: 1.6;
 }
 
 .reminder-item {

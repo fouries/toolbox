@@ -24,6 +24,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     user_type: Mapped[str] = mapped_column(String(32), nullable=False, default="anonymous")
+    wx_openid: Mapped[str] = mapped_column(String(128), nullable=False, default="", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -68,6 +69,9 @@ class UserReminderSubscription(Base):
     title: Mapped[str] = mapped_column(String(64), nullable=False)
     reminder_time: Mapped[str] = mapped_column(String(5), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    wx_template_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    wx_subscribe_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_sent_date: Mapped[str] = mapped_column(String(10), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

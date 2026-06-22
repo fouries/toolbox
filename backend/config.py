@@ -26,6 +26,16 @@ class Settings(BaseSettings):
     # Redis 配置（用于缓存，降低 API 调用成本）。为空时自动跳过 Redis。
     REDIS_URL: str = ""
 
+    # 微信小程序订阅消息配置。Template ID 不是密钥，但 AppSecret 必须只放环境变量/.env。
+    WECHAT_MINI_APP_ID: str = ""
+    WECHAT_MINI_APP_SECRET: str = ""
+    WECHAT_SUBSCRIBE_ENABLED: bool = True
+    WECHAT_SUBSCRIBE_TEMPLATE_DAILY_BRIEF: str = ""
+    WECHAT_SUBSCRIBE_TEMPLATE_WEATHER: str = ""
+    WECHAT_SUBSCRIBE_TEMPLATE_HOT_SEARCH: str = ""
+    WECHAT_SUBSCRIBE_TEMPLATE_GOLD_PRICE: str = ""
+    WECHAT_SUBSCRIBE_TEMPLATE_DATA_KEYS: str = "thing1,time2,thing3"
+
     # 缓存时间（秒）
     CACHE_TTL_OIL: int = 3600
     CACHE_TTL_WEATHER: int = 1800

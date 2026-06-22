@@ -218,8 +218,15 @@ export interface ReminderSubscription {
   title: string
   reminder_time: string
   enabled: boolean
+  wx_subscribe_enabled?: boolean
+  has_wechat_template?: boolean
   created_at?: string
   updated_at?: string
+}
+
+export interface WechatSubscribeConfig {
+  enabled: boolean
+  templates: Record<string, string>
 }
 
 export interface DocumentConvertResult {
@@ -428,12 +435,25 @@ export const getReminderSubscriptions = (userKey: string) => {
   return request<ReminderSubscription[]>(`/api/reminders?user_key=${encodeURIComponent(userKey)}`)
 }
 
+export const getWechatSubscribeConfig = () => {
+  return request<WechatSubscribeConfig>('/api/wechat/subscribe-config')
+}
+
+export const bindWechatLogin = (payload: { user_key: string; code: string }) => {
+  return request<{ bound: boolean }>('/api/wechat/login', {
+    method: 'POST',
+    data: payload
+  })
+}
+
 export const saveReminderSubscription = (payload: {
   user_key: string
   reminder_type: string
   title: string
   reminder_time: string
   enabled: boolean
+  wx_template_id?: string
+  wx_subscribe_enabled?: boolean
 }) => {
   return request<ReminderSubscription>('/api/reminders', {
     method: 'POST',

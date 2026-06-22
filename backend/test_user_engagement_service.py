@@ -108,3 +108,27 @@ def test_reminders_reject_unknown_type_and_bad_time(monkeypatch, tmp_path):
     assert "提醒类型" in unknown["msg"]
     assert bad_time["code"] == 400
     assert "提醒时间" in bad_time["msg"]
+
+
+def test_reminder_can_store_wechat_subscription_flags(monkeypatch, tmp_path):
+    _configure_temp_db(monkeypatch, tmp_path)
+    service = UserEngagementService()
+
+    created = service.upsert_reminder(
+        user_key="anon_reminder_wx_001",
+        reminder_type="daily_brief",
+        title="每日简报",
+        reminder_time="08:30",
+        enabled=True,
+        wx_template_id="tmpl_daily",
+        wx_subscribe_enabled=True,
+    )
+
+    assert created["code"] == 200
+    assert created["data"]["wx_subscribe_enabled"] is True
+    assert created["data"]["has_wechat_template"] is True
+
+    disabled = service.disable_reminder("anon_reminder_wx_001", "daily_brief")
+    assert disabled["code"] == 200
+    assert disabled["data"]["enabled"] is False
+    assert disabled["data"]["wx_subscribe_enabled"] is False

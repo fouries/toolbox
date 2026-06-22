@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from config import get_settings
@@ -63,7 +63,27 @@ def session_scope() -> Iterator[Session]:
         session.close()
 
 
+def _ensure_column(table_name: str, column_name: str, ddl: str) -> None:
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns(table_name)}
+    if column_name in columns:
+        return
+    with engine.begin() as conn:
+        conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {ddl}"))
+
+
+def _run_lightweight_migrations() -> None:
+    # SQLite create_all 不会给已有表补新增列；这里做轻量向前兼容迁移。
+    _ensure_column("users", "wx_openid", "wx_openid VARCHAR(128) NOT NULL DEFAULT ''")
+    _ensure_column("user_reminder_subscriptions", "wx_template_id", "wx_template_id VARCHAR(128) NOT NULL DEFAULT ''")
+    _ensure_column("user_reminder_subscriptions", "wx_subscribe_enabled", "wx_subscribe_enabled BOOLEAN NOT NULL DEFAULT 0")
+    _ensure_column("user_reminder_subscriptions", "last_sent_date", "last_sent_date VARCHAR(10) NOT NULL DEFAULT ''")
+
+
 def init_db() -> None:
     from db import models  # noqa: F401 - register models
 
     Base.metadata.create_all(bind=engine)
+    _run_lightweight_migrations()

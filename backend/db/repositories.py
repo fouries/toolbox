@@ -3,9 +3,9 @@ import logging
 from pathlib import Path
 from typing import Dict, Mapping
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from db.models import ToolClickStat, User, UserFeedback, UserReminderSubscription, UserToolFavorite
 
@@ -103,9 +103,13 @@ class UserFavoritesRepository:
             user = User(user_key=user_key, user_type=user_type)
             self.session.add(user)
             self.session.flush()
-        else:
-            user.user_type = user.user_type or user_type
-            self.session.flush()
+        return user
+
+    def bind_wechat_openid(self, user_key: str, openid: str) -> User:
+        user = self.get_or_create_user(user_key)
+        user.wx_openid = openid
+        user.user_type = "wechat"
+        self.session.flush()
         return user
 
     def list_favorites(self, user_key: str) -> list[str]:
@@ -167,13 +171,23 @@ class UserEngagementRepository:
             ).scalars().all()
         )
 
-    def upsert_reminder(self, user_key: str, reminder_type: str, title: str, reminder_time: str, enabled: bool = True) -> UserReminderSubscription:
+    def upsert_reminder(
+        self,
+        user_key: str,
+        reminder_type: str,
+        title: str,
+        reminder_time: str,
+        enabled: bool = True,
+        wx_template_id: str = "",
+        wx_subscribe_enabled: bool | None = None,
+    ) -> UserReminderSubscription:
         user = self.users.get_or_create_user(user_key)
         reminder = self.session.execute(
             select(UserReminderSubscription)
             .where(UserReminderSubscription.user_id == user.id)
             .where(UserReminderSubscription.reminder_type == reminder_type)
         ).scalar_one_or_none()
+        subscribe_enabled = bool(wx_subscribe_enabled) if wx_subscribe_enabled is not None else False
         if reminder is None:
             reminder = UserReminderSubscription(
                 user_id=user.id,
@@ -181,12 +195,18 @@ class UserEngagementRepository:
                 title=title,
                 reminder_time=reminder_time,
                 enabled=enabled,
+                wx_template_id=wx_template_id or "",
+                wx_subscribe_enabled=subscribe_enabled,
             )
             self.session.add(reminder)
         else:
             reminder.title = title
             reminder.reminder_time = reminder_time
             reminder.enabled = enabled
+            if wx_template_id:
+                reminder.wx_template_id = wx_template_id
+            if wx_subscribe_enabled is not None:
+                reminder.wx_subscribe_enabled = subscribe_enabled
         self.session.flush()
         return reminder
 
@@ -210,5 +230,29 @@ class UserEngagementRepository:
         if reminder is None:
             return None
         reminder.enabled = False
+        reminder.wx_subscribe_enabled = False
         self.session.flush()
         return reminder
+
+    def list_due_wechat_reminders(self, reminder_time: str, today: str) -> list[UserReminderSubscription]:
+        return list(
+            self.session.execute(
+                select(UserReminderSubscription)
+                .options(joinedload(UserReminderSubscription.user))
+                .join(User, User.id == UserReminderSubscription.user_id)
+                .where(UserReminderSubscription.enabled.is_(True))
+                .where(UserReminderSubscription.wx_subscribe_enabled.is_(True))
+                .where(UserReminderSubscription.reminder_time == reminder_time)
+                .where(UserReminderSubscription.last_sent_date != today)
+                .where(User.wx_openid != "")
+                .order_by(UserReminderSubscription.id.asc())
+            ).scalars().all()
+        )
+
+    def mark_reminder_sent(self, reminder_id: int, today: str) -> None:
+        self.session.execute(
+            update(UserReminderSubscription)
+            .where(UserReminderSubscription.id == reminder_id)
+            .values(last_sent_date=today)
+        )
+        self.session.flush()

@@ -46,6 +46,8 @@ class UserEngagementService:
             "title": reminder.title,
             "reminder_time": reminder.reminder_time,
             "enabled": bool(reminder.enabled),
+            "wx_subscribe_enabled": bool(getattr(reminder, "wx_subscribe_enabled", False)),
+            "has_wechat_template": bool(getattr(reminder, "wx_template_id", "")),
             "created_at": reminder.created_at.isoformat() if reminder.created_at else "",
             "updated_at": reminder.updated_at.isoformat() if reminder.updated_at else "",
         }
@@ -86,7 +88,16 @@ class UserEngagementService:
             data = [self._reminder_to_dict(row) for row in rows]
         return {"code": 200, "msg": "success", "data": data}
 
-    def upsert_reminder(self, user_key: str, reminder_type: str, title: str, reminder_time: str, enabled: bool = True) -> Dict[str, Any]:
+    def upsert_reminder(
+        self,
+        user_key: str,
+        reminder_type: str,
+        title: str,
+        reminder_time: str,
+        enabled: bool = True,
+        wx_template_id: str = "",
+        wx_subscribe_enabled: bool | None = None,
+    ) -> Dict[str, Any]:
         user_key = self._validate_user_key(user_key)
         if not user_key:
             return {"code": 400, "msg": "用户标识无效"}
@@ -99,7 +110,15 @@ class UserEngagementService:
         title = str(title or REMINDER_TYPES[reminder_type]).strip()[:64] or REMINDER_TYPES[reminder_type]
 
         with session_scope() as session:
-            reminder = UserEngagementRepository(session).upsert_reminder(user_key, reminder_type, title, reminder_time, bool(enabled))
+            reminder = UserEngagementRepository(session).upsert_reminder(
+                user_key,
+                reminder_type,
+                title,
+                reminder_time,
+                bool(enabled),
+                wx_template_id=str(wx_template_id or "").strip(),
+                wx_subscribe_enabled=wx_subscribe_enabled,
+            )
             data = self._reminder_to_dict(reminder)
         return {"code": 200, "msg": "success", "data": data}
 
