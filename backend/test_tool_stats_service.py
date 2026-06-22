@@ -72,5 +72,44 @@ def test_migrate_legacy_json_to_database(monkeypatch, tmp_path):
     assert popular == [{"id": "weather", "clicks": 3}, {"id": "qrcode", "clicks": 2}]
 
 
+def test_migrate_legacy_news_clicks_to_current_info_news_tool(monkeypatch, tmp_path):
+    _configure_temp_db(monkeypatch, tmp_path)
+    stats_file = tmp_path / "tool_clicks.json"
+    stats_file.write_text(
+        '{"internet-news": 43, "auto-news": 18, "esports-news": 7, "info-news": 2}',
+        encoding="utf-8",
+    )
+    service = ToolStatsService(storage_path=stats_file)
+
+    service.migrate_legacy_json()
+
+    popular = service.get_popular(limit=1)
+    assert popular == [{"id": "info-news", "clicks": 70}]
+
+
+def test_record_click_accepts_current_frontend_tool_ids(monkeypatch, tmp_path):
+    _configure_temp_db(monkeypatch, tmp_path)
+    service = ToolStatsService(storage_path=tmp_path / "tool_clicks.json")
+
+    assert service.record_click("info-news") == {"code": 200, "msg": "success", "data": {"id": "info-news", "clicks": 1}}
+    assert service.record_click("baidu-hot") == {"code": 200, "msg": "success", "data": {"id": "baidu-hot", "clicks": 1}}
+
+
+def test_existing_legacy_news_rows_are_folded_into_current_info_news_tool(monkeypatch, tmp_path):
+    _configure_temp_db(monkeypatch, tmp_path)
+    from db.models import ToolClickStat
+    from db.session import session_scope
+
+    with session_scope() as session:
+        session.add(ToolClickStat(tool_id="internet-news", clicks=43))
+        session.add(ToolClickStat(tool_id="auto-news", clicks=18))
+        session.add(ToolClickStat(tool_id="info-news", clicks=2))
+
+    service = ToolStatsService(storage_path=tmp_path / "missing-tool-clicks.json")
+    service.migrate_legacy_json()
+
+    assert service.get_popular(limit=1) == [{"id": "info-news", "clicks": 63}]
+
+
 if __name__ == "__main__":
     print("Run with pytest for isolated database fixtures")

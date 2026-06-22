@@ -1,9 +1,9 @@
 import json
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Mapping
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -43,7 +43,29 @@ class ToolStatsRepository:
         clicks = self.session.execute(select(ToolClickStat.clicks).where(ToolClickStat.tool_id == tool_id)).scalar_one()
         return int(clicks)
 
-    def migrate_from_json(self, storage_path: Path, known_tools: list[str]) -> None:
+    def fold_aliases(self, aliases: Mapping[str, str]) -> None:
+        for legacy_id, current_id in aliases.items():
+            if legacy_id == current_id:
+                continue
+            legacy_clicks = self.session.execute(
+                select(ToolClickStat.clicks).where(ToolClickStat.tool_id == legacy_id)
+            ).scalar_one_or_none()
+            if not legacy_clicks:
+                continue
+
+            current_row = self.session.execute(
+                select(ToolClickStat).where(ToolClickStat.tool_id == current_id).with_for_update()
+            ).scalar_one_or_none()
+            if current_row is None:
+                self.session.add(ToolClickStat(tool_id=current_id, clicks=int(legacy_clicks)))
+            else:
+                current_row.clicks += int(legacy_clicks)
+            self.session.execute(delete(ToolClickStat).where(ToolClickStat.tool_id == legacy_id))
+            self.session.flush()
+
+    def migrate_from_json(self, storage_path: Path, known_tools: list[str] | set[str], aliases: Mapping[str, str] | None = None) -> None:
+        aliases = aliases or {}
+        self.fold_aliases(aliases)
         if not storage_path.exists():
             return
         try:
@@ -54,11 +76,18 @@ class ToolStatsRepository:
         if not isinstance(raw, dict):
             return
         existing = self.get_counts()
-        for tool_id, count in raw.items():
-            if tool_id not in known_tools or tool_id in existing:
+        merged_counts: Dict[str, int] = {}
+        for raw_tool_id, count in raw.items():
+            if not isinstance(raw_tool_id, str) or raw_tool_id not in known_tools:
                 continue
+            tool_id = aliases.get(raw_tool_id, raw_tool_id)
             try:
                 clicks = max(0, int(count))
             except (TypeError, ValueError):
+                continue
+            merged_counts[tool_id] = merged_counts.get(tool_id, 0) + clicks
+
+        for tool_id, clicks in merged_counts.items():
+            if tool_id in existing:
                 continue
             self.session.add(ToolClickStat(tool_id=tool_id, clicks=clicks))

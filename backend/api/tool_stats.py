@@ -20,11 +20,16 @@ KNOWN_TOOLS = [
     "douyin-hot",
     "daily-brief",
     "info-news",
-    # legacy ids kept so old counters are not lost
-    "internet-news",
-    "esports-news",
-    "auto-news",
 ]
+
+# Legacy ids are kept readable so historical counters can be folded into the
+# current frontend tool ids instead of appearing as dead/unknown热门工具 entries.
+LEGACY_TOOL_ALIASES = {
+    "internet-news": "info-news",
+    "esports-news": "info-news",
+    "auto-news": "info-news",
+}
+ACCEPTED_TOOL_IDS = set(KNOWN_TOOLS) | set(LEGACY_TOOL_ALIASES)
 
 
 class ToolStatsService:
@@ -35,9 +40,10 @@ class ToolStatsService:
 
     def migrate_legacy_json(self) -> None:
         with session_scope() as session:
-            ToolStatsRepository(session).migrate_from_json(self.storage_path, KNOWN_TOOLS)
+            ToolStatsRepository(session).migrate_from_json(self.storage_path, ACCEPTED_TOOL_IDS, LEGACY_TOOL_ALIASES)
 
     def record_click(self, tool_id: str) -> Dict[str, Any]:
+        tool_id = LEGACY_TOOL_ALIASES.get(tool_id, tool_id)
         if tool_id not in KNOWN_TOOLS:
             return {"code": 400, "msg": "未知工具"}
 
