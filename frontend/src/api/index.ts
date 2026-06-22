@@ -486,6 +486,38 @@ export const scanDocumentBase64 = (payload: {
   })
 }
 
+export interface MediaConvertResult {
+  filename?: string
+  media_type?: string
+  base64?: string
+  text?: string
+  language?: string
+  duration?: number | null
+}
+
+export const convertMediaBase64 = (payload: {
+  operation: string
+  files: Array<{ filename: string; content_base64: string }>
+  options?: Record<string, unknown>
+}) => {
+  return request<MediaConvertResult>('/api/media/convert-base64', {
+    method: 'POST',
+    timeout: 180000,
+    data: payload
+  })
+}
+
+export const extractUrlAudioBase64 = (payload: {
+  url: string
+  target_format?: string
+}) => {
+  return request<MediaConvertResult>('/api/media/extract-url-audio', {
+    method: 'POST',
+    timeout: 180000,
+    data: payload
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -518,5 +550,7 @@ export default {
   disableReminderSubscription,
   convertDocumentBase64,
   operatePdfBase64,
-  scanDocumentBase64
+  scanDocumentBase64,
+  convertMediaBase64,
+  extractUrlAudioBase64
 }

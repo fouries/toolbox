@@ -15,6 +15,7 @@ KNOWN_TOOLS = [
     "qrcode",
     "document-converter",
     "document-scanner",
+    "media-converter",
     "password",
     "history-today",
     "solar-terms",

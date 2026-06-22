@@ -57,6 +57,14 @@
       }
     },
     {
+      "path": "pages/media-converter/index",
+      "style": {
+        "navigationBarTitleText": "音视频转换",
+        "navigationBarBackgroundColor": "#7c3aed",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/password/index",
       "style": {
         "navigationBarTitleText": "密码生成器",

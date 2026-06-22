@@ -19,6 +19,7 @@ from core.responses import error, normalize_response, success
 from db.session import init_db
 from utils.cache import cache
 from api.document_converter import get_document_converter_service
+from api.media_converter import get_media_converter_service
 from api.tianapi import TianApiService
 from api.news_detail import NewsDetailService
 from api.tools import ToolsService
@@ -108,6 +109,17 @@ class DocumentScanBase64Request(BaseModel):
     files: list[DocumentOperationFile]
     target_format: str = "pdf"
     title: str = "扫描文档"
+
+
+class MediaConvertBase64Request(BaseModel):
+    operation: str
+    files: list[DocumentOperationFile] = []
+    options: dict = {}
+
+
+class MediaUrlExtractRequest(BaseModel):
+    url: str
+    target_format: str = "mp3"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -490,6 +502,46 @@ async def document_scan_base64(payload: DocumentScanBase64Request):
     result = get_document_converter_service().scan_images(decoded_files, payload.target_format, payload.title)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "扫描生成失败"))
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
+
+
+@app.post("/api/media/convert-base64", summary="音视频转换处理（Base64）", tags=["本地工具"])
+async def media_convert_base64(payload: MediaConvertBase64Request):
+    """小程序/H5 兼容接口：音频裁剪、拼接、合并、转文字、人声处理、音量调节、视频转音频。"""
+    import base64
+
+    decoded_files = []
+    for item in payload.files:
+        try:
+            raw = base64.b64decode(item.content_base64, validate=True)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"{item.filename} 不是有效的 Base64")
+        decoded_files.append({"filename": item.filename, "content": raw})
+    result = get_media_converter_service().process(payload.operation, decoded_files, payload.options or {})
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "音视频处理失败"))
+    data = result.get("data")
+    if data is not None:
+        return success(data)
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
+
+
+@app.post("/api/media/extract-url-audio", summary="视频链接提取音频（Base64）", tags=["本地工具"])
+async def media_extract_url_audio(payload: MediaUrlExtractRequest):
+    """从可直接下载的视频/音频链接中提取音频。"""
+    import base64
+
+    result = await get_media_converter_service().extract_audio_from_url(payload.url, payload.target_format)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "链接音频提取失败"))
     return success({
         "filename": result["filename"],
         "media_type": result["media_type"],

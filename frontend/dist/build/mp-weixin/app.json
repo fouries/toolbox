@@ -7,6 +7,7 @@
     "pages/qrcode/index",
     "pages/document-converter/index",
     "pages/document-scanner/index",
+    "pages/media-converter/index",
     "pages/password/index",
     "pages/weather/index",
     "pages/calendar/index",
