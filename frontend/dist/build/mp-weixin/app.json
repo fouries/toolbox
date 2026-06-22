@@ -8,6 +8,7 @@
     "pages/document-converter/index",
     "pages/document-scanner/index",
     "pages/media-converter/index",
+    "pages/parenting/index",
     "pages/password/index",
     "pages/weather/index",
     "pages/calendar/index",

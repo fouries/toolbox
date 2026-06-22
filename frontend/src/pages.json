@@ -65,6 +65,14 @@
       }
     },
     {
+      "path": "pages/parenting/index",
+      "style": {
+        "navigationBarTitleText": "育儿工具",
+        "navigationBarBackgroundColor": "#fb7185",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/password/index",
       "style": {
         "navigationBarTitleText": "密码生成器",

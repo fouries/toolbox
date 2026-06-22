@@ -16,6 +16,7 @@ KNOWN_TOOLS = [
     "document-converter",
     "document-scanner",
     "media-converter",
+    "parenting",
     "password",
     "history-today",
     "solar-terms",

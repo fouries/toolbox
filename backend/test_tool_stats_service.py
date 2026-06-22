@@ -93,6 +93,7 @@ def test_record_click_accepts_current_frontend_tool_ids(monkeypatch, tmp_path):
 
     assert service.record_click("info-news") == {"code": 200, "msg": "success", "data": {"id": "info-news", "clicks": 1}}
     assert service.record_click("baidu-hot") == {"code": 200, "msg": "success", "data": {"id": "baidu-hot", "clicks": 1}}
+    assert service.record_click("parenting") == {"code": 200, "msg": "success", "data": {"id": "parenting", "clicks": 1}}
 
 
 def test_existing_legacy_news_rows_are_folded_into_current_info_news_tool(monkeypatch, tmp_path):

@@ -272,6 +272,7 @@ const tools = ref<ToolItem[]>([
   { id: 'document-converter', name: '文档转换/处理', desc: 'PDF、Word、TXT、HTML 互转', icon: '📄', color: '#1677ff', category: 'utility', path: '/pages/document-converter/index', implemented: true, keywords: ['文档', '转换', '处理', 'PDF', 'Word', 'TXT', 'HTML'] },
   { id: 'document-scanner', name: '拍照扫描', desc: '拍照生成 PDF、Word、PPT', icon: '📷', color: '#f97316', category: 'utility', path: '/pages/document-scanner/index', implemented: true, keywords: ['拍照', '扫描', '摄像头', 'PDF', 'Word', 'PPT'] },
   { id: 'media-converter', name: '音视频转换', desc: '裁剪、拼接、转文字、提取音频', icon: '🎧', color: '#7c3aed', category: 'utility', path: '/pages/media-converter/index', implemented: true, keywords: ['音频', '视频', '转换', '裁剪', '拼接', '合并', '声音转文字', '人声', '音量', '提取音频'] },
+  { id: 'parenting', name: '育儿工具', desc: '孕晚期到 6 岁育儿助手', icon: '👶', color: '#fb7185', category: 'life', path: '/pages/parenting/index', implemented: true, keywords: ['育儿', '孕晚期', '胎动', '宝宝', '喂养', '睡眠', '疫苗', '体检', '入园'] },
   { id: 'password', name: '密码生成器', desc: '生成安全随机密码', icon: '🔐', color: '#6366f1', category: 'utility', path: '/pages/password/index', implemented: true, keywords: ['密码', '随机', '安全'] },
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'calendar', path: '/pages/calendar/index', implemented: true, keywords: ['黄历', '农历', '日历'] },
   { id: 'history-today', name: '历史上的今天', desc: '查看今日历史事件', icon: '📜', color: '#b45309', category: 'calendar', path: '/pages/history-today/index', implemented: true, keywords: ['历史', '今天'] },
