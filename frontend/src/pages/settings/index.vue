@@ -551,19 +551,31 @@ onMounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 24rpx;
+  padding: 24rpx 24rpx calc(148rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   background: rgba(15, 23, 42, 0.42);
 }
 
 .panel-sheet {
   width: 100%;
-  max-height: 84vh;
+  max-height: calc(100vh - 188rpx - env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: 34rpx 34rpx 24rpx 24rpx;
   background: var(--theme-surface, #ffffff);
   box-shadow: 0 -20rpx 70rpx rgba(15, 23, 42, 0.18);
 }
+
+/* #ifdef MP-WEIXIN */
+.panel-mask {
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+}
+/* #endif */
+
+/* #ifdef H5 */
+.panel-mask {
+  padding-bottom: calc(168rpx + env(safe-area-inset-bottom));
+}
+/* #endif */
 
 .sheet-handle {
   width: 78rpx;
