@@ -405,9 +405,15 @@ const toggleReminder = async (option: typeof reminderOptions[number], event: any
 
 const changeReminderTime = async (option: typeof reminderOptions[number], event: any) => {
   const time = String(event?.detail?.value || getReminderTime(option.type))
+  const current = reminderMap.value[option.type]
+  const enabled = Boolean(current?.enabled)
+  const wxSubscribe = {
+    accepted: enabled && Boolean(current?.wx_subscribe_enabled),
+    templateId: current?.has_wechat_template ? (wechatSubscribeConfig.value.templates?.[option.type] || '') : ''
+  }
   try {
-    await saveReminder(option, true, time, { accepted: isReminderEnabled(option.type) && Boolean(reminderMap.value[option.type]?.wx_subscribe_enabled), templateId: reminderMap.value[option.type]?.has_wechat_template ? (wechatSubscribeConfig.value.templates?.[option.type] || '') : '' })
-    uni.showToast({ title: '提醒时间已保存', icon: 'success' })
+    await saveReminder(option, enabled, time, wxSubscribe)
+    uni.showToast({ title: enabled ? '提醒时间已保存' : '时间已保存，开启后生效', icon: 'success' })
   } catch (err) {
     console.warn('change reminder time failed', err)
     uni.showToast({ title: '保存失败，请稍后再试', icon: 'none' })

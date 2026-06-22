@@ -77,7 +77,7 @@ def test_media_converter_rejects_missing_files_and_unknown_operation():
     assert service.process("unknown", [cast(MediaInputFile, {"filename": "a.wav", "content": b"x"})], {})["code"] == 400
 
 
-def test_media_converter_extracts_audio_from_direct_video_url(tmp_path):
+def test_media_converter_rejects_localhost_direct_video_url(tmp_path):
     service = MediaConverterService()
     _make_video(tmp_path / "direct.mp4", 0.8)
 
@@ -88,8 +88,8 @@ def test_media_converter_extracts_audio_from_direct_video_url(tmp_path):
         try:
             url = f"http://127.0.0.1:{httpd.server_address[1]}/direct.mp4"
             result = asyncio.run(service.extract_audio_from_url(url, "mp3"))
-            out = _write_result(tmp_path, result)
-            assert _probe_duration(out) > 0.5
+            assert result["code"] == 400
+            assert "公网" in result["msg"]
         finally:
             httpd.shutdown()
 

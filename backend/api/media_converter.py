@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from utils.url_security import is_public_http_url
+
 AUDIO_MIME_TYPES = {
     "mp3": "audio/mpeg",
     "wav": "audio/wav",
@@ -72,11 +74,11 @@ class MediaConverterService:
         if not self.ffmpeg:
             return {"code": 400, "msg": "服务器未安装 FFmpeg，暂时无法处理音视频"}
         parsed = urlparse(str(url or "").strip())
-        if parsed.scheme not in {"http", "https"}:
-            return {"code": 400, "msg": "仅支持 http/https 视频直链"}
+        if parsed.scheme not in {"http", "https"} or not is_public_http_url(url):
+            return {"code": 400, "msg": "仅支持公网 http/https 视频直链"}
         target_format = self._normalize_audio_format(target_format)
         try:
-            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
                 async with client.stream("GET", url, headers={"User-Agent": "Mozilla/5.0"}) as response:
                     response.raise_for_status()
                     content_type = response.headers.get("content-type", "")
@@ -230,7 +232,7 @@ class MediaConverterService:
 
     def _run_ffmpeg(self, args: List[str]) -> None:
         cmd = [self.ffmpeg, "-hide_banner", "-loglevel", "error", "-y", *args]
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=180)
 
     @staticmethod
     def _suffix(filename: str) -> str:

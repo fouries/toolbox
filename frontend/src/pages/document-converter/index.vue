@@ -518,14 +518,19 @@ const downloadConvertedFile = () => {
   const link = document.createElement('a')
   link.href = url
   link.download = file.filename
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+    document.body.removeChild(link)
+  }, 1000)
   uni.showToast({ title: '已开始下载', icon: 'success' })
   // #endif
 
   // #ifdef MP-WEIXIN
   const fs = uni.getFileSystemManager()
-  const filePath = `${wx.env.USER_DATA_PATH}/${Date.now()}_${file.filename}`
+  const safeFilename = String(file.filename || 'converted-file').replace(/[\\/:*?"<>|]/g, '_')
+  const filePath = `${wx.env.USER_DATA_PATH}/${Date.now()}_${safeFilename}`
   fs.writeFile({
     filePath,
     data: file.base64,

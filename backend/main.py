@@ -7,11 +7,12 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 from urllib.parse import unquote, urlparse
 from starlette.background import BackgroundTask
@@ -25,6 +26,7 @@ from core.middleware import RequestLoggingMiddleware
 from core.responses import error, normalize_response, success
 from db.session import init_db
 from utils.cache import cache
+from utils.url_security import is_allowed_host, is_public_http_url
 from api.document_converter import get_document_converter_service
 from api.media_converter import get_media_converter_service
 from api.tianapi import TianApiService
@@ -128,8 +130,8 @@ class DocumentScanBase64Request(BaseModel):
 
 class MediaConvertBase64Request(BaseModel):
     operation: str
-    files: list[DocumentOperationFile] = []
-    options: dict = {}
+    files: list[DocumentOperationFile] = Field(default_factory=list)
+    options: dict = Field(default_factory=dict)
 
 
 class MediaUrlExtractRequest(BaseModel):
@@ -138,7 +140,7 @@ class MediaUrlExtractRequest(BaseModel):
 
 class MediaTaskInitRequest(BaseModel):
     operation: str
-    options: dict = {}
+    options: dict = Field(default_factory=dict)
 
 
 MEDIA_TASK_DIR = Path(__file__).resolve().parent / "data" / "media_tasks"
@@ -404,11 +406,11 @@ async def image_proxy(url: str, request: Request):
     url = _extract_proxy_target_url(url, request)
     parsed = urlparse(url)
     allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com", "douyinpic.com", "byteimg.com")
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not is_allowed_host(url, allowed_hosts) or not is_public_http_url(url):
         raise HTTPException(status_code=400, detail="Unsupported image host")
     is_douyin_image = any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in ("douyinpic.com", "byteimg.com"))
     referer = "https://www.douyin.com/" if is_douyin_image else "https://m.baidu.com/"
-    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
         try:
             response = await client.get(url, headers={"User-Agent": "Mozilla/5.0", "Referer": referer, "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"})
             response.raise_for_status()
@@ -426,7 +428,7 @@ async def video_proxy(url: str, request: Request):
     url = _extract_proxy_target_url(url, request)
     parsed = urlparse(url)
     allowed_hosts = ("bdstatic.com", "bcebos.com", "baidu.com", "douyinvod.com")
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not any(parsed.netloc == host or parsed.netloc.endswith(f".{host}") for host in allowed_hosts):
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not is_allowed_host(url, allowed_hosts) or not is_public_http_url(url):
         raise HTTPException(status_code=400, detail="Unsupported video host")
     if not re.search(r"(?:\.(?:mp4|m3u8)(?:\?|$)|mime_type=video_)", url, flags=re.IGNORECASE):
         raise HTTPException(status_code=400, detail="URL is not a supported video")
@@ -442,7 +444,7 @@ async def video_proxy(url: str, request: Request):
     if range_header:
         headers["Range"] = range_header
 
-    client = httpx.AsyncClient(timeout=30, follow_redirects=True)
+    client = httpx.AsyncClient(timeout=30, follow_redirects=False)
     try:
         upstream = await client.send(client.build_request("GET", url, headers=headers), stream=True)
         upstream.raise_for_status()
@@ -548,8 +550,8 @@ async def list_reminders(user_key: str):
 @app.post("/api/reminders", summary="保存订阅提醒", tags=["反馈订阅"])
 async def upsert_reminder(payload: ReminderRequest):
     configured_template = get_wechat_subscribe_service().template_id_for(payload.reminder_type)
-    wx_template_id = payload.wx_template_id or configured_template
-    wx_subscribe_enabled = bool(payload.enabled and wx_template_id and payload.wx_subscribe_enabled)
+    wx_template_id = configured_template
+    wx_subscribe_enabled = bool(payload.enabled and configured_template and payload.wx_subscribe_enabled)
     result = get_user_engagement_service().upsert_reminder(
         payload.user_key,
         payload.reminder_type,
@@ -608,7 +610,7 @@ async def convert_document(file: UploadFile = File(...), target_format: str = Fo
         content=result["content"],
         media_type=result["media_type"],
         headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{result['filename']}",
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(str(result['filename']))}",
             "Cache-Control": "no-store",
         },
     )
@@ -757,8 +759,8 @@ async def media_create_url_task(payload: MediaUrlExtractRequest):
     """后台下载直链视频/音频并提取音频。"""
     _cleanup_media_tasks()
     parsed = urlparse(str(payload.url or "").strip())
-    if parsed.scheme not in {"http", "https"}:
-        raise HTTPException(status_code=400, detail="仅支持 http/https 视频直链")
+    if parsed.scheme not in {"http", "https"} or not is_public_http_url(str(payload.url or "")):
+        raise HTTPException(status_code=400, detail="仅支持公网 http/https 视频直链")
     task_id = uuid.uuid4().hex
     task_dir = MEDIA_TASK_DIR / task_id
     task_dir.mkdir(parents=True, exist_ok=True)

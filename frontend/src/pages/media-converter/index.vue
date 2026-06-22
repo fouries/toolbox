@@ -257,6 +257,8 @@ const canSubmit = computed(() => {
 })
 
 const selectOperation = (value: Operation) => {
+  stopPolling()
+  loading.value = false
   operation.value = value
   selectedFiles.value = []
   convertedFile.value = null
@@ -325,6 +327,8 @@ const chooseMediaFiles = () => {
 }
 
 const clearSelectedFiles = () => {
+  stopPolling()
+  loading.value = false
   selectedFiles.value = []
   convertedFile.value = null
   transcriptText.value = ''
@@ -344,9 +348,13 @@ const pollMediaTask = (taskId: string) => {
   stopPolling()
   pollTimer = setInterval(async () => {
     try {
+      if (currentTask.value?.task_id && currentTask.value.task_id !== taskId) {
+        stopPolling()
+        return
+      }
       const res = await getMediaTask(taskId)
       const task = res.data
-      if (!task) return
+      if (!task || task.task_id !== taskId) return
       currentTask.value = task
       if (task.status === 'completed') {
         stopPolling()
@@ -406,7 +414,9 @@ const downloadConvertedFile = () => {
   const link = document.createElement('a')
   link.href = url
   link.download = convertedFile.value.filename
+  document.body.appendChild(link)
   link.click()
+  document.body.removeChild(link)
   // #endif
 
   // #ifdef MP-WEIXIN

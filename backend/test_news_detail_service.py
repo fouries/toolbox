@@ -278,7 +278,7 @@ def test_news_detail_normalizes_protocol_relative_source_urls():
     assert result["data"]["originalImage"] == "https://n.sinaimg.cn/games/demo.png"
 
 
-def test_news_detail_http_client_is_created_with_redirect_following_enabled():
+def test_news_detail_http_client_disables_automatic_redirects_for_ssrf_guard():
     html = """
     <html><body><article><p>重定向后的新闻正文内容，足够用于详情页展示。</p></article></body></html>
     """
@@ -288,7 +288,7 @@ def test_news_detail_http_client_is_created_with_redirect_following_enabled():
     result = run(NewsDetailService.fetch_detail("https://example.com/news/redirect"))
 
     assert result["code"] == 200
-    assert DummyHttpClient.init_kwargs[-1]["follow_redirects"] is True
+    assert DummyHttpClient.init_kwargs[-1]["follow_redirects"] is False
 
 
 def test_news_detail_prefers_article_body_container_over_comment_article():
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     setup_module(None)
     test_news_detail_normalizes_protocol_relative_source_urls()
     setup_module(None)
-    test_news_detail_http_client_is_created_with_redirect_following_enabled()
+    test_news_detail_http_client_disables_automatic_redirects_for_ssrf_guard()
     setup_module(None)
     test_news_detail_prefers_article_body_container_over_comment_article()
     print("news detail service tests passed")

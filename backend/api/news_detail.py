@@ -11,6 +11,7 @@ from urllib.parse import quote, urljoin, urlparse
 from config import get_settings
 from utils.cache import cache
 from utils.http_client import HttpClient
+from utils.url_security import is_public_http_url
 
 settings = get_settings()
 
@@ -97,19 +98,7 @@ class NewsDetailService:
 
     @staticmethod
     def _is_safe_url(url: str) -> bool:
-        parsed = urlparse(NewsDetailService._normalize_source_url(url))
-        if parsed.scheme not in {"http", "https"}:
-            return False
-        if not parsed.netloc:
-            return False
-        host = parsed.hostname or ""
-        if host in {"localhost", "127.0.0.1", "0.0.0.0"}:
-            return False
-        if host.startswith("10.") or host.startswith("192.168."):
-            return False
-        if re.match(r"^172\.(1[6-9]|2\d|3[0-1])\.", host):
-            return False
-        return True
+        return is_public_http_url(NewsDetailService._normalize_source_url(url))
 
     @staticmethod
     def _extract_meta(html_text: str, name: str) -> str:
@@ -318,7 +307,7 @@ class NewsDetailService:
         if not NewsDetailService.is_safe_image_url(url):
             return {"code": 400, "msg": "无效或不安全的图片链接"}
         try:
-            async with HttpClient(timeout=10, follow_redirects=True) as client:
+            async with HttpClient(timeout=10, follow_redirects=False) as client:
                 if client._client is None:
                     return {"code": 502, "msg": "图片读取失败"}
                 response = await client._client.get(url, headers={"User-Agent": NewsDetailService.USER_AGENT})
@@ -518,7 +507,7 @@ class NewsDetailService:
             return {"code": 200, "msg": "success", "data": {**cached, "fromCache": True}}
 
         try:
-            async with HttpClient(timeout=12, follow_redirects=True) as client:
+            async with HttpClient(timeout=12, follow_redirects=False) as client:
                 html_text = await client.get_text(
                     url,
                     headers={
