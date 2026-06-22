@@ -498,6 +498,7 @@ export const scanDocumentBase64 = (payload: {
   files: Array<{ filename: string; content_base64: string }>
   target_format: string
   title?: string
+  mode?: string
 }) => {
   return request<DocumentConvertResult>('/api/documents/scan-base64', {
     method: 'POST',
@@ -639,6 +640,47 @@ export const extractUrlAudioBase64 = (payload: {
   })
 }
 
+
+export interface ImageToolboxResult {
+  filename?: string
+  media_type?: string
+  base64?: string
+  text?: string
+  size?: number
+}
+
+export const processImageBase64 = (payload: {
+  filename: string
+  content_base64: string
+  operation: string
+  options?: Record<string, unknown>
+}) => {
+  return request<ImageToolboxResult>('/api/images/process-base64', {
+    method: 'POST',
+    timeout: 60000,
+    data: payload
+  })
+}
+
+export const generateBarcode = (text: string, height: number = 120) => {
+  return request<QrcodeResult>(`/api/barcode?text=${encodeURIComponent(text)}&height=${height}`)
+}
+
+export const getAdminFeedbackList = (params: { admin_key: string; status?: string; category?: string; limit?: number }) => {
+  const query = buildQueryString({ status: params.status || '', category: params.category || '', limit: params.limit || 100 })
+  return request<FeedbackResult[]>(`/api/admin/feedback?${query}`, {
+    header: { 'X-Admin-Key': params.admin_key }
+  })
+}
+
+export const updateAdminFeedbackStatus = (payload: { admin_key: string; feedback_id: number; status: string }) => {
+  return request<FeedbackResult>(`/api/admin/feedback/${encodeURIComponent(String(payload.feedback_id))}`, {
+    method: 'PATCH',
+    header: { 'X-Admin-Key': payload.admin_key },
+    data: { status: payload.status }
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -677,5 +719,9 @@ export default {
   getMediaTask,
   getMediaTaskDownloadUrl,
   convertMediaBase64,
-  extractUrlAudioBase64
+  extractUrlAudioBase64,
+  processImageBase64,
+  generateBarcode,
+  getAdminFeedbackList,
+  updateAdminFeedbackStatus
 }

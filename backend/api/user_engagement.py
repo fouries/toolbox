@@ -7,12 +7,15 @@ from db.session import session_scope
 USER_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 FEEDBACK_CATEGORIES = {"bug", "idea", "content", "other"}
+FEEDBACK_STATUSES = {"submitted", "reviewing", "planned", "done", "closed"}
 REMINDER_TYPES = {
     "daily_brief": "每日简报",
     "weather": "天气预报",
     "oil_price": "油价提醒",
     "hot_search": "热搜榜提醒",
     "gold_price": "黄金行情提醒",
+    "parenting": "育儿提醒",
+    "custom": "自定义提醒",
 }
 
 
@@ -77,6 +80,29 @@ class UserEngagementService:
         with session_scope() as session:
             rows = UserEngagementRepository(session).list_feedback(user_key)
             data = [self._feedback_to_dict(row) for row in rows]
+        return {"code": 200, "msg": "success", "data": data}
+
+    def list_all_feedback(self, status: str = "", category: str = "", limit: int = 100) -> Dict[str, Any]:
+        status = str(status or "").strip()
+        category = str(category or "").strip()
+        if status and status not in FEEDBACK_STATUSES:
+            return {"code": 400, "msg": "反馈状态无效"}
+        if category and category not in FEEDBACK_CATEGORIES:
+            return {"code": 400, "msg": "反馈类型无效"}
+        with session_scope() as session:
+            rows = UserEngagementRepository(session).list_all_feedback(status, category, limit)
+            data = [self._feedback_to_dict(row) for row in rows]
+        return {"code": 200, "msg": "success", "data": data}
+
+    def update_feedback_status(self, feedback_id: int, status: str) -> Dict[str, Any]:
+        status = str(status or "").strip()
+        if status not in FEEDBACK_STATUSES:
+            return {"code": 400, "msg": "反馈状态无效"}
+        with session_scope() as session:
+            feedback = UserEngagementRepository(session).update_feedback_status(int(feedback_id), status)
+            if feedback is None:
+                return {"code": 404, "msg": "反馈不存在"}
+            data = self._feedback_to_dict(feedback)
         return {"code": 200, "msg": "success", "data": data}
 
     def list_reminders(self, user_key: str) -> Dict[str, Any]:

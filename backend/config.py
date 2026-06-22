@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     WECHAT_SUBSCRIBE_TEMPLATE_GOLD_PRICE: str = ""
     WECHAT_SUBSCRIBE_TEMPLATE_DATA_KEYS: str = "thing1,time2,thing3"
 
+    # 管理后台密钥，仅用于反馈后台等轻量管理接口；生产环境必须设置强随机值。
+    ADMIN_KEY: str = ""
+
     # 缓存时间（秒）
     CACHE_TTL_OIL: int = 3600
     CACHE_TTL_WEATHER: int = 1800

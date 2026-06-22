@@ -171,6 +171,22 @@ class UserEngagementRepository:
             ).scalars().all()
         )
 
+    def list_all_feedback(self, status: str = "", category: str = "", limit: int = 100) -> list[UserFeedback]:
+        stmt = select(UserFeedback).order_by(UserFeedback.id.desc()).limit(max(1, min(int(limit or 100), 500)))
+        if status:
+            stmt = stmt.where(UserFeedback.status == status)
+        if category:
+            stmt = stmt.where(UserFeedback.category == category)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def update_feedback_status(self, feedback_id: int, status: str) -> UserFeedback | None:
+        feedback = self.session.execute(select(UserFeedback).where(UserFeedback.id == feedback_id)).scalar_one_or_none()
+        if feedback is None:
+            return None
+        feedback.status = status
+        self.session.flush()
+        return feedback
+
     def upsert_reminder(
         self,
         user_key: str,

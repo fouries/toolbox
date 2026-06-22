@@ -25,6 +25,14 @@
       }
     },
     {
+      "path": "pages/feedback-admin/index",
+      "style": {
+        "navigationBarTitleText": "反馈后台",
+        "navigationBarBackgroundColor": "#0f172a",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/oil-price/index",
       "style": {
         "navigationBarTitleText": "油价查询",
@@ -53,6 +61,14 @@
       "style": {
         "navigationBarTitleText": "拍照扫描",
         "navigationBarBackgroundColor": "#f97316",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/image-toolbox/index",
+      "style": {
+        "navigationBarTitleText": "图片工具箱",
+        "navigationBarBackgroundColor": "#0ea5e9",
         "navigationBarTextStyle": "white"
       }
     },

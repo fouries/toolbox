@@ -40,3 +40,9 @@ assert.match(page, /new Blob\(/, 'H5 should download generated file via Blob')
 assert.equal(pkg.scripts['test:document-scanner'], 'node scripts/test-document-scanner.mjs', 'package scripts should include document scanner test')
 
 console.log('document scanner page, API, and home entry are valid')
+
+const scanModeChecks = ['扫描模式', '自动增强', '灰度扫描', '黑白扫描', 'mode: scanMode.value']
+for (const token of scanModeChecks) {
+  if (!page.includes(token)) throw new Error(`missing scan mode token: ${token}`)
+}
+console.log('scan mode checks passed')

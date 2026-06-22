@@ -56,3 +56,9 @@ assert.match(page, /uni\.downloadFile\(/, 'mp-weixin should download generated m
 assert.equal(pkg.scripts['test:media-converter'], 'node scripts/test-media-converter.mjs', 'package scripts should include media converter test')
 
 console.log('media converter page, API, and home entry are valid')
+
+const extraMediaChecks = ['视频压缩', '视频裁剪', '视频转 GIF', '提取封面', 'video_compress', 'video_trim', 'video_to_gif', 'extract_cover']
+for (const token of extraMediaChecks) {
+  if (!page.includes(token)) throw new Error(`missing video extra operations token: ${token}`)
+}
+console.log('video extra operations checks passed')

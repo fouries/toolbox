@@ -173,3 +173,31 @@ def test_media_task_init_upload_start_flow(tmp_path, monkeypatch):
         import time
         time.sleep(0.2)
     assert status["status"] == "completed", status
+
+
+
+def test_video_extra_operations(monkeypatch, tmp_path):
+    service = MediaConverterService()
+    monkeypatch.setattr(service, "ffmpeg", "/usr/bin/ffmpeg")
+
+    def fake_run(args):
+        Path(args[-1]).write_bytes(b"video-result")
+
+    monkeypatch.setattr(service, "_run_ffmpeg", fake_run)
+    files = [{"filename": "demo.mp4", "content": b"fake-video"}]
+
+    compressed = service.process("video_compress", files, {"video_quality": "low"})
+    assert compressed["code"] == 200
+    assert compressed["media_type"] == "video/mp4"
+
+    trimmed = service.process("video_trim", files, {"start": 0, "end": 1})
+    assert trimmed["code"] == 200
+    assert trimmed["filename"].endswith("_trimmed.mp4")
+
+    gif = service.process("video_to_gif", files, {"start": 0, "end": 1, "gif_width": 320})
+    assert gif["code"] == 200
+    assert gif["media_type"] == "image/gif"
+
+    cover = service.process("extract_cover", files, {"cover_second": 0})
+    assert cover["code"] == 200
+    assert cover["media_type"] == "image/jpeg"

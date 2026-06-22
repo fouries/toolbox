@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
@@ -28,6 +28,7 @@ from db.session import init_db
 from utils.cache import cache
 from utils.url_security import is_allowed_host, is_public_http_url
 from api.document_converter import get_document_converter_service
+from api.image_tools import get_image_toolbox_service
 from api.media_converter import get_media_converter_service
 from api.tianapi import TianApiService
 from api.news_detail import NewsDetailService
@@ -67,6 +68,14 @@ def _extract_proxy_target_from_query(url: str, raw_query: str) -> str:
 def _extract_proxy_target_url(url: str, request: Request) -> str:
     return _extract_proxy_target_from_query(url, str(request.url.query or ""))
 
+
+def _check_admin_key(x_admin_key: str = "") -> None:
+    configured = str(getattr(settings, "ADMIN_KEY", "") or "").strip()
+    if not configured:
+        raise HTTPException(status_code=503, detail="后台管理密钥未配置")
+    if not x_admin_key or x_admin_key != configured:
+        raise HTTPException(status_code=401, detail="后台管理密钥无效")
+
 class ToolClickRequest(BaseModel):
     tool_id: str
 
@@ -102,6 +111,15 @@ class WechatLoginRequest(BaseModel):
     user_key: str
     code: str
 
+class AdminFeedbackStatusRequest(BaseModel):
+    status: str
+
+class ImageToolboxBase64Request(BaseModel):
+    filename: str
+    content_base64: str
+    operation: str
+    options: dict = Field(default_factory=dict)
+
 
 class DocumentConvertBase64Request(BaseModel):
     filename: str
@@ -126,6 +144,7 @@ class DocumentScanBase64Request(BaseModel):
     files: list[DocumentOperationFile]
     target_format: str = "pdf"
     title: str = "扫描文档"
+    mode: str = "color"
 
 
 class MediaConvertBase64Request(BaseModel):
@@ -540,6 +559,24 @@ async def list_feedback(user_key: str):
         raise HTTPException(status_code=400, detail=result.get("msg", "用户标识无效"))
     return normalize_response(result)
 
+@app.get("/api/admin/feedback", summary="后台反馈列表", tags=["反馈订阅"])
+async def admin_list_feedback(status: str = "", category: str = "", limit: int = 100, x_admin_key: str = Header(default="")):
+    _check_admin_key(x_admin_key)
+    result = get_user_engagement_service().list_all_feedback(status, category, limit)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "查询反馈失败"))
+    return normalize_response(result)
+
+@app.patch("/api/admin/feedback/{feedback_id}", summary="更新反馈状态", tags=["反馈订阅"])
+async def admin_update_feedback(feedback_id: int, payload: AdminFeedbackStatusRequest, x_admin_key: str = Header(default="")):
+    _check_admin_key(x_admin_key)
+    result = get_user_engagement_service().update_feedback_status(feedback_id, payload.status)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "更新反馈失败"))
+    if result.get("code") == 404:
+        raise HTTPException(status_code=404, detail=result.get("msg", "反馈不存在"))
+    return normalize_response(result)
+
 @app.get("/api/reminders", summary="获取订阅提醒", tags=["反馈订阅"])
 async def list_reminders(user_key: str):
     result = get_user_engagement_service().list_reminders(user_key)
@@ -599,6 +636,26 @@ async def generate_qrcode(text: str, size: int = 256):
     """生成二维码图片（base64格式）"""
     result = ToolsService.generate_qrcode(text, size)
     return normalize_response(result)
+
+@app.get("/api/barcode", summary="条形码生成", tags=["本地工具"])
+async def generate_barcode(text: str, height: int = 120):
+    result = ToolsService.generate_barcode(text, height)
+    return normalize_response(result)
+
+@app.post("/api/images/process-base64", summary="图片工具箱处理（Base64）", tags=["本地工具"])
+async def image_toolbox_process_base64(payload: ImageToolboxBase64Request):
+    result = get_image_toolbox_service().process_base64(payload.filename, payload.content_base64, payload.operation, payload.options or {})
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "图片处理失败"))
+    data = result.get("data")
+    if data is not None:
+        return success(data)
+    import base64
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
 
 @app.post("/api/documents/convert", summary="文档格式转换", tags=["本地工具"])
 async def convert_document(file: UploadFile = File(...), target_format: str = Form(...)):
@@ -669,7 +726,7 @@ async def document_scan_base64(payload: DocumentScanBase64Request):
         except Exception:
             raise HTTPException(status_code=400, detail=f"{item.filename} 不是有效的 Base64")
         decoded_files.append({"filename": item.filename, "content": raw})
-    result = get_document_converter_service().scan_images(decoded_files, payload.target_format, payload.title)
+    result = get_document_converter_service().scan_images(decoded_files, payload.target_format, payload.title, payload.mode)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "扫描生成失败"))
     return success({

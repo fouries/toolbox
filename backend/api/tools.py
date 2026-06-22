@@ -42,6 +42,48 @@ class ToolsService:
             return {"code": 500, "msg": f"生成失败: {str(e)}"}
     
 
+
+    @staticmethod
+    def generate_barcode(text: str, height: int = 120) -> Dict[str, Any]:
+        """生成 Code39 条形码（支持英文大写、数字和常见符号）。"""
+        from PIL import Image, ImageDraw, ImageFont
+        patterns = {
+            '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+            'A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+            'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn',
+            'U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','*':'nwnnwnwnn','$':'nwnwnwnnn','/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn'
+        }
+        raw = str(text or '').upper().strip()[:64]
+        if not raw:
+            return {"code": 400, "msg": "请输入条形码内容"}
+        if any(ch not in patterns or ch == '*' for ch in raw):
+            return {"code": 400, "msg": "Code39 仅支持英文大写、数字、空格和 -.$/+%"}
+        encoded = f"*{raw}*"
+        narrow, wide, gap = 2, 5, 2
+        bar_height = max(80, min(int(height or 120), 240))
+        width = 40 + sum((wide if c == 'w' else narrow) for ch in encoded for c in patterns[ch]) + gap * (len(encoded) - 1)
+        img = Image.new('RGB', (width, bar_height + 42), 'white')
+        draw = ImageDraw.Draw(img)
+        x = 20
+        for idx, ch in enumerate(encoded):
+            for pos, c in enumerate(patterns[ch]):
+                w = wide if c == 'w' else narrow
+                if pos % 2 == 0:
+                    draw.rectangle((x, 10, x + w - 1, 10 + bar_height), fill='black')
+                x += w
+            if idx != len(encoded) - 1:
+                x += gap
+        try:
+            font = ImageFont.load_default()
+            bbox = draw.textbbox((0, 0), raw, font=font)
+            draw.text(((width - (bbox[2]-bbox[0])) / 2, bar_height + 18), raw, fill='black', font=font)
+        except Exception:
+            pass
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+        return {"code": 200, "msg": "success", "data": {"base64": f"data:image/png;base64,{img_str}", "text": raw}}
+
     @staticmethod
     def generate_password(length: int = 16, 
                          include_upper: bool = True,

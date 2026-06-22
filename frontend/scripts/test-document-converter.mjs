@@ -68,3 +68,9 @@ assert.match(page, /扫描件图片 PDF 暂不做 OCR/, 'page should disclose sc
 assert.equal(pkg.scripts['test:document-converter'], 'node scripts/test-document-converter.mjs', 'package scripts should include document converter test')
 
 console.log('document converter page, API, and home entry are valid')
+
+const pdfExtraChecks = ['PDF 加水印', 'PDF 加页码', 'PDF 加密', 'PDF 解密', 'add_watermark', 'add_page_numbers', 'encrypt', 'decrypt']
+for (const token of pdfExtraChecks) {
+  if (!page.includes(token)) throw new Error(`missing pdf extra operation token: ${token}`)
+}
+console.log('pdf extra operation checks passed')

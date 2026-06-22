@@ -225,3 +225,26 @@ def test_same_format_is_rejected_to_avoid_empty_work():
     result = _convert(service, upload, "txt")
     assert result["code"] == 400
     assert "请选择不同" in result["msg"]
+
+
+
+def test_pdf_watermark_page_numbers_encrypt_decrypt():
+    service = DocumentConverterService()
+    pdf = service._text_to_pdf("hello pdf", "demo")
+    files = [{"filename": "demo.pdf", "content": pdf}]
+
+    watermarked = service.operate_pdf("add_watermark", files, text="内部资料")
+    assert watermarked["code"] == 200
+    assert watermarked["filename"].endswith("_watermark.pdf")
+
+    numbered = service.operate_pdf("add_page_numbers", files)
+    assert numbered["code"] == 200
+    assert numbered["filename"].endswith("_numbered.pdf")
+
+    encrypted = service.operate_pdf("encrypt", files, text="1234")
+    assert encrypted["code"] == 200
+    assert encrypted["filename"].endswith("_encrypted.pdf")
+
+    decrypted = service.operate_pdf("decrypt", [{"filename": encrypted["filename"], "content": encrypted["content"]}], text="1234")
+    assert decrypted["code"] == 200
+    assert decrypted["filename"].endswith("_decrypted.pdf")

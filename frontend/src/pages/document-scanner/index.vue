@@ -34,6 +34,20 @@
 
       <view class="card format-card">
         <view class="section-title-row">
+          <text class="section-title">扫描模式</text>
+          <text class="section-badge">{{ selectedScanMode.label }}</text>
+        </view>
+        <view class="format-grid scan-mode-grid">
+          <view v-for="item in scanModeOptions" :key="item.value" class="format-item" :class="{ active: scanMode === item.value }" @click="selectScanMode(item.value)">
+            <text class="format-icon">{{ item.icon }}</text>
+            <text class="format-name">{{ item.label }}</text>
+            <text class="format-desc">{{ item.desc }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card format-card">
+        <view class="section-title-row">
           <text class="section-title">生成类型</text>
           <text class="section-badge">{{ scanTargetFormat.toUpperCase() }}</text>
         </view>
@@ -72,6 +86,7 @@
         <text class="scene-title">常用场景</text>
         <view class="scene-list">
           <view class="scene-item">拍照 → PDF：把纸质资料、票据、合同整理成 PDF</view>
+          <view class="scene-item">自动增强/灰度/黑白扫描：适合 A4 资料归档和打印</view>
           <view class="scene-item">多图 → Word：把扫描图片插入 Word，方便继续补充文字</view>
           <view class="scene-item">多图 → PPT：每张图片生成一页演示文稿</view>
         </view>
@@ -101,6 +116,7 @@ const imageExts = ['jpg', 'jpeg', 'png', 'webp']
 const scanFiles = ref<PickedFile[]>([])
 const scanTargetFormat = ref<'pdf' | 'docx' | 'pptx'>('pdf')
 const scanTitle = ref('扫描文档')
+const scanMode = ref<'color' | 'enhance' | 'gray' | 'bw'>('enhance')
 const loading = ref(false)
 const convertedFile = ref<DocumentConvertResult | null>(null)
 
@@ -109,6 +125,15 @@ const scanTargetFormats = [
   { value: 'docx', label: 'Word', icon: '📝', desc: '图片页可编辑' },
   { value: 'pptx', label: 'PPT', icon: '📽️', desc: '一图一页演示' }
 ] as const
+
+const scanModeOptions = [
+  { value: 'color', label: '彩色原图', icon: '🌈', desc: '保留原始色彩' },
+  { value: 'enhance', label: '自动增强', icon: '✨', desc: '增强对比和清晰度' },
+  { value: 'gray', label: '灰度扫描', icon: '⚪', desc: '适合资料归档' },
+  { value: 'bw', label: '黑白扫描', icon: '⚫', desc: '接近复印件效果' }
+] as const
+
+const selectedScanMode = computed(() => scanModeOptions.find(item => item.value === scanMode.value) || scanModeOptions[1])
 
 const canScanDocument = computed(() => scanFiles.value.length > 0)
 
@@ -141,6 +166,11 @@ const base64ToArrayBuffer = (base64: string) => {
 
 const selectScanTargetFormat = (format: 'pdf' | 'docx' | 'pptx') => {
   scanTargetFormat.value = format
+  convertedFile.value = null
+}
+
+const selectScanMode = (mode: 'color' | 'enhance' | 'gray' | 'bw') => {
+  scanMode.value = mode
   convertedFile.value = null
 }
 
@@ -255,7 +285,8 @@ const generateScanDocument = async () => {
     const res = await scanDocumentBase64({
       files,
       target_format: scanTargetFormat.value,
-      title: scanTitle.value.trim() || '扫描文档'
+      title: scanTitle.value.trim() || '扫描文档',
+      mode: scanMode.value
     })
     if (res.code === 200 && res.data) {
       convertedFile.value = res.data

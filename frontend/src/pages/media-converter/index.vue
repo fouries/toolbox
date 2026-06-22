@@ -115,7 +115,29 @@
         </view>
       </view>
 
-      <view class="card format-card" v-if="operation !== 'transcribe'">
+      <view class="card option-card" v-if="operation === 'video_compress'">
+        <view class="section-title-row">
+          <text class="section-title">压缩质量</text>
+          <text class="section-badge">{{ videoQuality }}</text>
+        </view>
+        <view class="format-grid">
+          <view class="format-item" :class="{ active: videoQuality === 'high' }" @click="videoQuality = 'high'"><text class="format-label">高清</text><text class="format-desc">体积较大</text></view>
+          <view class="format-item" :class="{ active: videoQuality === 'medium' }" @click="videoQuality = 'medium'"><text class="format-label">均衡</text><text class="format-desc">推荐</text></view>
+          <view class="format-item" :class="{ active: videoQuality === 'low' }" @click="videoQuality = 'low'"><text class="format-label">高压缩</text><text class="format-desc">体积更小</text></view>
+        </view>
+      </view>
+
+      <view class="card option-card" v-if="operation === 'video_to_gif'">
+        <view class="section-title-row"><text class="section-title">GIF 宽度</text><text class="section-badge">px</text></view>
+        <input class="text-input" type="number" v-model="gifWidth" placeholder="例如 420" />
+      </view>
+
+      <view class="card option-card" v-if="operation === 'extract_cover'">
+        <view class="section-title-row"><text class="section-title">封面时间点</text><text class="section-badge">秒</text></view>
+        <input class="text-input" type="digit" v-model="coverSecond" placeholder="例如 0" />
+      </view>
+
+      <view class="card format-card" v-if="showOutputFormat">
         <view class="section-title-row">
           <text class="section-title">输出格式</text>
           <text class="section-badge">{{ targetFormat.toUpperCase() }}</text>
@@ -179,6 +201,7 @@
           <view class="scene-item">声音转文字：调用服务器 Whisper 能力，输出文本</view>
           <view class="scene-item">人声消除/提取：轻量声道处理，复杂歌曲不保证完美</view>
           <view class="scene-item">视频转音频/链接提取：上传原文件后台处理，完成后通过临时链接下载</view>
+          <view class="scene-item">视频压缩/视频裁剪/视频转 GIF/提取封面：常用视频处理集中在本页</view>
           <view class="scene-item">大文件不再使用 Base64 JSON 往返，十几 M/几十 M 视频体验更稳定</view>
         </view>
       </view>
@@ -196,7 +219,7 @@ declare const wx: any
 const { themeClass } = useTheme()
 const MAX_FILE_SIZE = 50 * 1024 * 1024
 
-type Operation = 'trim' | 'concat' | 'merge' | 'transcribe' | 'vocal_remove' | 'volume' | 'video_to_audio' | 'url_extract'
+type Operation = 'trim' | 'concat' | 'merge' | 'transcribe' | 'vocal_remove' | 'volume' | 'video_to_audio' | 'url_extract' | 'video_compress' | 'video_trim' | 'video_to_gif' | 'extract_cover'
 
 interface PickedFile {
   name: string
@@ -215,6 +238,10 @@ const operations: Array<{ value: Operation; label: string; icon: string; desc: s
   { value: 'vocal_remove', label: '人声消除/提取', icon: '🎤', desc: '轻量分离伴奏或人声', action: '开始处理' },
   { value: 'volume', label: '音量调节', icon: '🔊', desc: '放大或降低音量', action: '调节音量' },
   { value: 'video_to_audio', label: '视频转音频', icon: '🎬', desc: '从视频文件提取音频', action: '提取音频' },
+  { value: 'video_compress', label: '视频压缩', icon: '📦', desc: '压缩 MP4 体积', action: '压缩视频' },
+  { value: 'video_trim', label: '视频裁剪', icon: '🎞️', desc: '截取视频片段', action: '裁剪视频' },
+  { value: 'video_to_gif', label: '视频转 GIF', icon: '🖼️', desc: '截取片段生成动图', action: '生成 GIF' },
+  { value: 'extract_cover', label: '提取封面', icon: '🏞️', desc: '截取视频画面', action: '提取封面' },
   { value: 'url_extract', label: '链接提取音频', icon: '🌐', desc: '从视频直链提取音频', action: '提取链接音频' }
 ]
 
@@ -237,6 +264,9 @@ const targetFormat = ref('mp3')
 const startTime = ref('0')
 const endTime = ref('30')
 const volumeLevel = ref('1.5')
+const videoQuality = ref<'high' | 'medium' | 'low'>('medium')
+const gifWidth = ref('420')
+const coverSecond = ref('0')
 const vocalMode = ref<'instrumental' | 'vocal'>('instrumental')
 const language = ref('zh')
 const videoUrl = ref('')
@@ -249,7 +279,8 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 const selectedOperation = computed(() => operations.find(item => item.value === operation.value))
 const multiFileMode = computed(() => Boolean(selectedOperation.value?.multi))
 const maxFileCount = computed(() => multiFileMode.value ? 6 : 1)
-const showTimeOptions = computed(() => operation.value === 'trim')
+const showTimeOptions = computed(() => ['trim', 'video_trim', 'video_to_gif'].includes(operation.value))
+const showOutputFormat = computed(() => !['transcribe', 'video_compress', 'video_trim', 'video_to_gif', 'extract_cover'].includes(operation.value))
 const canSubmit = computed(() => {
   if (operation.value === 'url_extract') return /^https?:\/\//.test(videoUrl.value.trim())
   if (multiFileMode.value) return selectedFiles.value.length >= 2
@@ -336,12 +367,15 @@ const clearSelectedFiles = () => {
 }
 
 const buildOptions = () => ({
-  target_format: targetFormat.value,
+  target_format: ['video_compress', 'video_trim'].includes(operation.value) ? 'mp4' : operation.value === 'video_to_gif' ? 'gif' : operation.value === 'extract_cover' ? 'jpg' : targetFormat.value,
   start: startTime.value,
   end: endTime.value,
   volume: volumeLevel.value,
   vocal_mode: vocalMode.value,
-  language: language.value
+  language: language.value,
+  video_quality: videoQuality.value,
+  gif_width: gifWidth.value,
+  cover_second: coverSecond.value
 })
 
 const pollMediaTask = (taskId: string) => {

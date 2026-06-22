@@ -66,7 +66,7 @@
         </view>
         <view class="tips-box">
           <text class="tips-title">PDF 能力</text>
-          <text class="tips-text">合并请选择多个 PDF；拆分/压缩/编辑/去水印选择一个 PDF。</text>
+          <text class="tips-text">合并请选择多个 PDF；拆分/压缩/编辑/加水印/加页码/加密/解密选择一个 PDF。</text>
           <text v-if="pdfOperation === 'merge'" class="tips-text">如果当前环境一次只能选一个，请点“继续添加 PDF”逐个添加，至少添加 2 个后即可合并。</text>
           <text class="tips-text">页码示例：1,3-5；去水印仅尝试移除指定文本/批注类水印，扫描图水印不保证。</text>
         </view>
@@ -112,6 +112,9 @@
           <text class="tips-text">当前编辑功能支持在每页顶部添加文字，复杂内容编辑后续再扩展。</text>
         </view>
         <input v-if="pdfOperation === 'remove_watermark'" class="text-input" v-model="pdfText" placeholder="输入要尝试移除的水印文字，可留空仅移除批注" />
+        <input v-if="pdfOperation === 'add_watermark'" class="text-input" v-model="pdfText" placeholder="输入要添加的水印文字" />
+        <input v-if="pdfOperation === 'encrypt'" class="text-input" v-model="pdfText" password placeholder="输入至少 4 位 PDF 密码" />
+        <input v-if="pdfOperation === 'decrypt'" class="text-input" v-model="pdfText" password placeholder="输入 PDF 密码；未加密 PDF 可留空" />
       </view>
 
       <view class="card format-card" v-if="toolMode === 'convert'">
@@ -159,7 +162,7 @@
           <view class="scene-item">图片 → PDF：把照片、截图整理成单页 PDF</view>
           <view class="scene-item">图片 → Word：把图片插入可继续编辑的 Word 文档</view>
           <view class="scene-item">PDF 合并/拆分：多份 PDF 合成一份，或按页码提取</view>
-          <view class="scene-item">PDF 压缩/编辑/去水印：适合基础页面处理</view>
+          <view class="scene-item">PDF 压缩/编辑/去水印/加水印/加页码/加密解密：适合基础页面处理</view>
           <view class="scene-item">Excel/PPT → PDF/Word/TXT：提取内容后轻量转换</view>
         </view>
       </view>
@@ -209,7 +212,11 @@ const pdfOperations = [
   { value: 'extract', label: '拆分/提取', icon: '✂️', desc: '按页码导出' },
   { value: 'compress', label: 'PDF 压缩', icon: '📦', desc: '可选压缩比' },
   { value: 'edit', label: 'PDF 编辑', icon: '✏️', desc: '添加文字' },
-  { value: 'remove_watermark', label: 'PDF 去水印', icon: '🧼', desc: '文本/批注' }
+  { value: 'remove_watermark', label: 'PDF 去水印', icon: '🧼', desc: '文本/批注' },
+  { value: 'add_watermark', label: 'PDF 加水印', icon: '💧', desc: '斜向文字水印' },
+  { value: 'add_page_numbers', label: 'PDF 加页码', icon: '🔢', desc: '底部页码' },
+  { value: 'encrypt', label: 'PDF 加密', icon: '🔐', desc: '设置打开密码' },
+  { value: 'decrypt', label: 'PDF 解密', icon: '🔓', desc: '移除密码保护' }
 ]
 
 const compressionOptions = [
@@ -254,6 +261,8 @@ const canOperatePdf = computed(() => {
   if (!selectedPdfFiles.value.length) return false
   if (pdfOperation.value === 'extract') return Boolean(pdfPages.value.trim())
   if (pdfOperation.value === 'edit') return Boolean(pdfText.value.trim())
+  if (pdfOperation.value === 'add_watermark') return Boolean(pdfText.value.trim())
+  if (pdfOperation.value === 'encrypt') return pdfText.value.trim().length >= 4
   return true
 })
 const canRunAction = computed(() => toolMode.value === 'convert' ? canConvert.value : canOperatePdf.value)

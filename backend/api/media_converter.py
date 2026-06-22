@@ -19,6 +19,13 @@ AUDIO_MIME_TYPES = {
     "m4a": "audio/mp4",
     "aac": "audio/aac",
 }
+VIDEO_MIME_TYPES = {
+    "mp4": "video/mp4",
+    "webm": "video/webm",
+    "mov": "video/quicktime",
+}
+IMAGE_MIME_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}
+IMAGE_MIME_TYPES["gif"] = "image/gif"
 
 SUPPORTED_AUDIO_EXTS = {"mp3", "wav", "m4a", "aac", "ogg", "flac"}
 SUPPORTED_VIDEO_EXTS = {"mp4", "mov", "m4v", "webm", "avi", "mkv"}
@@ -58,6 +65,10 @@ class MediaConverterService:
             "vocal_remove": self._vocal_remove,
             "volume": self._adjust_volume,
             "video_to_audio": self._video_to_audio,
+            "video_compress": self._video_compress,
+            "video_trim": self._video_trim,
+            "video_to_gif": self._video_to_gif,
+            "extract_cover": self._extract_cover,
         }
         handler = handlers.get(operation)
         if not handler:
@@ -157,6 +168,44 @@ class MediaConverterService:
             output_path = Path(tmp) / f"video_audio.{target_format}"
             self._run_ffmpeg(["-i", str(input_path), "-vn", *self._audio_output_args(target_format), str(output_path)])
             return self._file_result(output_path, f"{Path(files[0]['filename']).stem}_audio.{target_format}", target_format)
+
+
+    def _video_compress(self, files: List[MediaInputFile], options: Dict[str, Any]) -> Dict[str, Any]:
+        preset = str(options.get("video_quality") or "medium").lower()
+        crf = {"high": "23", "medium": "28", "low": "32"}.get(preset, "28")
+        with self._single_input(files[0]) as (tmp, input_path):
+            output_path = Path(tmp) / "compressed.mp4"
+            self._run_ffmpeg(["-i", str(input_path), "-vcodec", "libx264", "-crf", crf, "-preset", "veryfast", "-acodec", "aac", "-movflags", "+faststart", str(output_path)])
+            return self._file_result(output_path, f"{Path(files[0]['filename']).stem}_compressed.mp4", "mp4")
+
+    def _video_trim(self, files: List[MediaInputFile], options: Dict[str, Any]) -> Dict[str, Any]:
+        start = max(0.0, self._to_float(options.get("start"), 0.0))
+        end = self._to_float(options.get("end"), 0.0)
+        duration_args = []
+        if end > start:
+            duration_args = ["-t", str(end - start)]
+        with self._single_input(files[0]) as (tmp, input_path):
+            output_path = Path(tmp) / "video_trimmed.mp4"
+            self._run_ffmpeg(["-ss", str(start), "-i", str(input_path), *duration_args, "-vcodec", "libx264", "-acodec", "aac", "-movflags", "+faststart", str(output_path)])
+            return self._file_result(output_path, f"{Path(files[0]['filename']).stem}_trimmed.mp4", "mp4")
+
+    def _video_to_gif(self, files: List[MediaInputFile], options: Dict[str, Any]) -> Dict[str, Any]:
+        start = max(0.0, self._to_float(options.get("start"), 0.0))
+        end = self._to_float(options.get("end"), start + 5.0)
+        duration = min(15.0, max(1.0, end - start))
+        width = int(min(640, max(240, self._to_float(options.get("gif_width"), 420))))
+        with self._single_input(files[0]) as (tmp, input_path):
+            output_path = Path(tmp) / "clip.gif"
+            vf = f"fps=10,scale={width}:-1:flags=lanczos"
+            self._run_ffmpeg(["-ss", str(start), "-t", str(duration), "-i", str(input_path), "-vf", vf, str(output_path)])
+            return self._file_result(output_path, f"{Path(files[0]['filename']).stem}.gif", "gif")
+
+    def _extract_cover(self, files: List[MediaInputFile], options: Dict[str, Any]) -> Dict[str, Any]:
+        second = max(0.0, self._to_float(options.get("cover_second"), 0.0))
+        with self._single_input(files[0]) as (tmp, input_path):
+            output_path = Path(tmp) / "cover.jpg"
+            self._run_ffmpeg(["-ss", str(second), "-i", str(input_path), "-frames:v", "1", "-q:v", "2", str(output_path)])
+            return self._file_result(output_path, f"{Path(files[0]['filename']).stem}_cover.jpg", "jpg")
 
     def _vocal_remove(self, files: List[MediaInputFile], options: Dict[str, Any]) -> Dict[str, Any]:
         # 轻量版：利用立体声中置抵消做人声消除；不是 Demucs 级 AI 分离。
@@ -260,7 +309,7 @@ class MediaConverterService:
             "code": 200,
             "msg": "success",
             "filename": filename,
-            "media_type": AUDIO_MIME_TYPES.get(fmt, "audio/mpeg"),
+            "media_type": AUDIO_MIME_TYPES.get(fmt, VIDEO_MIME_TYPES.get(fmt, IMAGE_MIME_TYPES.get(fmt, "application/octet-stream"))),
             "content": path.read_bytes(),
         }
 

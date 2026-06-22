@@ -9,7 +9,7 @@ from docx import Document
 from docx.shared import Inches
 from fastapi import UploadFile
 from openpyxl import Workbook, load_workbook
-from PIL import Image, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 from pptx import Presentation
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import ByteStringObject, ContentStream, NameObject, TextStringObject
@@ -34,6 +34,7 @@ OUTPUT_MIME_TYPES = {
     "pdf": "application/pdf",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "zip": "application/zip",
 }
 
 
@@ -297,12 +298,12 @@ class DocumentConverterService:
         doc.save(buf)
         return buf.getvalue()
 
-    def scan_images(self, files: List[ScanImageFile], target_format: str = "pdf", title: str = "扫描文档") -> Dict[str, Any]:
+    def scan_images(self, files: List[ScanImageFile], target_format: str = "pdf", title: str = "扫描文档", mode: str = "color") -> Dict[str, Any]:
         target = TARGET_ALIASES.get(str(target_format or "").lower().strip(), str(target_format or "").lower().strip())
         if target not in {"pdf", "docx", "pptx"}:
             return {"code": 400, "msg": "扫描生成暂时支持 PDF、Word、PPT"}
         try:
-            images = self._validate_scan_images(files)
+            images = [self._enhance_scan_image(image, mode) for image in self._validate_scan_images(files)]
             if target == "pdf":
                 content = self._scan_images_to_pdf(images, title)
             elif target == "docx":
@@ -340,6 +341,19 @@ class DocumentConverterService:
                 raise ValueError(f"单张图片不能超过 {self.max_file_size // 1024 // 1024}MB，总大小不能超过 {self.max_file_size * 4 // 1024 // 1024}MB")
             images.append(self._open_image(content))
         return images
+
+
+    @staticmethod
+    def _enhance_scan_image(image: Image.Image, mode: str = "color") -> Image.Image:
+        mode = str(mode or "color").lower().strip()
+        if mode in {"enhance", "gray", "grayscale", "bw"}:
+            image = ImageOps.autocontrast(image)
+            image = ImageEnhance.Sharpness(image).enhance(1.25)
+        if mode in {"gray", "grayscale", "bw"}:
+            image = ImageOps.grayscale(image)
+        if mode == "bw":
+            image = image.point(lambda p: 255 if p > 170 else 0, mode="1")
+        return image.convert("RGB")
 
     def _scan_images_to_pdf(self, images: list[Image.Image], title: str) -> bytes:
         buf = BytesIO()
@@ -414,6 +428,14 @@ class DocumentConverterService:
                 return self._pdf_add_text(files, text)
             if op in {"remove_watermark", "watermark_remove"}:
                 return self._pdf_remove_watermark(files, text)
+            if op == "add_watermark":
+                return self._pdf_add_watermark(files, text)
+            if op == "add_page_numbers":
+                return self._pdf_add_page_numbers(files)
+            if op == "encrypt":
+                return self._pdf_encrypt(files, text)
+            if op == "decrypt":
+                return self._pdf_decrypt(files, text)
         except Exception as exc:  # pragma: no cover - defensive API guard
             return {"code": 400, "msg": f"PDF 处理失败：{exc}"}
         return {"code": 400, "msg": "不支持的 PDF 操作"}
@@ -527,6 +549,77 @@ class DocumentConverterService:
             writer.add_page(page)
         return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_clean.pdf")
 
+
+    def _pdf_add_watermark(self, files: List[PdfInputFile], text: str) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        watermark = str(text or "").strip()
+        if not watermark:
+            return {"code": 400, "msg": "请输入水印文字"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        for page in reader.pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            overlay = self._make_watermark_overlay(watermark, width, height)
+            page.merge_page(PdfReader(BytesIO(overlay)).pages[0])
+            writer.add_page(page)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_watermark.pdf")
+
+    def _pdf_add_page_numbers(self, files: List[PdfInputFile]) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        total = len(reader.pages)
+        for index, page in enumerate(reader.pages, start=1):
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            overlay = self._make_page_number_overlay(f"{index} / {total}", width, height)
+            page.merge_page(PdfReader(BytesIO(overlay)).pages[0])
+            writer.add_page(page)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_numbered.pdf")
+
+    def _pdf_encrypt(self, files: List[PdfInputFile], password: str) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        password = str(password or "").strip()
+        if len(password) < 4:
+            return {"code": 400, "msg": "请输入至少 4 位 PDF 密码"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        writer.encrypt(password)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_encrypted.pdf")
+
+    def _pdf_decrypt(self, files: List[PdfInputFile], password: str) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        password = str(password or "").strip()
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        if reader.is_encrypted:
+            if not password:
+                return {"code": 400, "msg": "请输入 PDF 密码"}
+            try:
+                ok = reader.decrypt(password)
+            except Exception:
+                ok = 0
+            if not ok:
+                return {"code": 400, "msg": "PDF 密码不正确或无法解密"}
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_decrypted.pdf")
+
     @staticmethod
     def _pdf_result(writer: PdfWriter, filename: str) -> Dict[str, Any]:
         buf = BytesIO()
@@ -565,6 +658,35 @@ class DocumentConverterService:
             page.setFont("Helvetica", 14)
         page.setFillColorRGB(0.2, 0.2, 0.2)
         page.drawString(36, max(36, height - 54), text[:160])
+        page.save()
+        return buf.getvalue()
+
+
+    @staticmethod
+    def _make_watermark_overlay(text: str, width: float, height: float) -> bytes:
+        buf = BytesIO()
+        page = canvas.Canvas(buf, pagesize=(width, height))
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+            page.setFont("STSong-Light", max(22, min(width, height) / 15))
+        except Exception:
+            page.setFont("Helvetica", max(22, min(width, height) / 15))
+        page.saveState()
+        page.setFillColorRGB(0.78, 0.78, 0.78, alpha=0.28)
+        page.translate(width / 2, height / 2)
+        page.rotate(35)
+        page.drawCentredString(0, 0, text[:80])
+        page.restoreState()
+        page.save()
+        return buf.getvalue()
+
+    @staticmethod
+    def _make_page_number_overlay(text: str, width: float, height: float) -> bytes:
+        buf = BytesIO()
+        page = canvas.Canvas(buf, pagesize=(width, height))
+        page.setFont("Helvetica", 10)
+        page.setFillColorRGB(0.35, 0.35, 0.35)
+        page.drawCentredString(width / 2, 24, text)
         page.save()
         return buf.getvalue()
 

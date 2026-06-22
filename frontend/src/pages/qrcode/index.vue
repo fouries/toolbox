@@ -3,7 +3,7 @@
     <view class="page-shell">
       <view class="page-header">
         <text class="title">📱 二维码生成</text>
-        <text class="subtitle">输入文字或网址，一键生成二维码</text>
+        <text class="subtitle">输入文字或网址生成二维码，也支持数字/英文条形码</text>
       </view>
 
       <view class="input-box card">
@@ -20,8 +20,16 @@
         </view>
       </view>
 
+      <view class="mode-box card">
+        <text class="size-label">生成类型</text>
+        <view class="mode-tabs">
+          <view class="mode-tab" :class="{ active: codeMode === 'qrcode' }" @click="switchCodeMode('qrcode')">二维码</view>
+          <view class="mode-tab" :class="{ active: codeMode === 'barcode' }" @click="switchCodeMode('barcode')">条形码</view>
+        </view>
+      </view>
+
       <view class="size-box card">
-        <text class="size-label">二维码尺寸</text>
+        <text class="size-label">{{ codeMode === 'qrcode' ? '二维码尺寸' : '条形码高度' }}</text>
         <slider
           class="size-slider"
           :min="128"
@@ -35,7 +43,7 @@
       </view>
 
       <button class="generate-btn" @click="generateQrcode" :disabled="!inputText.trim() || loading">
-        {{ loading ? '生成中...' : '生成二维码' }}
+        {{ loading ? '生成中...' : (codeMode === 'qrcode' ? '生成二维码' : '生成条形码') }}
       </button>
 
       <view class="result-box card" v-if="qrCode">
@@ -71,13 +79,14 @@
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
 import { ref, computed } from 'vue'
-import { generateQrcode as apiGenerateQrcode } from '@/api'
+import { generateQrcode as apiGenerateQrcode, generateBarcode as apiGenerateBarcode } from '@/api'
 
 const { themeClass } = useTheme()
 
 declare const wx: any
 
 const inputText = ref('')
+const codeMode = ref<'qrcode' | 'barcode'>('qrcode')
 const qrSize = ref(256)
 const loading = ref(false)
 const qrCode = ref('')
@@ -90,6 +99,11 @@ const onSizeChange = (e: any) => {
   qrSize.value = e.detail.value
 }
 
+const switchCodeMode = (mode: 'qrcode' | 'barcode') => {
+  codeMode.value = mode
+  qrCode.value = ''
+}
+
 const generateQrcode = async () => {
   if (!inputText.value.trim()) {
     uni.showToast({ title: '请输入内容', icon: 'none' })
@@ -99,7 +113,9 @@ const generateQrcode = async () => {
   loading.value = true
 
   try {
-    const res: any = await apiGenerateQrcode(inputText.value, qrSize.value)
+    const res: any = codeMode.value === 'qrcode'
+      ? await apiGenerateQrcode(inputText.value, qrSize.value)
+      : await apiGenerateBarcode(inputText.value, qrSize.value)
     if (res.code === 200) {
       qrCode.value = res.data.base64
       uni.showToast({ title: '生成成功', icon: 'success' })
@@ -145,7 +161,7 @@ const saveImage = () => {
   // #ifdef H5
   const link = document.createElement('a')
   link.href = qrCode.value
-  link.download = `qrcode_${Date.now()}.png`
+  link.download = `${codeMode.value}_${Date.now()}.png`
   link.click()
   uni.showToast({ title: '已开始下载', icon: 'success' })
   // #endif
@@ -289,4 +305,9 @@ const copyText = () => {
   border-radius: 30rpx;
   font-size: 24rpx;
 }
+</style>
+<style scoped>
+.mode-tabs { display: flex; gap: 12rpx; flex: 1; }
+.mode-tab { flex: 1; text-align: center; padding: 16rpx 20rpx; border-radius: 999rpx; background: #f1f5f9; color: #64748b; font-size: 25rpx; }
+.mode-tab.active { background: #007aff; color: #fff; font-weight: 700; }
 </style>
