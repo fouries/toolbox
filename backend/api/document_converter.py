@@ -3,31 +3,43 @@ import re
 from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypedDict
 
 from docx import Document
 from docx.shared import Inches
 from fastapi import UploadFile
+from openpyxl import Workbook, load_workbook
 from PIL import Image, ImageOps
-from pypdf import PdfReader
+from pptx import Presentation
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import ByteStringObject, ContentStream, NameObject, TextStringObject
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
 
 IMAGE_INPUTS = {"jpg", "jpeg", "png", "webp"}
-SUPPORTED_INPUTS = {"txt", "html", "htm", "docx", "pdf", *IMAGE_INPUTS}
-SUPPORTED_TARGETS = {"txt", "html", "docx", "pdf"}
-TARGET_ALIASES = {"word": "docx", "text": "txt", "htm": "html"}
+OFFICE_INPUTS = {"xlsx", "xls", "pptx", "ppt"}
+SUPPORTED_INPUTS = {"txt", "html", "htm", "docx", "pdf", *IMAGE_INPUTS, *OFFICE_INPUTS}
+SUPPORTED_TARGETS = {"txt", "html", "docx", "pdf", "xlsx", "pptx"}
+TARGET_ALIASES = {"word": "docx", "text": "txt", "htm": "html", "excel": "xlsx", "ppt": "pptx"}
 OUTPUT_MIME_TYPES = {
     "txt": "text/plain; charset=utf-8",
     "html": "text/html; charset=utf-8",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "pdf": "application/pdf",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
+
+
+class PdfInputFile(TypedDict):
+    filename: str
+    content: bytes
 
 
 class _TextExtractor(HTMLParser):
@@ -67,13 +79,15 @@ class DocumentConverterService:
         target = TARGET_ALIASES.get(str(target_format or "").lower().strip(), str(target_format or "").lower().strip())
 
         if source_ext not in SUPPORTED_INPUTS:
-            return {"code": 400, "msg": "暂时支持 TXT、HTML、DOCX、PDF、JPG、PNG、WEBP 文件"}
+            return {"code": 400, "msg": "暂时支持 TXT、HTML、DOCX、PDF、JPG、PNG、WEBP、Excel、PPT 文件"}
         if target not in SUPPORTED_TARGETS:
-            return {"code": 400, "msg": "目标格式支持 txt、html、docx、pdf"}
+            return {"code": 400, "msg": "目标格式支持 txt、html、docx、pdf、xlsx、pptx"}
         if source_ext == target:
             return {"code": 400, "msg": "请选择不同的目标格式"}
         if source_ext in IMAGE_INPUTS and target not in {"pdf", "docx"}:
             return {"code": 400, "msg": "图片转换暂时支持转 PDF 或 Word"}
+        if source_ext in {"xls", "ppt"}:
+            return {"code": 400, "msg": "当前轻量版暂不支持旧版 xls/ppt，请另存为 xlsx/pptx 后再转换"}
 
         content = await upload.read()
         if not content:
@@ -121,6 +135,10 @@ class DocumentConverterService:
         if source_ext == "pdf":
             reader = PdfReader(BytesIO(content))
             return "\n".join(page.extract_text() or "" for page in reader.pages)
+        if source_ext == "xlsx":
+            return self._extract_xlsx_text(content)
+        if source_ext == "pptx":
+            return self._extract_pptx_text(content)
         raise ValueError("不支持的源文件格式")
 
     def _render(self, text: str, target: str, title: str) -> bytes:
@@ -141,7 +159,34 @@ class DocumentConverterService:
             return buf.getvalue()
         if target == "pdf":
             return self._text_to_pdf(text, title)
+        if target == "xlsx":
+            return self._text_to_xlsx(text, title)
+        if target == "pptx":
+            return self._text_to_pptx(text, title)
         raise ValueError("不支持的目标格式")
+
+    @staticmethod
+    def _extract_xlsx_text(content: bytes) -> str:
+        workbook = load_workbook(BytesIO(content), data_only=True, read_only=True)
+        lines: List[str] = []
+        for sheet in workbook.worksheets:
+            lines.append(f"[{sheet.title}]")
+            for row in sheet.iter_rows(values_only=True):
+                values = [str(value) for value in row if value is not None and str(value).strip()]
+                if values:
+                    lines.append("\t".join(values))
+        return "\n".join(lines)
+
+    @staticmethod
+    def _extract_pptx_text(content: bytes) -> str:
+        presentation = Presentation(BytesIO(content))
+        lines: List[str] = []
+        for index, slide in enumerate(presentation.slides, start=1):
+            lines.append(f"[Slide {index}]")
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and str(shape.text).strip():
+                    lines.append(str(shape.text).strip())
+        return "\n".join(lines)
 
     def _text_to_pdf(self, text: str, title: str) -> bytes:
         buf = BytesIO()
@@ -158,6 +203,38 @@ class DocumentConverterService:
             story.append(Paragraph(escaped, body_style))
             story.append(Spacer(1, 6))
         doc.build(story or [Paragraph(" ", body_style)])
+        return buf.getvalue()
+
+    @staticmethod
+    def _text_to_xlsx(text: str, title: str) -> bytes:
+        buf = BytesIO()
+        workbook = Workbook()
+        sheet = workbook.active
+        assert sheet is not None
+        sheet.title = (title or "Sheet1")[:31]
+        for row_index, line in enumerate(text.splitlines() or [""], start=1):
+            columns = line.split("\t") if "\t" in line else [line]
+            for col_index, value in enumerate(columns, start=1):
+                sheet.cell(row=row_index, column=col_index, value=value)
+        workbook.save(buf)
+        return buf.getvalue()
+
+    @staticmethod
+    def _text_to_pptx(text: str, title: str) -> bytes:
+        buf = BytesIO()
+        deck = Presentation()
+        lines = [line for line in text.splitlines() if line.strip()] or [title or "文档内容"]
+        chunk_size = 8
+        for start in range(0, len(lines), chunk_size):
+            slide = deck.slides.add_slide(deck.slide_layouts[1])
+            slide.shapes.title.text = title or "文档转换"
+            body = slide.placeholders[1].text_frame
+            body.clear()
+            for line in lines[start:start + chunk_size]:
+                paragraph = body.add_paragraph()
+                paragraph.text = line[:180]
+                paragraph.level = 0
+        deck.save(buf)
         return buf.getvalue()
 
     def _render_image(self, content: bytes, target: str, title: str) -> bytes:
@@ -214,6 +291,185 @@ class DocumentConverterService:
         doc.add_picture(image_buffer, width=Inches(6))
         doc.save(buf)
         return buf.getvalue()
+
+    def operate_pdf(self, operation: str, files: List[PdfInputFile], pages: str = "", text: str = "") -> Dict[str, Any]:
+        op = str(operation or "").strip().lower()
+        try:
+            if op == "merge":
+                return self._pdf_merge(files)
+            if op in {"split", "extract"}:
+                return self._pdf_extract(files, pages)
+            if op == "compress":
+                return self._pdf_compress(files)
+            if op == "edit":
+                return self._pdf_add_text(files, text)
+            if op in {"remove_watermark", "watermark_remove"}:
+                return self._pdf_remove_watermark(files, text)
+        except Exception as exc:  # pragma: no cover - defensive API guard
+            return {"code": 400, "msg": f"PDF 处理失败：{exc}"}
+        return {"code": 400, "msg": "不支持的 PDF 操作"}
+
+    def _validate_pdf_files(self, files: List[PdfInputFile], min_count: int = 1) -> list[tuple[str, bytes]]:
+        if len(files) < min_count:
+            return []
+        normalized: list[tuple[str, bytes]] = []
+        total = 0
+        for item in files:
+            filename = str(item.get("filename") or "document.pdf")
+            content = item.get("content") or b""
+            if not filename.lower().endswith(".pdf"):
+                raise ValueError("仅支持 PDF 文件")
+            if not content:
+                raise ValueError("PDF 文件内容为空")
+            total += len(content)
+            if len(content) > self.max_file_size or total > self.max_file_size * 3:
+                raise ValueError(f"单文件不能超过 {self.max_file_size // 1024 // 1024}MB，合并总大小不能超过 {self.max_file_size * 3 // 1024 // 1024}MB")
+            normalized.append((filename, content))
+        return normalized
+
+    def _pdf_merge(self, files: List[PdfInputFile]) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=2)
+        if not pdfs:
+            return {"code": 400, "msg": "PDF 合并至少需要 2 个 PDF 文件"}
+        writer = PdfWriter()
+        for _, content in pdfs:
+            reader = PdfReader(BytesIO(content))
+            for page in reader.pages:
+                writer.add_page(page)
+        return self._pdf_result(writer, "merged.pdf")
+
+    def _pdf_extract(self, files: List[PdfInputFile], pages: str) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        indexes = self._parse_page_ranges(pages, len(reader.pages))
+        if not indexes:
+            return {"code": 400, "msg": "请输入要拆分/提取的页码，例如 1,3-5"}
+        writer = PdfWriter()
+        for index in indexes:
+            writer.add_page(reader.pages[index])
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_pages.pdf")
+
+    def _pdf_compress(self, files: List[PdfInputFile]) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        for page in reader.pages:
+            try:
+                page.compress_content_streams()
+            except Exception:
+                pass
+            writer.add_page(page)
+        for key, value in (reader.metadata or {}).items():
+            if value:
+                try:
+                    writer.add_metadata({key: str(value)})
+                except Exception:
+                    pass
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_compressed.pdf")
+
+    def _pdf_add_text(self, files: List[PdfInputFile], text: str) -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        if not str(text or "").strip():
+            return {"code": 400, "msg": "请输入要添加到 PDF 的文字"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        for page in reader.pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            overlay = self._make_text_overlay(str(text), width, height)
+            page.merge_page(PdfReader(BytesIO(overlay)).pages[0])
+            writer.add_page(page)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_edited.pdf")
+
+    def _pdf_remove_watermark(self, files: List[PdfInputFile], text: str = "") -> Dict[str, Any]:
+        pdfs = self._validate_pdf_files(files, min_count=1)
+        if not pdfs:
+            return {"code": 400, "msg": "请上传 PDF 文件"}
+        filename, content = pdfs[0]
+        reader = PdfReader(BytesIO(content))
+        writer = PdfWriter()
+        for page in reader.pages:
+            if "/Annots" in page:
+                del page[NameObject("/Annots")]
+            if str(text or "").strip():
+                self._remove_text_from_page_stream(page, str(text).strip())
+            try:
+                page.compress_content_streams()
+            except Exception:
+                pass
+            writer.add_page(page)
+        return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_clean.pdf")
+
+    @staticmethod
+    def _pdf_result(writer: PdfWriter, filename: str) -> Dict[str, Any]:
+        buf = BytesIO()
+        writer.write(buf)
+        return {"code": 200, "msg": "success", "filename": filename, "media_type": OUTPUT_MIME_TYPES["pdf"], "content": buf.getvalue()}
+
+    @staticmethod
+    def _parse_page_ranges(spec: str, total_pages: int) -> List[int]:
+        indexes: list[int] = []
+        for part in str(spec or "").replace("，", ",").split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                start_s, end_s = part.split("-", 1)
+                start, end = int(start_s), int(end_s)
+                if start > end:
+                    start, end = end, start
+                indexes.extend(range(start - 1, end))
+            else:
+                indexes.append(int(part) - 1)
+        seen = []
+        for index in indexes:
+            if 0 <= index < total_pages and index not in seen:
+                seen.append(index)
+        return seen
+
+    @staticmethod
+    def _make_text_overlay(text: str, width: float, height: float) -> bytes:
+        buf = BytesIO()
+        page = canvas.Canvas(buf, pagesize=(width, height))
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+            page.setFont("STSong-Light", 14)
+        except Exception:
+            page.setFont("Helvetica", 14)
+        page.setFillColorRGB(0.2, 0.2, 0.2)
+        page.drawString(36, max(36, height - 54), text[:160])
+        page.save()
+        return buf.getvalue()
+
+    @staticmethod
+    def _remove_text_from_page_stream(page: Any, watermark_text: str) -> None:
+        try:
+            content = ContentStream(page.get_contents(), page.pdf)
+        except Exception:
+            return
+        changed = False
+        for operands, operator in content.operations:
+            if operator in {b"Tj", b"'", b'"'} and operands:
+                if watermark_text in str(operands[0]):
+                    operands[0] = TextStringObject("") if isinstance(operands[0], TextStringObject) else ByteStringObject(b"")
+                    changed = True
+            elif operator == b"TJ" and operands:
+                items = operands[0]
+                for i, item in enumerate(items):
+                    if watermark_text in str(item):
+                        items[i] = TextStringObject("") if isinstance(item, TextStringObject) else ByteStringObject(b"")
+                        changed = True
+        if changed:
+            page[NameObject("/Contents")] = content
 
     @staticmethod
     def _decode_text(content: bytes) -> str:

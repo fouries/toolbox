@@ -460,6 +460,19 @@ export const convertDocumentBase64 = (payload: {
   })
 }
 
+export const operatePdfBase64 = (payload: {
+  operation: string
+  files: Array<{ filename: string; content_base64: string }>
+  pages?: string
+  text?: string
+}) => {
+  return request<DocumentConvertResult>('/api/documents/pdf-operation-base64', {
+    method: 'POST',
+    timeout: 60000,
+    data: payload
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -490,5 +503,6 @@ export default {
   getReminderSubscriptions,
   saveReminderSubscription,
   disableReminderSubscription,
-  convertDocumentBase64
+  convertDocumentBase64,
+  operatePdfBase64
 }

@@ -90,6 +90,18 @@ class DocumentConvertBase64Request(BaseModel):
     content_base64: str
     target_format: str
 
+
+class DocumentOperationFile(BaseModel):
+    filename: str
+    content_base64: str
+
+
+class PdfOperationBase64Request(BaseModel):
+    operation: str
+    files: list[DocumentOperationFile]
+    pages: str = ""
+    text: str = ""
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
@@ -427,6 +439,28 @@ async def convert_document_base64(payload: DocumentConvertBase64Request):
     result = await get_document_converter_service().convert(upload, payload.target_format)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "文档转换失败"))
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
+
+
+@app.post("/api/documents/pdf-operation-base64", summary="PDF 合并/拆分/压缩/编辑/去水印（Base64）", tags=["本地工具"])
+async def pdf_operation_base64(payload: PdfOperationBase64Request):
+    """小程序/H5 兼容接口：PDF 合并、页面提取、压缩、添加文字、去水印。"""
+    import base64
+
+    decoded_files = []
+    for item in payload.files:
+        try:
+            raw = base64.b64decode(item.content_base64, validate=True)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"{item.filename} 不是有效的 Base64")
+        decoded_files.append({"filename": item.filename, "content": raw})
+    result = get_document_converter_service().operate_pdf(payload.operation, decoded_files, payload.pages, payload.text)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "PDF 处理失败"))
     return success({
         "filename": result["filename"],
         "media_type": result["media_type"],

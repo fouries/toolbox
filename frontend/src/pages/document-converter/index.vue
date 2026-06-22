@@ -6,7 +6,26 @@
         <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，也支持图片转 PDF / Word，转换后直接下载，不长期保存</text>
       </view>
 
-      <view class="card upload-card">
+      <view class="card mode-card">
+        <view class="section-title-row">
+          <text class="section-title">功能类型</text>
+          <text class="section-badge">{{ toolMode === 'convert' ? '格式转换' : 'PDF 工具' }}</text>
+        </view>
+        <view class="mode-grid">
+          <view class="mode-item" :class="{ active: toolMode === 'convert' }" @click="switchToolMode('convert')">
+            <text class="format-icon">🔄</text>
+            <text class="format-name">文档互转</text>
+            <text class="format-desc">文档/图片转格式</text>
+          </view>
+          <view class="mode-item" :class="{ active: toolMode === 'pdf' }" @click="switchToolMode('pdf')">
+            <text class="format-icon">🧩</text>
+            <text class="format-name">PDF 处理</text>
+            <text class="format-desc">合并/拆分/压缩</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card upload-card" v-if="toolMode === 'convert'">
         <view class="section-title-row">
           <text class="section-title">选择文件</text>
           <text class="section-badge">最大 5MB</text>
@@ -23,13 +42,57 @@
         </view>
         <view class="tips-box">
           <text class="tips-title">支持格式</text>
-          <text class="tips-text">源文件：TXT、HTML、DOCX、PDF、JPG、PNG、WEBP</text>
-          <text class="tips-text">目标格式：TXT、HTML、DOCX、PDF；图片支持转 PDF / Word</text>
-          <text class="tips-text">说明：PDF 转换提取可选中文本，扫描件图片 PDF 暂不做 OCR。</text>
+          <text class="tips-text">源文件：TXT、HTML、DOCX、PDF、JPG、PNG、WEBP、Excel、PPT</text>
+          <text class="tips-text">目标格式：TXT、HTML、DOCX、PDF、Excel、PPT；图片支持转 PDF / Word</text>
+          <text class="tips-text">说明：PDF/Excel/PPT 转换会提取可选中文本，扫描件图片 PDF 暂不做 OCR。</text>
         </view>
       </view>
 
-      <view class="card format-card">
+      <view class="card pdf-card" v-if="toolMode === 'pdf'">
+        <view class="section-title-row">
+          <text class="section-title">PDF 文件</text>
+          <text class="section-badge">{{ selectedPdfFiles.length }} 个</text>
+        </view>
+        <button class="select-btn" @click="choosePdfFiles" :disabled="loading">
+          {{ selectedPdfFiles.length ? '重新选择 PDF' : '选择 PDF 文件' }}
+        </button>
+        <view class="file-preview" v-for="file in selectedPdfFiles" :key="file.name">
+          <text class="file-icon">📕</text>
+          <view class="file-info">
+            <text class="file-name">{{ file.name }}</text>
+            <text class="file-meta">PDF · {{ formatSize(file.size) }}</text>
+          </view>
+        </view>
+        <view class="tips-box">
+          <text class="tips-title">PDF 能力</text>
+          <text class="tips-text">支持合并、拆分/提取页面、基础压缩、添加文字、去水印。</text>
+          <text class="tips-text">页码示例：1,3-5；去水印仅尝试移除指定文本/批注类水印，扫描图水印不保证。</text>
+        </view>
+      </view>
+
+      <view class="card pdf-operation-card" v-if="toolMode === 'pdf'">
+        <view class="section-title-row">
+          <text class="section-title">PDF 操作</text>
+          <text class="section-badge">{{ selectedPdfOperation.label }}</text>
+        </view>
+        <view class="format-grid">
+          <view
+            v-for="item in pdfOperations"
+            :key="item.value"
+            class="format-item"
+            :class="{ active: pdfOperation === item.value }"
+            @click="selectPdfOperation(item.value)"
+          >
+            <text class="format-icon">{{ item.icon }}</text>
+            <text class="format-name">{{ item.label }}</text>
+            <text class="format-desc">{{ item.desc }}</text>
+          </view>
+        </view>
+        <input v-if="pdfOperation === 'extract'" class="text-input" v-model="pdfPages" placeholder="输入页码，如 1,3-5" />
+        <input v-if="pdfOperation === 'edit' || pdfOperation === 'remove_watermark'" class="text-input" v-model="pdfText" :placeholder="pdfOperation === 'edit' ? '输入要添加到每页顶部的文字' : '输入要尝试移除的水印文字，可留空仅移除批注'" />
+      </view>
+
+      <view class="card format-card" v-if="toolMode === 'convert'">
         <view class="section-title-row">
           <text class="section-title">转换为</text>
           <text class="section-badge">{{ targetFormat.toUpperCase() }}</text>
@@ -49,8 +112,8 @@
         </view>
       </view>
 
-      <button class="convert-btn" @click="convertDocument" :disabled="!canConvert || loading">
-        {{ loading ? '转换中...' : '开始转换' }}
+      <button class="convert-btn" @click="runPrimaryAction" :disabled="!canRunAction || loading">
+        {{ loading ? '处理中...' : primaryActionText }}
       </button>
 
       <view class="card result-card" v-if="convertedFile">
@@ -73,6 +136,9 @@
           <view class="scene-item">PDF → TXT：提取可复制 PDF 中的文字</view>
           <view class="scene-item">图片 → PDF：把照片、截图整理成单页 PDF</view>
           <view class="scene-item">图片 → Word：把图片插入可继续编辑的 Word 文档</view>
+          <view class="scene-item">PDF 合并/拆分：多份 PDF 合成一份，或按页码提取</view>
+          <view class="scene-item">PDF 压缩/编辑/去水印：适合基础页面处理</view>
+          <view class="scene-item">Excel/PPT → PDF/Word/TXT：提取内容后轻量转换</view>
         </view>
       </view>
     </view>
@@ -81,7 +147,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { convertDocumentBase64, type DocumentConvertResult } from '@/api'
+import { convertDocumentBase64, operatePdfBase64, type DocumentConvertResult } from '@/api'
 import { useTheme } from '@/utils/theme'
 
 const { themeClass } = useTheme()
@@ -97,7 +163,12 @@ interface PickedFile {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const selectedFile = ref<PickedFile | null>(null)
+const selectedPdfFiles = ref<PickedFile[]>([])
 const targetFormat = ref('pdf')
+const toolMode = ref<'convert' | 'pdf'>('convert')
+const pdfOperation = ref('merge')
+const pdfPages = ref('')
+const pdfText = ref('')
 const loading = ref(false)
 const convertedFile = ref<DocumentConvertResult | null>(null)
 
@@ -105,11 +176,21 @@ const targetFormats = [
   { value: 'pdf', label: 'PDF', icon: '📕', desc: '适合分享打印' },
   { value: 'docx', label: 'Word', icon: '📝', desc: '可继续编辑' },
   { value: 'txt', label: 'TXT', icon: '📄', desc: '纯文本提取' },
-  { value: 'html', label: 'HTML', icon: '🌐', desc: '网页格式' }
+  { value: 'html', label: 'HTML', icon: '🌐', desc: '网页格式' },
+  { value: 'xlsx', label: 'Excel', icon: '📊', desc: '表格数据' },
+  { value: 'pptx', label: 'PPT', icon: '📽️', desc: '演示文稿' }
+]
+
+const pdfOperations = [
+  { value: 'merge', label: 'PDF 合并', icon: '🧩', desc: '多份合一' },
+  { value: 'extract', label: '拆分/提取', icon: '✂️', desc: '按页码导出' },
+  { value: 'compress', label: 'PDF 压缩', icon: '📦', desc: '基础压缩' },
+  { value: 'edit', label: 'PDF 编辑', icon: '✏️', desc: '添加文字' },
+  { value: 'remove_watermark', label: 'PDF 去水印', icon: '🧼', desc: '文本/批注' }
 ]
 
 const imageExts = ['jpg', 'jpeg', 'png', 'webp']
-const documentExts = ['txt', 'html', 'docx', 'pdf']
+const documentExts = ['txt', 'html', 'docx', 'pdf', 'xlsx', 'pptx']
 
 const sourceExt = computed(() => {
   const name = selectedFile.value?.name || ''
@@ -120,11 +201,12 @@ const sourceExt = computed(() => {
 const isImageSource = computed(() => imageExts.includes(sourceExt.value))
 const sourceFormatLabel = computed(() => sourceExt.value ? sourceExt.value.toUpperCase() : '未知格式')
 const sourceIcon = computed(() => isImageSource.value ? '🖼️' : targetFormats.find(item => item.value === sourceExt.value)?.icon || '📎')
-const fileSizeLabel = computed(() => {
-  const size = selectedFile.value?.size || 0
+const formatSize = (size: number) => {
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(2)} MB`
   return `${Math.max(1, Math.round(size / 1024))} KB`
-})
+}
+const fileSizeLabel = computed(() => formatSize(selectedFile.value?.size || 0))
+const selectedPdfOperation = computed(() => pdfOperations.find(item => item.value === pdfOperation.value) || pdfOperations[0])
 
 const isTargetDisabled = (format: string) => {
   if (!sourceExt.value) return false
@@ -133,6 +215,15 @@ const isTargetDisabled = (format: string) => {
 }
 
 const canConvert = computed(() => Boolean(selectedFile.value && sourceExt.value && !isTargetDisabled(targetFormat.value)))
+const canOperatePdf = computed(() => {
+  if (pdfOperation.value === 'merge') return selectedPdfFiles.value.length >= 2
+  if (!selectedPdfFiles.value.length) return false
+  if (pdfOperation.value === 'extract') return Boolean(pdfPages.value.trim())
+  if (pdfOperation.value === 'edit') return Boolean(pdfText.value.trim())
+  return true
+})
+const canRunAction = computed(() => toolMode.value === 'convert' ? canConvert.value : canOperatePdf.value)
+const primaryActionText = computed(() => toolMode.value === 'convert' ? '开始转换' : '开始处理 PDF')
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let binary = ''
@@ -152,9 +243,23 @@ const base64ToArrayBuffer = (base64: string) => {
 }
 
 const isSupportedSource = (ext: string) => [...documentExts, ...imageExts].includes(ext)
+const normalizeExt = (name: string) => {
+  const ext = (name.split('.').pop() || '').toLowerCase()
+  return ext === 'htm' ? 'html' : ext
+}
+
+const switchToolMode = (mode: 'convert' | 'pdf') => {
+  toolMode.value = mode
+  convertedFile.value = null
+}
+
+const selectPdfOperation = (operation: string) => {
+  pdfOperation.value = operation
+  convertedFile.value = null
+}
 
 const setPickedFile = (file: PickedFile) => {
-  const ext = (file.name.split('.').pop() || '').toLowerCase().replace('htm', 'html')
+  const ext = normalizeExt(file.name)
   if (!isSupportedSource(ext)) {
     uni.showToast({ title: '仅支持文档或图片格式', icon: 'none' })
     return
@@ -177,7 +282,7 @@ const chooseDocumentFile = () => {
   wx.chooseMessageFile({
     count: 1,
     type: 'file',
-    extension: ['txt', 'html', 'htm', 'docx', 'pdf', 'jpg', 'jpeg', 'png', 'webp'],
+    extension: ['txt', 'html', 'htm', 'docx', 'pdf', 'xlsx', 'pptx', 'jpg', 'jpeg', 'png', 'webp'],
     success: (res: any) => {
       const file = res.tempFiles?.[0]
       if (!file) return
@@ -190,12 +295,57 @@ const chooseDocumentFile = () => {
   // #ifdef H5
   uni.chooseFile({
     count: 1,
-    extension: ['.txt', '.html', '.htm', '.docx', '.pdf', '.jpg', '.jpeg', '.png', '.webp'],
+    extension: ['.txt', '.html', '.htm', '.docx', '.pdf', '.xlsx', '.pptx', '.jpg', '.jpeg', '.png', '.webp'],
     success: async (res: any) => {
       const file = res.tempFiles?.[0]
       if (!file) return
       const content = file.file || file.raw || file.path || file.tempFilePath
       setPickedFile({ name: file.name || file.path?.split('/').pop() || 'document', size: file.size || 0, path: file.path || file.tempFilePath, content })
+    },
+    fail: () => uni.showToast({ title: '未选择文件', icon: 'none' })
+  })
+  // #endif
+}
+
+const setPickedPdfFiles = (files: PickedFile[]) => {
+  const validFiles = files.filter(file => normalizeExt(file.name) === 'pdf')
+  if (!validFiles.length) {
+    uni.showToast({ title: '请选择 PDF 文件', icon: 'none' })
+    return
+  }
+  if (validFiles.some(file => file.size > MAX_FILE_SIZE)) {
+    uni.showToast({ title: '单个 PDF 不能超过 5MB', icon: 'none' })
+    return
+  }
+  selectedPdfFiles.value = validFiles
+  convertedFile.value = null
+}
+
+const choosePdfFiles = () => {
+  const count = pdfOperation.value === 'merge' ? 5 : 1
+  // #ifdef MP-WEIXIN
+  wx.chooseMessageFile({
+    count,
+    type: 'file',
+    extension: ['pdf'],
+    success: (res: any) => {
+      const files = (res.tempFiles || []).map((file: any) => ({ name: file.name, size: file.size, path: file.path }))
+      setPickedPdfFiles(files)
+    },
+    fail: () => uni.showToast({ title: '未选择文件', icon: 'none' })
+  })
+  // #endif
+
+  // #ifdef H5
+  uni.chooseFile({
+    count,
+    extension: ['.pdf'],
+    success: (res: any) => {
+      const files = (res.tempFiles || []).map((file: any) => {
+        const content = file.file || file.raw || file.path || file.tempFilePath
+        return { name: file.name || file.path?.split('/').pop() || 'document.pdf', size: file.size || 0, path: file.path || file.tempFilePath, content }
+      })
+      setPickedPdfFiles(files)
     },
     fail: () => uni.showToast({ title: '未选择文件', icon: 'none' })
   })
@@ -279,6 +429,43 @@ const convertDocument = async () => {
   }
 }
 
+const operatePdf = async () => {
+  if (!canOperatePdf.value) {
+    uni.showToast({ title: '请补全 PDF 文件或参数', icon: 'none' })
+    return
+  }
+
+  loading.value = true
+  convertedFile.value = null
+  try {
+    const files = []
+    for (const file of selectedPdfFiles.value) {
+      files.push({ filename: file.name, content_base64: await readSelectedFileAsBase64(file) })
+    }
+    const res = await operatePdfBase64({
+      operation: pdfOperation.value,
+      files,
+      pages: pdfPages.value,
+      text: pdfText.value
+    })
+    if (res.code === 200 && res.data) {
+      convertedFile.value = res.data
+      uni.showToast({ title: '处理成功', icon: 'success' })
+    } else {
+      uni.showToast({ title: res.msg || '处理失败', icon: 'none' })
+    }
+  } catch (error: any) {
+    uni.showToast({ title: error?.message || '处理失败', icon: 'none' })
+  } finally {
+    loading.value = false
+  }
+}
+
+const runPrimaryAction = () => {
+  if (toolMode.value === 'convert') return convertDocument()
+  return operatePdf()
+}
+
 const downloadConvertedFile = () => {
   const file = convertedFile.value
   if (!file) return
@@ -302,7 +489,7 @@ const downloadConvertedFile = () => {
     data: file.base64,
     encoding: 'base64',
     success: () => {
-      if (/\.(pdf|docx)$/i.test(filePath)) {
+      if (/\.(pdf|docx|xlsx|pptx)$/i.test(filePath)) {
         uni.openDocument({ filePath, showMenu: true })
       } else {
         uni.showModal({ title: '已保存', content: `文件已保存到：${filePath}`, showCancel: false })
@@ -355,6 +542,9 @@ const downloadConvertedFile = () => {
   line-height: 1.6;
 }
 
+.mode-card,
+.pdf-card,
+.pdf-operation-card,
 .upload-card,
 .format-card,
 .result-card,
@@ -475,13 +665,15 @@ const downloadConvertedFile = () => {
   line-height: 1.5;
 }
 
-.format-grid {
+.format-grid,
+.mode-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
 }
 
-.format-item {
+.format-item,
+.mode-item {
   display: flex;
   min-height: 150rpx;
   flex-direction: column;
@@ -493,7 +685,8 @@ const downloadConvertedFile = () => {
   background: var(--theme-surface-muted, #f6f8fb);
 }
 
-.format-item.active {
+.format-item.active,
+.mode-item.active {
   border-color: var(--theme-primary, #1677ff);
   background: var(--theme-primary-soft, #eef5ff);
 }
