@@ -26,6 +26,8 @@ assert.match(page, /MAX_FILE_SIZE\s*=\s*5\s*\*\s*1024\s*\*\s*1024/, 'page should
 assert.match(page, /chooseDocumentFile/, 'page should let users choose a document file')
 assert.match(page, /wx\.chooseMessageFile/, 'mp-weixin should use chooseMessageFile for document upload')
 assert.match(page, /uni\.chooseFile/, 'H5 should use chooseFile for document upload')
+assert.match(page, /file\.file \|\| file\.raw \|\| file\.path \|\| file\.tempFilePath/, 'H5 should keep multiple chooseFile content fallbacks')
+assert.match(page, /typeof rawContent === 'string'[\s\S]*fetch\(rawContent\)/, 'H5 should fetch blob/path URLs when chooseFile does not expose File content')
 assert.match(page, /convertDocumentBase64\(/, 'page should call backend conversion API')
 assert.match(page, /downloadConvertedFile/, 'page should provide converted file download/open action')
 assert.match(page, /uni\.openDocument/, 'mp-weixin should open PDF/DOCX after conversion')

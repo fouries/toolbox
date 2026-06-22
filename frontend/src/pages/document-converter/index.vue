@@ -90,7 +90,7 @@ interface PickedFile {
   name: string
   size: number
   path?: string
-  content?: ArrayBuffer | File
+  content?: ArrayBuffer | Blob | string
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -176,10 +176,11 @@ const chooseDocumentFile = () => {
   uni.chooseFile({
     count: 1,
     extension: ['.txt', '.html', '.htm', '.docx', '.pdf'],
-    success: (res: any) => {
+    success: async (res: any) => {
       const file = res.tempFiles?.[0]
       if (!file) return
-      setPickedFile({ name: file.name, size: file.size, path: file.path, content: file.file })
+      const content = file.file || file.raw || file.path || file.tempFilePath
+      setPickedFile({ name: file.name || file.path?.split('/').pop() || 'document', size: file.size || 0, path: file.path || file.tempFilePath, content })
     },
     fail: () => uni.showToast({ title: '未选择文件', icon: 'none' })
   })
@@ -210,11 +211,24 @@ const readSelectedFileAsBase64 = async (file: PickedFile) => {
 
   // #ifdef H5
   const rawContent = file.content as any
-  const source = rawContent && typeof rawContent.arrayBuffer === 'function'
-    ? await rawContent.arrayBuffer()
-    : rawContent
-  if (!source) throw new Error('读取文件失败')
-  return arrayBufferToBase64(source as ArrayBuffer)
+  if (rawContent instanceof ArrayBuffer) {
+    return arrayBufferToBase64(rawContent)
+  }
+  if (rawContent && typeof rawContent.arrayBuffer === 'function') {
+    return arrayBufferToBase64(await rawContent.arrayBuffer())
+  }
+  if (typeof rawContent === 'string') {
+    const response = await fetch(rawContent)
+    if (!response.ok) throw new Error('读取文件失败')
+    return arrayBufferToBase64(await response.arrayBuffer())
+  }
+  const filePath = file.path
+  if (typeof filePath === 'string' && filePath) {
+    const response = await fetch(filePath as string)
+    if (!response.ok) throw new Error('读取文件失败')
+    return arrayBufferToBase64(await response.arrayBuffer())
+  }
+  throw new Error('读取文件失败')
   // #endif
 }
 
