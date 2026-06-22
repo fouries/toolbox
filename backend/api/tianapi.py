@@ -7,6 +7,7 @@ from datetime import datetime
 from urllib.parse import quote, urljoin, unquote, urlparse, parse_qs
 from utils.http_client import HttpClient
 from utils.cache import cache, make_cache_key
+from utils.url_security import is_public_http_url
 from config import get_settings
 from api.news_detail import NewsDetailService
 
@@ -457,7 +458,7 @@ class TianApiService:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
         try:
-            async with HttpClient(timeout=15, follow_redirects=True) as client:
+            async with HttpClient(timeout=15, follow_redirects=False) as client:
                 text = await client.get_text(
                     "https://www.sogou.com/sogou",
                     params={"query": keyword, "ie": "utf8"},
@@ -756,7 +757,7 @@ class TianApiService:
             "version_code": "880",
         }
         try:
-            async with HttpClient(timeout=15, follow_redirects=True) as client:
+            async with HttpClient(timeout=15, follow_redirects=False) as client:
                 result = await client.get(DOUYIN_HOT_VIDEO_API, params=params, headers=headers)
         except Exception:
             return []
@@ -1055,11 +1056,11 @@ class TianApiService:
             "Referer": "https://m.baidu.com/",
         }
         try:
-            async with HttpClient(timeout=15, follow_redirects=True) as client:
+            async with HttpClient(timeout=15, follow_redirects=False) as client:
                 source_url = str(source_url or "").strip()
                 candidate_pages: List[Tuple[str, Dict[str, str], Dict[str, str]]] = []
                 source_word = keyword
-                if source_url.startswith("http"):
+                if source_url.startswith("http") and is_public_http_url(source_url):
                     candidate_pages.append((source_url, {}, headers))
                     parsed_source = urlparse(source_url)
                     if parsed_source.netloc.endswith("baidu.com") and parsed_source.path == "/s":

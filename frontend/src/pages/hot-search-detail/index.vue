@@ -556,11 +556,9 @@ onLoad((options: any) => {
   // 获取热搜列表，尝试从内存/缓存获取
   // 1. 优先从页面栈获取
   const pages = getCurrentPages()
-  console.log('[hot-nav] current pages length: ', pages.length)
   let gotList = false
   if (pages.length >= 2) {
     const prevPage = pages[pages.length - 2]
-    console.log('[hot-nav] prevPage route: ', prevPage.route)
     let hotItemsData: any = null
     if (prevPage.vm && prevPage.vm.$setup && prevPage.vm.$setup.hotItems) {
       hotItemsData = prevPage.vm.$setup.hotItems
@@ -581,7 +579,6 @@ onLoad((options: any) => {
       if (Array.isArray(cached) && cached.length > 0) {
         hotList.value = cached
         gotList = true
-        console.log('[hot-nav] 从缓存获取热搜列表成功, length=', hotList.value.length)
       }
     } catch (e) {
       console.warn('[hot-nav] read cache failed', e)
@@ -592,18 +589,14 @@ onLoad((options: any) => {
     hotList.value = hotList.value.slice(0, 21)
   }
   if (gotList) {
-    console.log('[hot-nav] 获取热搜列表成功, length=', hotList.value.length)
     // 如果索引不正确，根据当前keyword重新查找
     if (currentIndex.value === -1 || !hotList.value[currentIndex.value] || hotList.value[currentIndex.value].title !== keyword.value) {
       const foundIndex = hotList.value.findIndex(item => item.title === keyword.value)
-      console.log('[hot-nav] 查找当前关键词索引: ', keyword.value, 'found=', foundIndex)
       if (foundIndex >= 0) {
         currentIndex.value = foundIndex
-        console.log('[hot-nav] 更新索引到: ', foundIndex)
       }
     }
   } else {
-    console.log('[hot-nav] 获取热搜列表失败')
   }
   if (!keyword.value) {
     keyword.value = extractKeywordFromRaw()
