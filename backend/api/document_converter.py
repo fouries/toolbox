@@ -42,6 +42,11 @@ class PdfInputFile(TypedDict):
     content: bytes
 
 
+class ScanImageFile(TypedDict):
+    filename: str
+    content: bytes
+
+
 class _TextExtractor(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -290,6 +295,110 @@ class DocumentConverterService:
         image_buffer.seek(0)
         doc.add_picture(image_buffer, width=Inches(6))
         doc.save(buf)
+        return buf.getvalue()
+
+    def scan_images(self, files: List[ScanImageFile], target_format: str = "pdf", title: str = "扫描文档") -> Dict[str, Any]:
+        target = TARGET_ALIASES.get(str(target_format or "").lower().strip(), str(target_format or "").lower().strip())
+        if target not in {"pdf", "docx", "pptx"}:
+            return {"code": 400, "msg": "扫描生成暂时支持 PDF、Word、PPT"}
+        try:
+            images = self._validate_scan_images(files)
+            if target == "pdf":
+                content = self._scan_images_to_pdf(images, title)
+            elif target == "docx":
+                content = self._scan_images_to_docx(images, title)
+            else:
+                content = self._scan_images_to_pptx(images, title)
+        except Exception as exc:  # pragma: no cover - defensive API guard
+            return {"code": 400, "msg": f"扫描生成失败：{exc}"}
+        safe_title = self._safe_stem(title or "scan")
+        return {
+            "code": 200,
+            "msg": "success",
+            "filename": f"{safe_title}.{target}",
+            "media_type": OUTPUT_MIME_TYPES[target],
+            "content": content,
+        }
+
+    def _validate_scan_images(self, files: List[ScanImageFile]) -> list[Image.Image]:
+        if not files:
+            raise ValueError("请先拍照或选择图片")
+        if len(files) > 10:
+            raise ValueError("一次最多支持 10 张扫描图片")
+        images: list[Image.Image] = []
+        total = 0
+        for item in files:
+            filename = str(item.get("filename") or "scan.jpg")
+            ext = Path(filename).suffix.lower().lstrip(".")
+            if ext not in IMAGE_INPUTS:
+                raise ValueError("扫描图片支持 JPG、PNG、WEBP")
+            content = item.get("content") or b""
+            if not content:
+                raise ValueError("图片内容为空")
+            total += len(content)
+            if len(content) > self.max_file_size or total > self.max_file_size * 4:
+                raise ValueError(f"单张图片不能超过 {self.max_file_size // 1024 // 1024}MB，总大小不能超过 {self.max_file_size * 4 // 1024 // 1024}MB")
+            images.append(self._open_image(content))
+        return images
+
+    def _scan_images_to_pdf(self, images: list[Image.Image], title: str) -> bytes:
+        buf = BytesIO()
+        page_width, page_height = A4
+        margin = 28
+        draw_width = page_width - margin * 2
+        draw_height = page_height - margin * 2
+        page = canvas.Canvas(buf, pagesize=A4)
+        page.setTitle(title or "扫描文档")
+        for image in images:
+            ratio = min(draw_width / image.width, draw_height / image.height)
+            width = image.width * ratio
+            height = image.height * ratio
+            x = (page_width - width) / 2
+            y = (page_height - height) / 2
+            image_buffer = BytesIO()
+            image.save(image_buffer, format="JPEG", quality=90)
+            image_buffer.seek(0)
+            page.drawImage(ImageReader(image_buffer), x, y, width=width, height=height, preserveAspectRatio=True, mask="auto")
+            page.showPage()
+        page.save()
+        return buf.getvalue()
+
+    @staticmethod
+    def _scan_images_to_docx(images: list[Image.Image], title: str) -> bytes:
+        buf = BytesIO()
+        doc = Document()
+        doc.add_heading(title or "扫描文档", level=1)
+        for index, image in enumerate(images, start=1):
+            if index > 1:
+                doc.add_page_break()
+            image_buffer = BytesIO()
+            image.save(image_buffer, format="JPEG", quality=90)
+            image_buffer.seek(0)
+            doc.add_paragraph(f"扫描页 {index}")
+            doc.add_picture(image_buffer, width=Inches(6))
+        doc.save(buf)
+        return buf.getvalue()
+
+    @staticmethod
+    def _scan_images_to_pptx(images: list[Image.Image], title: str) -> bytes:
+        buf = BytesIO()
+        deck = Presentation()
+        blank_layout = deck.slide_layouts[6]
+        slide_width = deck.slide_width
+        slide_height = deck.slide_height
+        for image in images:
+            slide = deck.slides.add_slide(blank_layout)
+            image_buffer = BytesIO()
+            image.save(image_buffer, format="JPEG", quality=90)
+            image_buffer.seek(0)
+            ratio = min(slide_width / image.width, slide_height / image.height)
+            width = int(image.width * ratio)
+            height = int(image.height * ratio)
+            left = int((slide_width - width) / 2)
+            top = int((slide_height - height) / 2)
+            slide.shapes.add_picture(image_buffer, left, top, width=width, height=height)
+        deck.core_properties.title = title or "扫描文档"
+        deck.save(buf)
         return buf.getvalue()
 
     def operate_pdf(self, operation: str, files: List[PdfInputFile], pages: str = "", text: str = "", compression_level: str = "medium") -> Dict[str, Any]:

@@ -10,7 +10,7 @@ from pypdf import PdfReader
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-from api.document_converter import DocumentConverterService
+from api.document_converter import DocumentConverterService, ScanImageFile
 
 
 async def _upload_file(name: str, content: bytes, content_type: str = "application/octet-stream") -> UploadFile:
@@ -127,6 +127,31 @@ def test_image_can_convert_to_pdf_and_word():
     assert docx["filename"] == "photo.docx"
     doc = Document(BytesIO(docx["content"]))
     assert doc.inline_shapes
+
+
+def test_scan_images_can_generate_pdf_word_and_ppt():
+    service = DocumentConverterService(max_file_size=1024 * 1024)
+    image1 = _make_png()
+    image2 = _make_png()
+    files: list[ScanImageFile] = [{"filename": "scan1.png", "content": image1}, {"filename": "scan2.png", "content": image2}]
+
+    pdf = service.scan_images(files, "pdf", "证件扫描")
+    assert pdf["code"] == 200
+    assert pdf["filename"] == "证件扫描.pdf"
+    assert len(PdfReader(BytesIO(pdf["content"])).pages) == 2
+
+    docx = service.scan_images(files, "docx", "资料扫描")
+    assert docx["code"] == 200
+    doc = Document(BytesIO(docx["content"]))
+    assert len(doc.inline_shapes) == 2
+
+    pptx = service.scan_images(files, "pptx", "演示扫描")
+    assert pptx["code"] == 200
+    deck = Presentation(BytesIO(pptx["content"]))
+    assert len(deck.slides) == 2
+
+    bad = service.scan_images([], "pdf", "空扫描")
+    assert bad["code"] == 400
 
 
 def test_txt_can_convert_to_html_docx_and_pdf():

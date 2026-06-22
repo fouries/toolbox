@@ -103,6 +103,12 @@ class PdfOperationBase64Request(BaseModel):
     text: str = ""
     compression_level: str = "medium"
 
+
+class DocumentScanBase64Request(BaseModel):
+    files: list[DocumentOperationFile]
+    target_format: str = "pdf"
+    title: str = "扫描文档"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
@@ -462,6 +468,28 @@ async def pdf_operation_base64(payload: PdfOperationBase64Request):
     result = get_document_converter_service().operate_pdf(payload.operation, decoded_files, payload.pages, payload.text, payload.compression_level)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "PDF 处理失败"))
+    return success({
+        "filename": result["filename"],
+        "media_type": result["media_type"],
+        "base64": base64.b64encode(result["content"]).decode("ascii"),
+    })
+
+
+@app.post("/api/documents/scan-base64", summary="扫描图片生成文档（Base64）", tags=["本地工具"])
+async def document_scan_base64(payload: DocumentScanBase64Request):
+    """小程序/H5 兼容接口：接收多张拍照/图片内容，生成 PDF、Word 或 PPT。"""
+    import base64
+
+    decoded_files = []
+    for item in payload.files:
+        try:
+            raw = base64.b64decode(item.content_base64, validate=True)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"{item.filename} 不是有效的 Base64")
+        decoded_files.append({"filename": item.filename, "content": raw})
+    result = get_document_converter_service().scan_images(decoded_files, payload.target_format, payload.title)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "扫描生成失败"))
     return success({
         "filename": result["filename"],
         "media_type": result["media_type"],
