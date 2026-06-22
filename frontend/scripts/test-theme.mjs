@@ -26,8 +26,8 @@ assert.match(themeSource, /setStorageSync\(['"]toolbox-theme['"]/, 'selected the
 assert.match(appSource, /initTheme\(\)/, 'app should initialize persisted theme on launch')
 assert.match(
   settingsSource,
-  /v-for="theme in themes"[\s\S]*@click="setTheme\(theme\.id\)"/,
-  'settings tab should render theme choices and switch themes from the tab page'
+  /@click="showThemePicker"[\s\S]*currentTheme\.icon[\s\S]*currentTheme\.name/,
+  'settings tab should expose the native theme picker and current theme'
 )
 assert.match(
   globalStyleSource,

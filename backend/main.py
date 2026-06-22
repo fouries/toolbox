@@ -22,6 +22,7 @@ from api.news_detail import NewsDetailService
 from api.tools import ToolsService
 from api.location import LocationService
 from api.tool_stats import get_tool_stats_service
+from api.user_favorites import get_user_favorites_service
 from services.content_service import ContentService
 
 settings = get_settings()
@@ -53,6 +54,15 @@ def _extract_proxy_target_url(url: str, request: Request) -> str:
     return _extract_proxy_target_from_query(url, str(request.url.query or ""))
 
 class ToolClickRequest(BaseModel):
+    tool_id: str
+
+
+class UserIdentityRequest(BaseModel):
+    user_key: str
+
+
+class UserFavoriteRequest(BaseModel):
+    user_key: str
     tool_id: str
 
 @asynccontextmanager
@@ -278,6 +288,35 @@ async def record_tool_click(payload: ToolClickRequest):
     result = get_tool_stats_service().record_click(payload.tool_id)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "未知工具"))
+    return normalize_response(result)
+
+@app.post("/api/users/anonymous", summary="创建/刷新匿名用户", tags=["轻量用户"])
+async def ensure_anonymous_user(payload: UserIdentityRequest):
+    """第一阶段轻量身份：H5 本地生成 user_key，小程序后续可替换为 openid。"""
+    result = get_user_favorites_service().ensure_user(payload.user_key)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "用户标识无效"))
+    return normalize_response(result)
+
+@app.get("/api/users/favorites", summary="获取工具收藏", tags=["轻量用户"])
+async def list_user_favorites(user_key: str):
+    result = get_user_favorites_service().list_favorites(user_key)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "用户标识无效"))
+    return normalize_response(result)
+
+@app.post("/api/users/favorites", summary="收藏工具", tags=["轻量用户"])
+async def add_user_favorite(payload: UserFavoriteRequest):
+    result = get_user_favorites_service().add_favorite(payload.user_key, payload.tool_id)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "收藏失败"))
+    return normalize_response(result)
+
+@app.delete("/api/users/favorites", summary="取消收藏工具", tags=["轻量用户"])
+async def remove_user_favorite(payload: UserFavoriteRequest):
+    result = get_user_favorites_service().remove_favorite(payload.user_key, payload.tool_id)
+    if result.get("code") == 400:
+        raise HTTPException(status_code=400, detail=result.get("msg", "取消收藏失败"))
     return normalize_response(result)
 
 @app.get("/api/qrcode", summary="二维码生成", tags=["本地工具"])

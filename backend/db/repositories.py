@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from db.models import ToolClickStat
+from db.models import ToolClickStat, User, UserToolFavorite
 
 logger = logging.getLogger(__name__)
 
@@ -91,3 +91,48 @@ class ToolStatsRepository:
             if tool_id in existing:
                 continue
             self.session.add(ToolClickStat(tool_id=tool_id, clicks=clicks))
+
+
+class UserFavoritesRepository:
+    def __init__(self, session: Session):
+        self.session = session
+
+    def get_or_create_user(self, user_key: str, user_type: str = "anonymous") -> User:
+        user = self.session.execute(select(User).where(User.user_key == user_key)).scalar_one_or_none()
+        if user is None:
+            user = User(user_key=user_key, user_type=user_type)
+            self.session.add(user)
+            self.session.flush()
+        else:
+            user.user_type = user.user_type or user_type
+            self.session.flush()
+        return user
+
+    def list_favorites(self, user_key: str) -> list[str]:
+        user = self.get_or_create_user(user_key)
+        rows = self.session.execute(
+            select(UserToolFavorite.tool_id)
+            .where(UserToolFavorite.user_id == user.id)
+            .order_by(UserToolFavorite.id.desc())
+        ).scalars().all()
+        return [str(tool_id) for tool_id in rows]
+
+    def add_favorite(self, user_key: str, tool_id: str) -> None:
+        user = self.get_or_create_user(user_key)
+        existing = self.session.execute(
+            select(UserToolFavorite)
+            .where(UserToolFavorite.user_id == user.id)
+            .where(UserToolFavorite.tool_id == tool_id)
+        ).scalar_one_or_none()
+        if existing is None:
+            self.session.add(UserToolFavorite(user_id=user.id, tool_id=tool_id))
+            self.session.flush()
+
+    def remove_favorite(self, user_key: str, tool_id: str) -> None:
+        user = self.get_or_create_user(user_key)
+        self.session.execute(
+            delete(UserToolFavorite)
+            .where(UserToolFavorite.user_id == user.id)
+            .where(UserToolFavorite.tool_id == tool_id)
+        )
+        self.session.flush()

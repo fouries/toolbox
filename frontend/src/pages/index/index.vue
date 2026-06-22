@@ -41,6 +41,34 @@
           </view>
         </view>
 
+        <view class="quick-panel" v-if="favoriteTools.length">
+          <view class="quick-panel-title">
+            <text class="quick-panel-title-text">我的收藏</text>
+            <text class="quick-panel-title-icon">⭐</text>
+          </view>
+          <scroll-view class="quick-tool-scroll" scroll-x="true" show-scrollbar="false">
+            <view class="quick-tool-list">
+              <view
+                class="quick-tool-card"
+                @click="goToTool(tool)"
+                v-for="tool in favoriteTools"
+                :key="tool.id"
+              >
+                <button
+                  class="favorite-toggle active"
+                  @click.stop="toggleFavorite(tool)"
+                >★</button>
+                <view class="quick-tool-icon" :style="{ background: tool.color }">
+                  <text class="quick-icon-text">{{ tool.icon }}</text>
+                </view>
+                <view class="quick-tool-info">
+                  <text class="quick-tool-name">{{ tool.name }}</text>
+                </view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
         <view class="quick-panel" v-if="recentTools.length">
           <view class="quick-panel-title">
             <text class="quick-panel-title-text">最近使用</text>
@@ -54,6 +82,11 @@
                 v-for="tool in recentTools"
                 :key="tool.id"
               >
+                <button
+                  class="favorite-toggle"
+                  :class="{ active: isFavorite(tool.id) }"
+                  @click.stop="toggleFavorite(tool)"
+                >{{ isFavorite(tool.id) ? '★' : '☆' }}</button>
                 <view class="quick-tool-icon" :style="{ background: tool.color }">
                   <text class="quick-icon-text">{{ tool.icon }}</text>
                 </view>
@@ -79,6 +112,11 @@
                 v-for="tool in popularTools"
                 :key="tool.id"
               >
+                <button
+                  class="favorite-toggle"
+                  :class="{ active: isFavorite(tool.id) }"
+                  @click.stop="toggleFavorite(tool)"
+                >{{ isFavorite(tool.id) ? '★' : '☆' }}</button>
                 <view class="quick-tool-icon" :style="{ background: tool.color }">
                   <text class="quick-icon-text">{{ tool.icon }}</text>
                 </view>
@@ -124,6 +162,12 @@
               v-for="tool in filteredTools"
               :key="tool.id"
             >
+              <button
+                class="favorite-toggle tool-favorite-toggle"
+                :class="{ active: isFavorite(tool.id) }"
+                v-if="tool.implemented"
+                @click.stop="toggleFavorite(tool)"
+              >{{ isFavorite(tool.id) ? '★' : '☆' }}</button>
               <view class="tool-icon" :style="{ background: tool.color }">
                 <text class="icon-text">{{ tool.icon }}</text>
               </view>
@@ -156,11 +200,21 @@
 
 <script setup lang="ts">
 import { useTheme } from '@/utils/theme'
-import { getPopularTools, recordToolClick, type ToolPopularityItem } from '@/api'
+import {
+  addUserFavorite,
+  ensureAnonymousUser,
+  getPopularTools,
+  getUserFavorites,
+  recordToolClick,
+  removeUserFavorite,
+  type ToolPopularityItem
+} from '@/api'
 import { ref, computed, onMounted } from 'vue'
 
 const { themeClass } = useTheme()
 const RECENT_TOOLS_KEY = 'toolbox_recent_tools'
+const TOOLBOX_USER_KEY = 'toolbox_user_key'
+const FAVORITE_TOOLS_KEY = 'toolbox_favorite_tools'
 
 interface CategoryItem {
   id: string
@@ -195,6 +249,8 @@ const searchText = ref('')
 const activeCategory = ref('all')
 const toolClickCounts = ref<Record<string, number>>({})
 const recentToolIds = ref<string[]>([])
+const favoriteToolIds = ref<string[]>([])
+const userKey = ref('')
 
 const categories = ref<CategoryItem[]>([
   { id: 'life', name: '生活查询' },
@@ -203,6 +259,10 @@ const categories = ref<CategoryItem[]>([
   { id: 'calendar', name: '日历文化' },
   { id: 'news', name: '热榜资讯' }
 ])
+
+const HIDDEN_TOOL_IDS = new Set(['password'])
+
+const visibleTools = () => tools.value.filter(tool => !HIDDEN_TOOL_IDS.has(tool.id))
 
 const tools = ref<ToolItem[]>([
   { id: 'weather', name: '天气预报', desc: '城市实时天气和7天预报', icon: '🌤️', color: '#4ecdc4', category: 'life', path: '/pages/weather/index', implemented: true, keywords: ['天气', '预报', '城市'] },
@@ -226,12 +286,12 @@ const todayOverview = computed<OverviewItem[]>(() => {
   return [
     { id: 'today', label: '今日', value: `${month}月${day}日`, desc: '黄历、节气、历史事件', icon: '📅', color: '#f97316', path: '/pages/calendar/index' },
     { id: 'hot', label: '热榜', value: '百度 / 抖音', desc: '热点内容集中查看', icon: '🔥', color: '#ef4444', path: '/pages/news/index', tab: true },
-    { id: 'tools', label: '工具', value: `${tools.value.filter(tool => tool.implemented).length} 个可用`, desc: '生活查询和实用工具', icon: '🧰', color: '#2563eb', path: '' }
+    { id: 'tools', label: '工具', value: `${visibleTools().filter(tool => tool.implemented).length} 个可用`, desc: '生活查询和实用工具', icon: '🧰', color: '#2563eb', path: '' }
   ]
 })
 
 const popularTools = computed(() => {
-  const rankedTools = tools.value
+  const rankedTools = visibleTools()
     .filter(tool => tool.implemented)
     .slice()
     .sort((a, b) => {
@@ -244,15 +304,23 @@ const popularTools = computed(() => {
 })
 
 const recentTools = computed(() => {
-  const available = tools.value.filter(tool => tool.implemented)
+  const available = visibleTools().filter(tool => tool.implemented)
   return recentToolIds.value
     .map(id => available.find(tool => tool.id === id))
     .filter((tool): tool is ToolItem => Boolean(tool))
     .slice(0, 10)
 })
 
+const favoriteTools = computed(() => {
+  const available = visibleTools().filter(tool => tool.implemented)
+  return favoriteToolIds.value
+    .map(id => available.find(tool => tool.id === id))
+    .filter((tool): tool is ToolItem => Boolean(tool))
+    .slice(0, 10)
+})
+
 const filteredTools = computed(() => {
-  let list = tools.value
+  let list = visibleTools()
 
   if (activeCategory.value !== 'all') {
     list = list.filter(t => t.category === activeCategory.value)
@@ -302,6 +370,78 @@ const loadRecentTools = () => {
     recentToolIds.value = Array.isArray(stored) ? stored.filter(item => typeof item === 'string') : []
   } catch (error) {
     console.warn('加载最近使用失败', error)
+  }
+}
+
+const generateUserKey = () => `anon_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`
+
+const ensureUserKey = () => {
+  if (userKey.value) return userKey.value
+  try {
+    const stored = uni.getStorageSync(TOOLBOX_USER_KEY)
+    const key = typeof stored === 'string' && stored.length >= 8 ? stored : generateUserKey()
+    userKey.value = key
+    if (key !== stored) uni.setStorageSync(TOOLBOX_USER_KEY, key)
+    return key
+  } catch (error) {
+    console.warn('初始化用户标识失败', error)
+    const key = generateUserKey()
+    userKey.value = key
+    return key
+  }
+}
+
+const saveFavoriteTools = () => {
+  try {
+    uni.setStorageSync(FAVORITE_TOOLS_KEY, favoriteToolIds.value)
+  } catch (error) {
+    console.warn('保存收藏失败', error)
+  }
+}
+
+const loadCachedFavorites = () => {
+  try {
+    const stored = uni.getStorageSync(FAVORITE_TOOLS_KEY)
+    favoriteToolIds.value = Array.isArray(stored) ? stored.filter(item => typeof item === 'string') : []
+  } catch (error) {
+    console.warn('加载本地收藏失败', error)
+  }
+}
+
+const syncUserAndFavorites = async () => {
+  const key = ensureUserKey()
+  loadCachedFavorites()
+  try {
+    await ensureAnonymousUser(userKey.value)
+    const result = await getUserFavorites(userKey.value)
+    const remoteFavorites = (result.data || result.newslist || []) as string[]
+    if (Array.isArray(remoteFavorites)) {
+      favoriteToolIds.value = remoteFavorites.filter(item => typeof item === 'string')
+      saveFavoriteTools()
+    }
+  } catch (error) {
+    console.warn('同步收藏失败，使用本地收藏', key, error)
+  }
+}
+
+const isFavorite = (toolId: string) => favoriteToolIds.value.includes(toolId)
+
+const toggleFavorite = async (tool: ToolItem) => {
+  if (!tool.implemented) return
+  const key = ensureUserKey()
+  const nextFavorited = !isFavorite(tool.id)
+  favoriteToolIds.value = nextFavorited
+    ? [tool.id, ...favoriteToolIds.value.filter(id => id !== tool.id)].slice(0, 10)
+    : favoriteToolIds.value.filter(id => id !== tool.id)
+  saveFavoriteTools()
+  try {
+    if (nextFavorited) {
+      await addUserFavorite(userKey.value, tool.id)
+    } else {
+      await removeUserFavorite(userKey.value, tool.id)
+    }
+  } catch (error) {
+    console.warn('同步收藏操作失败', key, error)
   }
 }
 
@@ -371,6 +511,7 @@ const navigateToBeian = () => {
 
 onMounted(() => {
   loadRecentTools()
+  void syncUserAndFavorites()
   loadPopularTools()
 })
 </script>
@@ -408,6 +549,10 @@ onMounted(() => {
 .main-panel {
   position: relative;
   z-index: 1;
+}
+
+.tool-search-wrap {
+  display: none;
 }
 
 .hero-content {
@@ -618,15 +763,16 @@ onMounted(() => {
 }
 
 .quick-tool-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 118rpx;
+  flex: 0 0 112rpx;
   min-width: 0;
-  min-height: 92rpx;
+  min-height: 88rpx;
   gap: 7rpx;
-  padding: 12rpx 8rpx;
+  padding: 10rpx 6rpx;
   border-radius: 18rpx;
   background: linear-gradient(135deg, var(--theme-surface, rgba(255, 255, 255, 0.94)) 0%, var(--theme-primary-soft, rgba(238, 245, 255, 0.86)) 100%);
   border: 2rpx solid var(--theme-border, rgba(238, 242, 247, 0.9));
@@ -634,8 +780,8 @@ onMounted(() => {
 }
 
 .quick-tool-icon {
-  width: 42rpx;
-  height: 42rpx;
+  width: 40rpx;
+  height: 40rpx;
   border-radius: 14rpx;
   display: flex;
   align-items: center;
@@ -663,6 +809,41 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.favorite-toggle {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  z-index: 2;
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 32rpx;
+  margin: 0;
+  padding: 0;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.86);
+  color: #cbd5e1;
+  font-size: 22rpx;
+  font-weight: 900;
+  box-shadow: 0 4rpx 12rpx rgba(15, 23, 42, 0.08);
+}
+
+.favorite-toggle::after {
+  border: 0;
+}
+
+.favorite-toggle.active {
+  color: #f59e0b;
+}
+
+.tool-favorite-toggle {
+  top: 16rpx;
+  right: 16rpx;
+  width: 46rpx;
+  height: 46rpx;
+  line-height: 44rpx;
+  font-size: 30rpx;
 }
 
 .main-panel {
@@ -705,7 +886,7 @@ onMounted(() => {
 
 .tool-item {
   position: relative;
-  min-height: 166rpx;
+  min-height: 156rpx;
   background: rgba(255, 255, 255, 0.94);
   border-radius: 22rpx;
   padding: 22rpx 18rpx 20rpx;
@@ -883,7 +1064,7 @@ onMounted(() => {
   }
 
   .tool-item {
-    min-height: 146px;
+    min-height: 136px;
     padding: 20px 18px 18px;
     border-radius: 18px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;

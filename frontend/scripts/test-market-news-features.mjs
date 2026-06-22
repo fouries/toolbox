@@ -28,13 +28,12 @@ assert.ok(routes.includes('pages/gold-price/index'), 'pages.json should register
 
 const home = fs.readFileSync(homePath, 'utf8')
 for (const [id, name] of [
-  ['internet-news', '互联网资讯'],
-  ['esports-news', '电竞资讯'],
-  ['auto-news', '汽车新闻'],
+  ['info-news', '资讯查询'],
   ['gold-price', '黄金行情'],
 ]) {
   assert.match(home, new RegExp(`id:\\s*'${id}'[\\s\\S]*name:\\s*'${name}'[\\s\\S]*implemented:\\s*true`), `home should enable ${name} card`)
 }
+assert.match(home, /互联网、AI、汽车与电竞资讯/, 'home should consolidate internet/esports/auto news into the current 资讯查询 card')
 assert.match(home, /category:\s*'market'/, 'home should include a market/news category for information tools')
 
 const api = fs.readFileSync(apiPath, 'utf8')
@@ -82,8 +81,8 @@ assert.match(oilPage, /WTI|布伦特|Brent/, 'crude oil card should show common 
 const infoNewsPage = fs.readFileSync(infoNewsPagePath, 'utf8')
 assert.match(infoNewsPage, /互联网资讯|电竞资讯|汽车新闻/, 'info news page should support requested news categories')
 assert.match(infoNewsPage, /getInfoNews/, 'info news page should fetch category news')
-assert.match(infoNewsPage, /v-for="item in newsList"/, 'info news page should render a news list')
-assert.match(infoNewsPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}&image=\$\{encodeURIComponent\(safeImageUrl\(item\.picUrl\) \|\| ''\)\}/, 'info news cards should navigate to native detail page with normalized list image')
+assert.match(infoNewsPage, /v-for="(?:item|\(item,\s*index\)) in newsList"/, 'info news page should render a news list')
+assert.match(infoNewsPage, /\/pages\/news-detail\/index\?url=\$\{encodeURIComponent\(safeUrl\)\}[\s\S]*image=\$\{encodeURIComponent\(safeImageUrl\(item\.picUrl\) \|\| ''\)\}/, 'info news cards should navigate to native detail page with normalized list image')
 assert.match(infoNewsPage, /safeImageUrl\s*=\s*\(url\?:\s*string\):\s*string\s*=>\s*normalizeNewsUrl\(url\)/, 'info news cards should normalize protocol-relative list images before passing them to detail')
 assert.match(infoNewsPage, /normalizeNewsUrl/, 'info news cards should normalize protocol-relative esports URLs before navigation')
 assert.match(infoNewsPage, /url\.startsWith\('\/\/'\)[\s\S]*`https:\$\{url\}`/, 'protocol-relative esports URLs should be converted to https URLs')
@@ -97,7 +96,7 @@ assert.match(newsDetailPage, /getNewsDetail/, 'news detail page should fetch cac
 assert.match(newsDetailPage, /detail\.title/, 'news detail page should render article title')
 assert.match(newsDetailPage, /<image\s+class="article-image"\s+:src="detail\.image"\s+mode="widthFix"/, 'news detail page should render original article image')
 assert.match(newsDetailPage, /\.article-image\s*\{[\s\S]*width:\s*100%;[\s\S]*border-radius:/, 'article image should be full-width and rounded')
-assert.match(newsDetailPage, /detail\.content/, 'news detail page should render cleaned article content')
+assert.match(newsDetailPage, /detail\.value\?\.content|const\s+paragraphs\s*=\s*computed/, 'news detail page should render cleaned article content via parsed paragraphs')
 assert.match(newsDetailPage, /copyOriginalUrl/, 'news detail page should keep original link copy fallback')
 assert.match(newsDetailPage, /onLoad/, 'news detail page should read source url from route query')
 

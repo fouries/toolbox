@@ -191,6 +191,17 @@ export interface ToolPopularityItem {
   clicks: number
 }
 
+export interface UserIdentity {
+  id: number
+  user_key: string
+  user_type: string
+}
+
+export interface FavoriteToolResult {
+  tool_id: string
+  favorited: boolean
+}
+
 function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
 
@@ -345,6 +356,31 @@ export const recordToolClick = (toolId: string) => {
   })
 }
 
+export const ensureAnonymousUser = (userKey: string) => {
+  return request<UserIdentity>('/api/users/anonymous', {
+    method: 'POST',
+    data: { user_key: userKey }
+  })
+}
+
+export const getUserFavorites = (userKey: string) => {
+  return request<string[]>(`/api/users/favorites?user_key=${encodeURIComponent(userKey)}`)
+}
+
+export const addUserFavorite = (userKey: string, toolId: string) => {
+  return request<FavoriteToolResult>('/api/users/favorites', {
+    method: 'POST',
+    data: { user_key: userKey, tool_id: toolId }
+  })
+}
+
+export const removeUserFavorite = (userKey: string, toolId: string) => {
+  return request<FavoriteToolResult>('/api/users/favorites', {
+    method: 'DELETE',
+    data: { user_key: userKey, tool_id: toolId }
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -365,5 +401,9 @@ export default {
   urlEncode,
   urlDecode,
   getPopularTools,
-  recordToolClick
+  recordToolClick,
+  ensureAnonymousUser,
+  getUserFavorites,
+  addUserFavorite,
+  removeUserFavorite
 }
