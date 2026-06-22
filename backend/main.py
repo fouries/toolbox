@@ -101,6 +101,7 @@ class PdfOperationBase64Request(BaseModel):
     files: list[DocumentOperationFile]
     pages: str = ""
     text: str = ""
+    compression_level: str = "medium"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -458,7 +459,7 @@ async def pdf_operation_base64(payload: PdfOperationBase64Request):
         except Exception:
             raise HTTPException(status_code=400, detail=f"{item.filename} 不是有效的 Base64")
         decoded_files.append({"filename": item.filename, "content": raw})
-    result = get_document_converter_service().operate_pdf(payload.operation, decoded_files, payload.pages, payload.text)
+    result = get_document_converter_service().operate_pdf(payload.operation, decoded_files, payload.pages, payload.text, payload.compression_level)
     if result.get("code") == 400:
         raise HTTPException(status_code=400, detail=result.get("msg", "PDF 处理失败"))
     return success({

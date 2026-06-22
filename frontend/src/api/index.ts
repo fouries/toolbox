@@ -465,6 +465,7 @@ export const operatePdfBase64 = (payload: {
   files: Array<{ filename: string; content_base64: string }>
   pages?: string
   text?: string
+  compression_level?: string
 }) => {
   return request<DocumentConvertResult>('/api/documents/pdf-operation-base64', {
     method: 'POST',

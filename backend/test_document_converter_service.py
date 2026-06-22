@@ -97,9 +97,10 @@ def test_pdf_operations_merge_extract_compress_edit_and_remove_watermark():
     assert extracted["code"] == 200
     assert len(PdfReader(BytesIO(extracted["content"])).pages) == 1
 
-    compressed = service.operate_pdf("compress", [{"filename": "a.pdf", "content": pdf1}])
+    compressed = service.operate_pdf("compress", [{"filename": "a.pdf", "content": pdf1}], compression_level="high")
     assert compressed["code"] == 200
     assert compressed["filename"].endswith("_compressed.pdf")
+    assert len(PdfReader(BytesIO(compressed["content"])).pages) == 1
 
     edited = service.operate_pdf("edit", [{"filename": "a.pdf", "content": pdf1}], text="备注")
     assert edited["code"] == 200

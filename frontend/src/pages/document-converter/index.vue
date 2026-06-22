@@ -54,9 +54,10 @@
           <text class="section-badge">{{ selectedPdfFiles.length }} 个</text>
         </view>
         <button class="select-btn" @click="choosePdfFiles" :disabled="loading">
-          {{ selectedPdfFiles.length ? '重新选择 PDF' : '选择 PDF 文件' }}
+          {{ pdfSelectButtonText }}
         </button>
-        <view class="file-preview" v-for="file in selectedPdfFiles" :key="file.name">
+        <button v-if="selectedPdfFiles.length" class="secondary-btn" @click="clearSelectedPdfFiles" :disabled="loading">清空已选 PDF</button>
+        <view class="file-preview" v-for="(file, index) in selectedPdfFiles" :key="`${file.name}-${index}`">
           <text class="file-icon">📕</text>
           <view class="file-info">
             <text class="file-name">{{ file.name }}</text>
@@ -65,7 +66,8 @@
         </view>
         <view class="tips-box">
           <text class="tips-title">PDF 能力</text>
-          <text class="tips-text">支持合并、拆分/提取页面、基础压缩、添加文字、去水印。</text>
+          <text class="tips-text">合并请选择多个 PDF；拆分/压缩/编辑/去水印选择一个 PDF。</text>
+          <text v-if="pdfOperation === 'merge'" class="tips-text">如果当前环境一次只能选一个，请点“继续添加 PDF”逐个添加，至少添加 2 个后即可合并。</text>
           <text class="tips-text">页码示例：1,3-5；去水印仅尝试移除指定文本/批注类水印，扫描图水印不保证。</text>
         </view>
       </view>
@@ -88,8 +90,28 @@
             <text class="format-desc">{{ item.desc }}</text>
           </view>
         </view>
+        <view v-if="pdfOperation === 'compress'" class="compression-panel">
+          <text class="option-title">压缩比</text>
+          <view class="compression-grid">
+            <view
+              v-for="item in compressionOptions"
+              :key="item.value"
+              class="compression-item"
+              :class="{ active: pdfCompressionLevel === item.value }"
+              @click="selectCompressionLevel(item.value)"
+            >
+              <text class="compression-name">{{ item.label }}</text>
+              <text class="compression-desc">{{ item.desc }}</text>
+            </view>
+          </view>
+        </view>
         <input v-if="pdfOperation === 'extract'" class="text-input" v-model="pdfPages" placeholder="输入页码，如 1,3-5" />
-        <input v-if="pdfOperation === 'edit' || pdfOperation === 'remove_watermark'" class="text-input" v-model="pdfText" :placeholder="pdfOperation === 'edit' ? '输入要添加到每页顶部的文字' : '输入要尝试移除的水印文字，可留空仅移除批注'" />
+        <view v-if="pdfOperation === 'edit'" class="edit-panel">
+          <text class="option-title">编辑内容</text>
+          <textarea class="text-area" v-model="pdfText" maxlength="160" placeholder="输入要添加到每页顶部的文字，例如：内部资料 / 已审核" />
+          <text class="tips-text">当前编辑功能支持在每页顶部添加文字，复杂内容编辑后续再扩展。</text>
+        </view>
+        <input v-if="pdfOperation === 'remove_watermark'" class="text-input" v-model="pdfText" placeholder="输入要尝试移除的水印文字，可留空仅移除批注" />
       </view>
 
       <view class="card format-card" v-if="toolMode === 'convert'">
@@ -169,6 +191,7 @@ const toolMode = ref<'convert' | 'pdf'>('convert')
 const pdfOperation = ref('merge')
 const pdfPages = ref('')
 const pdfText = ref('')
+const pdfCompressionLevel = ref<'low' | 'medium' | 'high'>('medium')
 const loading = ref(false)
 const convertedFile = ref<DocumentConvertResult | null>(null)
 
@@ -184,10 +207,16 @@ const targetFormats = [
 const pdfOperations = [
   { value: 'merge', label: 'PDF 合并', icon: '🧩', desc: '多份合一' },
   { value: 'extract', label: '拆分/提取', icon: '✂️', desc: '按页码导出' },
-  { value: 'compress', label: 'PDF 压缩', icon: '📦', desc: '基础压缩' },
+  { value: 'compress', label: 'PDF 压缩', icon: '📦', desc: '可选压缩比' },
   { value: 'edit', label: 'PDF 编辑', icon: '✏️', desc: '添加文字' },
   { value: 'remove_watermark', label: 'PDF 去水印', icon: '🧼', desc: '文本/批注' }
 ]
+
+const compressionOptions = [
+  { value: 'low', label: '低压缩', desc: '优先保留质量' },
+  { value: 'medium', label: '中压缩', desc: '推荐平衡方案' },
+  { value: 'high', label: '高压缩', desc: '尽量减小体积' }
+] as const
 
 const imageExts = ['jpg', 'jpeg', 'png', 'webp']
 const documentExts = ['txt', 'html', 'docx', 'pdf', 'xlsx', 'pptx']
@@ -207,6 +236,10 @@ const formatSize = (size: number) => {
 }
 const fileSizeLabel = computed(() => formatSize(selectedFile.value?.size || 0))
 const selectedPdfOperation = computed(() => pdfOperations.find(item => item.value === pdfOperation.value) || pdfOperations[0])
+const pdfSelectButtonText = computed(() => {
+  if (pdfOperation.value === 'merge') return selectedPdfFiles.value.length ? '继续添加 PDF' : '选择多个 PDF 文件'
+  return selectedPdfFiles.value.length ? '重新选择 PDF' : '选择 PDF 文件'
+})
 
 const isTargetDisabled = (format: string) => {
   if (!sourceExt.value) return false
@@ -255,6 +288,11 @@ const switchToolMode = (mode: 'convert' | 'pdf') => {
 
 const selectPdfOperation = (operation: string) => {
   pdfOperation.value = operation
+  convertedFile.value = null
+}
+
+const selectCompressionLevel = (level: 'low' | 'medium' | 'high') => {
+  pdfCompressionLevel.value = level
   convertedFile.value = null
 }
 
@@ -317,7 +355,12 @@ const setPickedPdfFiles = (files: PickedFile[]) => {
     uni.showToast({ title: '单个 PDF 不能超过 5MB', icon: 'none' })
     return
   }
-  selectedPdfFiles.value = validFiles
+  selectedPdfFiles.value = pdfOperation.value === 'merge' ? [...selectedPdfFiles.value, ...validFiles] : validFiles.slice(0, 1)
+  convertedFile.value = null
+}
+
+const clearSelectedPdfFiles = () => {
+  selectedPdfFiles.value = []
   convertedFile.value = null
 }
 
@@ -446,7 +489,8 @@ const operatePdf = async () => {
       operation: pdfOperation.value,
       files,
       pages: pdfPages.value,
-      text: pdfText.value
+      text: pdfText.value,
+      compression_level: pdfCompressionLevel.value
     })
     if (res.code === 200 && res.data) {
       convertedFile.value = res.data
@@ -576,6 +620,7 @@ const downloadConvertedFile = () => {
 }
 
 .select-btn,
+.secondary-btn,
 .convert-btn,
 .download-btn {
   width: 100%;
@@ -588,9 +633,16 @@ const downloadConvertedFile = () => {
 }
 
 .select-btn,
+.secondary-btn,
 .download-btn {
   height: 84rpx;
   line-height: 84rpx;
+}
+
+.secondary-btn {
+  margin-top: 18rpx;
+  background: var(--theme-surface-muted, #f6f8fb);
+  color: var(--theme-primary, #1677ff);
 }
 
 .convert-btn {
@@ -600,7 +652,8 @@ const downloadConvertedFile = () => {
 }
 
 .convert-btn[disabled],
-.select-btn[disabled] {
+.select-btn[disabled],
+.secondary-btn[disabled] {
   opacity: 0.55;
 }
 
@@ -666,14 +719,16 @@ const downloadConvertedFile = () => {
 }
 
 .format-grid,
-.mode-grid {
+.mode-grid,
+.compression-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
 }
 
 .format-item,
-.mode-item {
+.mode-item,
+.compression-item {
   display: flex;
   min-height: 150rpx;
   flex-direction: column;
@@ -686,9 +741,58 @@ const downloadConvertedFile = () => {
 }
 
 .format-item.active,
-.mode-item.active {
+.mode-item.active,
+.compression-item.active {
   border-color: var(--theme-primary, #1677ff);
   background: var(--theme-primary-soft, #eef5ff);
+}
+
+.compression-panel,
+.edit-panel {
+  margin-top: 22rpx;
+}
+
+.option-title,
+.compression-name,
+.compression-desc {
+  display: block;
+}
+
+.option-title {
+  margin-bottom: 14rpx;
+  color: var(--theme-text, #17233d);
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.compression-item {
+  min-height: 116rpx;
+}
+
+.compression-name {
+  color: var(--theme-text, #17233d);
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.compression-desc {
+  margin-top: 8rpx;
+  color: var(--theme-text-secondary, #667085);
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.text-area {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150rpx;
+  padding: 20rpx 22rpx;
+  border: 2rpx solid var(--theme-border, #e6e8ef);
+  border-radius: 20rpx;
+  background: var(--theme-surface-muted, #f6f8fb);
+  color: var(--theme-text, #17233d);
+  font-size: 26rpx;
+  line-height: 1.5;
 }
 
 .format-item.disabled {

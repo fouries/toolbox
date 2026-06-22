@@ -292,7 +292,7 @@ class DocumentConverterService:
         doc.save(buf)
         return buf.getvalue()
 
-    def operate_pdf(self, operation: str, files: List[PdfInputFile], pages: str = "", text: str = "") -> Dict[str, Any]:
+    def operate_pdf(self, operation: str, files: List[PdfInputFile], pages: str = "", text: str = "", compression_level: str = "medium") -> Dict[str, Any]:
         op = str(operation or "").strip().lower()
         try:
             if op == "merge":
@@ -300,7 +300,7 @@ class DocumentConverterService:
             if op in {"split", "extract"}:
                 return self._pdf_extract(files, pages)
             if op == "compress":
-                return self._pdf_compress(files)
+                return self._pdf_compress(files, compression_level)
             if op == "edit":
                 return self._pdf_add_text(files, text)
             if op in {"remove_watermark", "watermark_remove"}:
@@ -352,10 +352,13 @@ class DocumentConverterService:
             writer.add_page(reader.pages[index])
         return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_pages.pdf")
 
-    def _pdf_compress(self, files: List[PdfInputFile]) -> Dict[str, Any]:
+    def _pdf_compress(self, files: List[PdfInputFile], compression_level: str = "medium") -> Dict[str, Any]:
         pdfs = self._validate_pdf_files(files, min_count=1)
         if not pdfs:
             return {"code": 400, "msg": "请上传 PDF 文件"}
+        level = str(compression_level or "medium").strip().lower()
+        if level not in {"low", "medium", "high"}:
+            level = "medium"
         filename, content = pdfs[0]
         reader = PdfReader(BytesIO(content))
         writer = PdfWriter()
@@ -365,12 +368,18 @@ class DocumentConverterService:
             except Exception:
                 pass
             writer.add_page(page)
-        for key, value in (reader.metadata or {}).items():
-            if value:
-                try:
-                    writer.add_metadata({key: str(value)})
-                except Exception:
-                    pass
+        if level in {"medium", "high"}:
+            try:
+                writer.compress_identical_objects(remove_duplicates=True, remove_unreferenced=True)
+            except Exception:
+                pass
+        if level != "high":
+            for key, value in (reader.metadata or {}).items():
+                if value:
+                    try:
+                        writer.add_metadata({key: str(value)})
+                    except Exception:
+                        pass
         return self._pdf_result(writer, f"{self._safe_stem(Path(filename).stem)}_compressed.pdf")
 
     def _pdf_add_text(self, files: List[PdfInputFile], text: str) -> Dict[str, Any]:
