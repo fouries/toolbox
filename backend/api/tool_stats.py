@@ -14,6 +14,7 @@ KNOWN_TOOLS = [
     "gold-price",
     "qrcode",
     "document-converter",
+    "document-scanner",
     "password",
     "history-today",
     "solar-terms",

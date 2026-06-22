@@ -270,6 +270,7 @@ const tools = ref<ToolItem[]>([
   { id: 'gold-price', name: '黄金行情', desc: '黄金与贵金属行情参考', icon: '🥇', color: '#f59e0b', category: 'market', path: '/pages/gold-price/index', implemented: true, keywords: ['黄金', '金价', '行情'] },
   { id: 'qrcode', name: '二维码生成', desc: '文本/网址一键生成二维码', icon: '📱', color: '#a29bfe', category: 'utility', path: '/pages/qrcode/index', implemented: true, keywords: ['二维码', '网址', '文本'] },
   { id: 'document-converter', name: '文档转换/处理', desc: 'PDF、Word、TXT、HTML 互转', icon: '📄', color: '#1677ff', category: 'utility', path: '/pages/document-converter/index', implemented: true, keywords: ['文档', '转换', '处理', 'PDF', 'Word', 'TXT', 'HTML'] },
+  { id: 'document-scanner', name: '拍照扫描', desc: '拍照生成 PDF、Word、PPT', icon: '📷', color: '#f97316', category: 'utility', path: '/pages/document-scanner/index', implemented: true, keywords: ['拍照', '扫描', '摄像头', 'PDF', 'Word', 'PPT'] },
   { id: 'password', name: '密码生成器', desc: '生成安全随机密码', icon: '🔐', color: '#6366f1', category: 'utility', path: '/pages/password/index', implemented: true, keywords: ['密码', '随机', '安全'] },
   { id: 'calendar', name: '黄历日历', desc: '农历节气与宜忌查询', icon: '📅', color: '#f97316', category: 'calendar', path: '/pages/calendar/index', implemented: true, keywords: ['黄历', '农历', '日历'] },
   { id: 'history-today', name: '历史上的今天', desc: '查看今日历史事件', icon: '📜', color: '#b45309', category: 'calendar', path: '/pages/history-today/index', implemented: true, keywords: ['历史', '今天'] },

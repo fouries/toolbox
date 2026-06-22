@@ -3,7 +3,7 @@
     <view class="page-shell document-shell">
       <view class="page-header hero-card">
         <text class="title">📄 文档转换/处理</text>
-        <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，也支持拍照扫描生成 PDF / Word / PPT，转换后直接下载，不长期保存</text>
+        <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，也支持图片转 PDF / Word，转换后直接下载，不长期保存</text>
       </view>
 
       <view class="card mode-card">
@@ -21,11 +21,6 @@
             <text class="format-icon">🧩</text>
             <text class="format-name">PDF 处理</text>
             <text class="format-desc">合并/拆分/压缩</text>
-          </view>
-          <view class="mode-item" :class="{ active: toolMode === 'scan' }" @click="switchToolMode('scan')">
-            <text class="format-icon">📷</text>
-            <text class="format-name">拍照扫描</text>
-            <text class="format-desc">生成 PDF/Word/PPT</text>
           </view>
         </view>
       </view>
@@ -119,49 +114,6 @@
         <input v-if="pdfOperation === 'remove_watermark'" class="text-input" v-model="pdfText" placeholder="输入要尝试移除的水印文字，可留空仅移除批注" />
       </view>
 
-      <view class="card scan-card" v-if="toolMode === 'scan'">
-        <view class="section-title-row">
-          <text class="section-title">扫描图片</text>
-          <text class="section-badge">{{ scanFiles.length }} 张</text>
-        </view>
-        <button class="select-btn" @click="takeScanPhoto" :disabled="loading || scanFiles.length >= 10">调用摄像头拍照</button>
-        <button class="secondary-btn" @click="chooseScanImages" :disabled="loading || scanFiles.length >= 10">从相册选择图片</button>
-        <button v-if="scanFiles.length" class="secondary-btn" @click="clearScanFiles" :disabled="loading">清空扫描图片</button>
-        <view class="scan-preview-grid" v-if="scanFiles.length">
-          <view class="scan-preview" v-for="(file, index) in scanFiles" :key="`${file.name}-${index}`">
-            <text class="scan-index">{{ index + 1 }}</text>
-            <text class="scan-name">{{ file.name }}</text>
-            <text class="scan-size">{{ formatSize(file.size) }}</text>
-          </view>
-        </view>
-        <view class="tips-box">
-          <text class="tips-title">扫描说明</text>
-          <text class="tips-text">支持调用摄像头拍照，也可以从相册选择 JPG、PNG、WEBP 图片。</text>
-          <text class="tips-text">一次最多 10 张，按添加顺序生成文档；当前是图片扫描生成文档，不做 OCR 文字识别。</text>
-        </view>
-      </view>
-
-      <view class="card scan-format-card" v-if="toolMode === 'scan'">
-        <view class="section-title-row">
-          <text class="section-title">生成类型</text>
-          <text class="section-badge">{{ scanTargetFormat.toUpperCase() }}</text>
-        </view>
-        <input class="text-input" v-model="scanTitle" maxlength="40" placeholder="文档标题，如：扫描文档" />
-        <view class="format-grid scan-target-grid">
-          <view
-            v-for="item in scanTargetFormats"
-            :key="item.value"
-            class="format-item"
-            :class="{ active: scanTargetFormat === item.value }"
-            @click="selectScanTargetFormat(item.value)"
-          >
-            <text class="format-icon">{{ item.icon }}</text>
-            <text class="format-name">{{ item.label }}</text>
-            <text class="format-desc">{{ item.desc }}</text>
-          </view>
-        </view>
-      </view>
-
       <view class="card format-card" v-if="toolMode === 'convert'">
         <view class="section-title-row">
           <text class="section-title">转换为</text>
@@ -209,7 +161,6 @@
           <view class="scene-item">PDF 合并/拆分：多份 PDF 合成一份，或按页码提取</view>
           <view class="scene-item">PDF 压缩/编辑/去水印：适合基础页面处理</view>
           <view class="scene-item">Excel/PPT → PDF/Word/TXT：提取内容后轻量转换</view>
-          <view class="scene-item">拍照扫描 → PDF/Word/PPT：调用摄像头拍照，多张图片生成不同类型文档</view>
         </view>
       </view>
     </view>
@@ -218,7 +169,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { convertDocumentBase64, operatePdfBase64, scanDocumentBase64, type DocumentConvertResult } from '@/api'
+import { convertDocumentBase64, operatePdfBase64, type DocumentConvertResult } from '@/api'
 import { useTheme } from '@/utils/theme'
 
 const { themeClass } = useTheme()
@@ -235,15 +186,12 @@ interface PickedFile {
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const selectedFile = ref<PickedFile | null>(null)
 const selectedPdfFiles = ref<PickedFile[]>([])
-const scanFiles = ref<PickedFile[]>([])
 const targetFormat = ref('pdf')
-const toolMode = ref<'convert' | 'pdf' | 'scan'>('convert')
+const toolMode = ref<'convert' | 'pdf'>('convert')
 const pdfOperation = ref('merge')
 const pdfPages = ref('')
 const pdfText = ref('')
 const pdfCompressionLevel = ref<'low' | 'medium' | 'high'>('medium')
-const scanTargetFormat = ref<'pdf' | 'docx' | 'pptx'>('pdf')
-const scanTitle = ref('扫描文档')
 const loading = ref(false)
 const convertedFile = ref<DocumentConvertResult | null>(null)
 
@@ -270,12 +218,6 @@ const compressionOptions = [
   { value: 'high', label: '高压缩', desc: '尽量减小体积' }
 ] as const
 
-const scanTargetFormats = [
-  { value: 'pdf', label: 'PDF', icon: '📕', desc: '适合归档打印' },
-  { value: 'docx', label: 'Word', icon: '📝', desc: '图片页可编辑' },
-  { value: 'pptx', label: 'PPT', icon: '📽️', desc: '一图一页演示' }
-] as const
-
 const imageExts = ['jpg', 'jpeg', 'png', 'webp']
 const documentExts = ['txt', 'html', 'docx', 'pdf', 'xlsx', 'pptx']
 
@@ -293,11 +235,7 @@ const formatSize = (size: number) => {
   return `${Math.max(1, Math.round(size / 1024))} KB`
 }
 const fileSizeLabel = computed(() => formatSize(selectedFile.value?.size || 0))
-const modeBadge = computed(() => {
-  if (toolMode.value === 'convert') return '格式转换'
-  if (toolMode.value === 'pdf') return 'PDF 工具'
-  return '拍照扫描'
-})
+const modeBadge = computed(() => toolMode.value === 'convert' ? '格式转换' : 'PDF 工具')
 const selectedPdfOperation = computed(() => pdfOperations.find(item => item.value === pdfOperation.value) || pdfOperations[0])
 const pdfSelectButtonText = computed(() => {
   if (pdfOperation.value === 'merge') return selectedPdfFiles.value.length ? '继续添加 PDF' : '选择多个 PDF 文件'
@@ -318,17 +256,8 @@ const canOperatePdf = computed(() => {
   if (pdfOperation.value === 'edit') return Boolean(pdfText.value.trim())
   return true
 })
-const canScanDocument = computed(() => scanFiles.value.length > 0)
-const canRunAction = computed(() => {
-  if (toolMode.value === 'convert') return canConvert.value
-  if (toolMode.value === 'pdf') return canOperatePdf.value
-  return canScanDocument.value
-})
-const primaryActionText = computed(() => {
-  if (toolMode.value === 'convert') return '开始转换'
-  if (toolMode.value === 'pdf') return '开始处理 PDF'
-  return '生成扫描文档'
-})
+const canRunAction = computed(() => toolMode.value === 'convert' ? canConvert.value : canOperatePdf.value)
+const primaryActionText = computed(() => toolMode.value === 'convert' ? '开始转换' : '开始处理 PDF')
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let binary = ''
@@ -353,13 +282,8 @@ const normalizeExt = (name: string) => {
   return ext === 'htm' ? 'html' : ext
 }
 
-const switchToolMode = (mode: 'convert' | 'pdf' | 'scan') => {
+const switchToolMode = (mode: 'convert' | 'pdf') => {
   toolMode.value = mode
-  convertedFile.value = null
-}
-
-const selectScanTargetFormat = (format: 'pdf' | 'docx' | 'pptx') => {
-  scanTargetFormat.value = format
   convertedFile.value = null
 }
 
@@ -472,65 +396,6 @@ const choosePdfFiles = () => {
   // #endif
 }
 
-const normalizeScanPickedFiles = (res: any, prefix = 'scan') => {
-  const tempFiles = res.tempFiles || []
-  const paths = res.tempFilePaths || []
-  if (tempFiles.length) {
-    return tempFiles.map((file: any, index: number) => {
-      const path = file.path || file.tempFilePath || paths[index]
-      const name = file.name || path?.split('/').pop() || `${prefix}-${Date.now()}-${index + 1}.jpg`
-      const content = file.file || file.raw || path
-      return { name, size: file.size || 0, path, content }
-    })
-  }
-  return paths.map((path: string, index: number) => ({ name: path?.split('/').pop() || `${prefix}-${Date.now()}-${index + 1}.jpg`, size: 0, path, content: path }))
-}
-
-const setPickedScanFiles = (files: PickedFile[]) => {
-  const remain = 10 - scanFiles.value.length
-  if (remain <= 0) {
-    uni.showToast({ title: '一次最多 10 张', icon: 'none' })
-    return
-  }
-  const candidates = files.slice(0, remain)
-  const validFiles = candidates.filter(file => imageExts.includes(normalizeExt(file.name)))
-  if (!validFiles.length) {
-    uni.showToast({ title: '请选择 JPG、PNG、WEBP 图片', icon: 'none' })
-    return
-  }
-  if (validFiles.some(file => file.size > MAX_FILE_SIZE)) {
-    uni.showToast({ title: '单张图片不能超过 5MB', icon: 'none' })
-    return
-  }
-  scanFiles.value = [...scanFiles.value, ...validFiles]
-  convertedFile.value = null
-}
-
-const takeScanPhoto = () => {
-  uni.chooseImage({
-    count: 1,
-    sourceType: ['camera'],
-    sizeType: ['compressed'],
-    success: (res: any) => setPickedScanFiles(normalizeScanPickedFiles(res, 'camera')),
-    fail: () => uni.showToast({ title: '未拍照', icon: 'none' })
-  })
-}
-
-const chooseScanImages = () => {
-  uni.chooseImage({
-    count: Math.max(1, Math.min(9, 10 - scanFiles.value.length)),
-    sourceType: ['album'],
-    sizeType: ['compressed'],
-    success: (res: any) => setPickedScanFiles(normalizeScanPickedFiles(res, 'album')),
-    fail: () => uni.showToast({ title: '未选择图片', icon: 'none' })
-  })
-}
-
-const clearScanFiles = () => {
-  scanFiles.value = []
-  convertedFile.value = null
-}
-
 const selectTargetFormat = (format: string) => {
   if (isTargetDisabled(format)) {
     uni.showToast({ title: isImageSource.value ? '图片仅支持转 PDF 或 Word' : '请选择不同的目标格式', icon: 'none' })
@@ -641,42 +506,7 @@ const operatePdf = async () => {
   }
 }
 
-const generateScanDocument = async () => {
-  if (!canScanDocument.value) {
-    uni.showToast({ title: '请先拍照或选择图片', icon: 'none' })
-    return
-  }
-
-  loading.value = true
-  convertedFile.value = null
-  try {
-    const files = []
-    for (const file of scanFiles.value) {
-      files.push({ filename: file.name, content_base64: await readSelectedFileAsBase64(file) })
-    }
-    const res = await scanDocumentBase64({
-      files,
-      target_format: scanTargetFormat.value,
-      title: scanTitle.value.trim() || '扫描文档'
-    })
-    if (res.code === 200 && res.data) {
-      convertedFile.value = res.data
-      uni.showToast({ title: '生成成功', icon: 'success' })
-    } else {
-      uni.showToast({ title: res.msg || '生成失败', icon: 'none' })
-    }
-  } catch (error: any) {
-    uni.showToast({ title: error?.message || '生成失败', icon: 'none' })
-  } finally {
-    loading.value = false
-  }
-}
-
-const runPrimaryAction = () => {
-  if (toolMode.value === 'convert') return convertDocument()
-  if (toolMode.value === 'pdf') return operatePdf()
-  return generateScanDocument()
-}
+const runPrimaryAction = () => toolMode.value === 'convert' ? convertDocument() : operatePdf()
 
 const downloadConvertedFile = () => {
   const file = convertedFile.value
@@ -757,8 +587,6 @@ const downloadConvertedFile = () => {
 .mode-card,
 .pdf-card,
 .pdf-operation-card,
-.scan-card,
-.scan-format-card,
 .upload-card,
 .format-card,
 .result-card,
@@ -890,8 +718,7 @@ const downloadConvertedFile = () => {
 
 .format-grid,
 .mode-grid,
-.compression-grid,
-.scan-preview-grid {
+.compression-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
@@ -964,54 +791,6 @@ const downloadConvertedFile = () => {
   color: var(--theme-text, #17233d);
   font-size: 26rpx;
   line-height: 1.5;
-}
-
-.scan-preview-grid {
-  margin-top: 22rpx;
-  gap: 16rpx;
-}
-
-.scan-preview {
-  box-sizing: border-box;
-  min-height: 126rpx;
-  padding: 18rpx;
-  border: 2rpx solid var(--theme-border, #e6e8ef);
-  border-radius: 20rpx;
-  background: var(--theme-surface-muted, #f6f8fb);
-}
-
-.scan-index,
-.scan-name,
-.scan-size {
-  display: block;
-}
-
-.scan-index {
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 50%;
-  background: var(--theme-primary, #1677ff);
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 800;
-  line-height: 44rpx;
-  text-align: center;
-}
-
-.scan-name {
-  margin-top: 12rpx;
-  overflow: hidden;
-  color: var(--theme-text, #17233d);
-  font-size: 24rpx;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scan-size {
-  margin-top: 6rpx;
-  color: var(--theme-text-secondary, #667085);
-  font-size: 22rpx;
 }
 
 .format-item.disabled {
