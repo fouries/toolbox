@@ -495,6 +495,107 @@ export interface MediaConvertResult {
   duration?: number | null
 }
 
+export interface MediaTaskResult {
+  task_id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  progress: number
+  message?: string
+  operation?: string
+  error?: string
+  filename?: string
+  media_type?: string
+  download_url?: string
+  text?: string
+  language?: string
+  duration?: number | null
+}
+
+export const createMediaTask = (payload: {
+  operation: string
+  files: Array<{ name: string; path?: string; raw?: File | Blob; file?: File | Blob; tempFilePath?: string }>
+  options?: Record<string, unknown>
+}) => {
+  const formData = {
+    operation: payload.operation,
+    options: JSON.stringify(payload.options || {})
+  }
+
+  // #ifdef H5
+  const body = new FormData()
+  body.append('operation', formData.operation)
+  body.append('options', formData.options)
+  payload.files.forEach((item, index) => {
+    const raw = item.file || item.raw
+    if (raw instanceof Blob) body.append('files', raw, item.name || `media-${index}`)
+  })
+  return new Promise<ApiResponse<MediaTaskResult>>((resolve, reject) => {
+    fetch(BASE_URL + '/api/media/tasks', { method: 'POST', body })
+      .then(async response => {
+        const data = await response.json()
+        if (response.ok) resolve(data as ApiResponse<MediaTaskResult>)
+        else reject(new Error(data?.msg || data?.detail || `请求失败: ${response.status}`))
+      })
+      .catch(error => reject(new Error(error?.message || '上传失败')))
+  })
+  // #endif
+
+  // #ifdef MP-WEIXIN
+  return new Promise<ApiResponse<MediaTaskResult>>(async (resolve, reject) => {
+    try {
+      const init = await request<MediaTaskResult>('/api/media/tasks/init', {
+        method: 'POST',
+        timeout: 15000,
+        data: { operation: payload.operation, options: payload.options || {} }
+      })
+      const taskId = init.data?.task_id
+      if (!taskId) throw new Error('任务初始化失败')
+      for (const item of payload.files) {
+        await new Promise<void>((uploadResolve, uploadReject) => {
+          uni.uploadFile({
+            url: BASE_URL + `/api/media/tasks/${encodeURIComponent(taskId)}/files`,
+            filePath: item.path || item.tempFilePath || '',
+            name: 'file',
+            timeout: 180000,
+            success: (res) => {
+              if (res.statusCode >= 200 && res.statusCode < 300) uploadResolve()
+              else uploadReject(new Error(`上传失败: ${res.statusCode}`))
+            },
+            fail: (error) => uploadReject(new Error(error.errMsg || '上传失败'))
+          })
+        })
+      }
+      const started = await request<MediaTaskResult>(`/api/media/tasks/${encodeURIComponent(taskId)}/start`, {
+        method: 'POST',
+        timeout: 15000
+      })
+      resolve(started)
+    } catch (error: any) {
+      reject(new Error(error?.message || '上传失败'))
+    }
+  })
+  // #endif
+}
+
+export const createMediaUrlTask = (payload: {
+  url: string
+  target_format?: string
+}) => {
+  return request<MediaTaskResult>('/api/media/url-tasks', {
+    method: 'POST',
+    timeout: 15000,
+    data: payload
+  })
+}
+
+export const getMediaTask = (taskId: string) => {
+  return request<MediaTaskResult>(`/api/media/tasks/${encodeURIComponent(taskId)}`, { timeout: 15000 })
+}
+
+export const getMediaTaskDownloadUrl = (downloadUrl: string) => {
+  if (/^https?:\/\//.test(downloadUrl)) return downloadUrl
+  return BASE_URL + downloadUrl
+}
+
 export const convertMediaBase64 = (payload: {
   operation: string
   files: Array<{ filename: string; content_base64: string }>
@@ -551,6 +652,10 @@ export default {
   convertDocumentBase64,
   operatePdfBase64,
   scanDocumentBase64,
+  createMediaTask,
+  createMediaUrlTask,
+  getMediaTask,
+  getMediaTaskDownloadUrl,
   convertMediaBase64,
   extractUrlAudioBase64
 }

@@ -3,7 +3,7 @@
     <view class="page-shell media-shell">
       <view class="page-header hero-card">
         <text class="title">🎧 音视频转换</text>
-        <text class="subtitle">音频裁剪、拼接/合并、音量调节、视频提取音频、声音转文字和轻量人声处理</text>
+        <text class="subtitle">大文件直传服务器后台处理，支持进度查询和完成后下载，避免 Base64 往返卡顿</text>
       </view>
 
       <view class="card operation-card">
@@ -135,8 +135,20 @@
       </view>
 
       <button class="primary-btn" :disabled="!canSubmit || loading" @click="submitMediaTask">
-        {{ loading ? '处理中...' : selectedOperation?.action || '开始处理' }}
+        {{ loading ? '上传/处理中...' : selectedOperation?.action || '开始处理' }}
       </button>
+
+      <view class="card progress-card" v-if="currentTask">
+        <view class="section-title-row">
+          <text class="section-title">任务进度</text>
+          <text class="section-badge">{{ currentTask.status }}</text>
+        </view>
+        <view class="progress-track">
+          <view class="progress-bar" :style="{ width: `${currentTask.progress || 0}%` }"></view>
+        </view>
+        <text class="progress-text">{{ currentTask.progress || 0 }}% · {{ currentTask.message || '处理中...' }}</text>
+        <text class="progress-text error-text" v-if="currentTask.status === 'failed'">{{ currentTask.error || '处理失败' }}</text>
+      </view>
 
       <view class="card result-card" v-if="convertedFile || transcriptText">
         <view class="section-title-row">
@@ -166,7 +178,8 @@
           <view class="scene-item">音频合并：多个音频叠加混音</view>
           <view class="scene-item">声音转文字：调用服务器 Whisper 能力，输出文本</view>
           <view class="scene-item">人声消除/提取：轻量声道处理，复杂歌曲不保证完美</view>
-          <view class="scene-item">视频转音频/链接提取：输出 MP3/WAV/M4A/AAC</view>
+          <view class="scene-item">视频转音频/链接提取：上传原文件后台处理，完成后通过临时链接下载</view>
+          <view class="scene-item">大文件不再使用 Base64 JSON 往返，十几 M/几十 M 视频体验更稳定</view>
         </view>
       </view>
     </view>
@@ -174,8 +187,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { convertMediaBase64, extractUrlAudioBase64, type MediaConvertResult } from '@/api'
+import { computed, onUnmounted, ref } from 'vue'
+import { createMediaTask, createMediaUrlTask, getMediaTask, getMediaTaskDownloadUrl, type MediaTaskResult } from '@/api'
 import { useTheme } from '@/utils/theme'
 
 declare const wx: any
@@ -228,8 +241,10 @@ const vocalMode = ref<'instrumental' | 'vocal'>('instrumental')
 const language = ref('zh')
 const videoUrl = ref('')
 const loading = ref(false)
-const convertedFile = ref<MediaConvertResult | null>(null)
+const convertedFile = ref<MediaTaskResult | null>(null)
 const transcriptText = ref('')
+const currentTask = ref<MediaTaskResult | null>(null)
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const selectedOperation = computed(() => operations.find(item => item.value === operation.value))
 const multiFileMode = computed(() => Boolean(selectedOperation.value?.multi))
@@ -246,6 +261,14 @@ const selectOperation = (value: Operation) => {
   selectedFiles.value = []
   convertedFile.value = null
   transcriptText.value = ''
+  currentTask.value = null
+}
+
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 }
 
 const normalizePickedFile = (file: any, index: number): PickedFile => {
@@ -272,6 +295,7 @@ const setPickedFiles = (files: PickedFile[]) => {
   selectedFiles.value = multiFileMode.value ? [...selectedFiles.value, ...valid].slice(0, maxFileCount.value) : valid.slice(0, 1)
   convertedFile.value = null
   transcriptText.value = ''
+  currentTask.value = null
 }
 
 const chooseMediaFiles = () => {
@@ -304,44 +328,7 @@ const clearSelectedFiles = () => {
   selectedFiles.value = []
   convertedFile.value = null
   transcriptText.value = ''
-}
-
-const readFileAsBase64 = async (file: PickedFile): Promise<string> => {
-  const raw = file.file || file.raw
-  if (raw && typeof (raw as Blob).arrayBuffer === 'function') {
-    const buffer = await (raw as Blob).arrayBuffer()
-    return arrayBufferToBase64(buffer)
-  }
-  // #ifdef MP-WEIXIN
-  const fs = uni.getFileSystemManager()
-  return await new Promise((resolve, reject) => {
-    fs.readFile({
-      filePath: file.path || file.tempFilePath || '',
-      encoding: 'base64',
-      success: res => resolve(String(res.data)),
-      fail: reject
-    })
-  })
-  // #endif
-
-  // #ifdef H5
-  if (file.path) {
-    const response = await fetch(file.path as string)
-    const buffer = await response.arrayBuffer()
-    return arrayBufferToBase64(buffer)
-  }
-  // #endif
-  throw new Error('读取文件失败')
-}
-
-const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-  let binary = ''
-  const bytes = new Uint8Array(buffer)
-  const chunkSize = 0x8000
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
-  }
-  return btoa(binary)
+  currentTask.value = null
 }
 
 const buildOptions = () => ({
@@ -353,37 +340,58 @@ const buildOptions = () => ({
   language: language.value
 })
 
+const pollMediaTask = (taskId: string) => {
+  stopPolling()
+  pollTimer = setInterval(async () => {
+    try {
+      const res = await getMediaTask(taskId)
+      const task = res.data
+      if (!task) return
+      currentTask.value = task
+      if (task.status === 'completed') {
+        stopPolling()
+        loading.value = false
+        if (operation.value === 'transcribe') {
+          transcriptText.value = String(task.text || '')
+          uni.showToast({ title: '识别完成', icon: 'success' })
+        } else {
+          convertedFile.value = task
+          uni.showToast({ title: '处理完成', icon: 'success' })
+        }
+      } else if (task.status === 'failed') {
+        stopPolling()
+        loading.value = false
+        uni.showToast({ title: task.error || '音视频处理失败', icon: 'none' })
+      }
+    } catch (error: any) {
+      stopPolling()
+      loading.value = false
+      uni.showToast({ title: error?.message || '查询任务失败', icon: 'none' })
+    }
+  }, 1500)
+}
+
 const submitMediaTask = async () => {
   if (!canSubmit.value) {
     uni.showToast({ title: multiFileMode.value ? '请至少选择 2 个音频文件' : '请补全文件或链接', icon: 'none' })
     return
   }
+  stopPolling()
   loading.value = true
   convertedFile.value = null
   transcriptText.value = ''
+  currentTask.value = null
   try {
-    let res
-    if (operation.value === 'url_extract') {
-      res = await extractUrlAudioBase64({ url: videoUrl.value.trim(), target_format: targetFormat.value })
-    } else {
-      const files = []
-      for (const file of selectedFiles.value) {
-        files.push({ filename: file.name, content_base64: await readFileAsBase64(file) })
-      }
-      res = await convertMediaBase64({ operation: operation.value, files, options: buildOptions() })
-    }
-    const data = res.data || {}
-    if (operation.value === 'transcribe') {
-      transcriptText.value = String(data.text || '')
-      uni.showToast({ title: '识别完成', icon: 'success' })
-    } else {
-      convertedFile.value = data
-      uni.showToast({ title: '处理完成', icon: 'success' })
-    }
+    const res = operation.value === 'url_extract'
+      ? await createMediaUrlTask({ url: videoUrl.value.trim(), target_format: targetFormat.value })
+      : await createMediaTask({ operation: operation.value, files: selectedFiles.value, options: buildOptions() })
+    const task = res.data
+    if (!task?.task_id) throw new Error('任务创建失败')
+    currentTask.value = task
+    pollMediaTask(task.task_id)
   } catch (error: any) {
-    uni.showToast({ title: error?.message || '音视频处理失败', icon: 'none' })
-  } finally {
     loading.value = false
+    uni.showToast({ title: error?.message || '音视频处理失败', icon: 'none' })
   }
 }
 
@@ -391,34 +399,27 @@ const copyTranscript = () => {
   uni.setClipboardData({ data: transcriptText.value })
 }
 
-const base64ToArrayBuffer = (base64: string) => {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
-  return bytes.buffer
-}
-
 const downloadConvertedFile = () => {
-  if (!convertedFile.value?.base64 || !convertedFile.value.filename) return
+  if (!convertedFile.value?.download_url || !convertedFile.value.filename) return
+  const url = getMediaTaskDownloadUrl(convertedFile.value.download_url)
   // #ifdef H5
-  const blob = new Blob([base64ToArrayBuffer(convertedFile.value.base64)], { type: convertedFile.value.media_type || 'audio/mpeg' })
-  const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = convertedFile.value.filename
   link.click()
-  URL.revokeObjectURL(url)
   // #endif
 
   // #ifdef MP-WEIXIN
-  const fs = uni.getFileSystemManager()
-  const filePath = `${wx.env.USER_DATA_PATH}/${convertedFile.value.filename}`
-  fs.writeFile({
-    filePath,
-    data: convertedFile.value.base64,
-    encoding: 'base64',
-    success: () => uni.showToast({ title: '已保存到小程序本地', icon: 'success' }),
-    fail: () => uni.showToast({ title: '保存失败', icon: 'none' })
+  uni.downloadFile({
+    url,
+    success: res => {
+      if (res.statusCode === 200) {
+        uni.openDocument({ filePath: res.tempFilePath, showMenu: true, fail: () => uni.showToast({ title: '文件已下载，请用其他应用打开', icon: 'none' }) })
+      } else {
+        uni.showToast({ title: '下载失败', icon: 'none' })
+      }
+    },
+    fail: () => uni.showToast({ title: '下载失败', icon: 'none' })
   })
   // #endif
 }
@@ -428,6 +429,8 @@ const formatSize = (size: number) => {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
+
+onUnmounted(() => stopPolling())
 </script>
 
 <style scoped>
@@ -464,6 +467,10 @@ const formatSize = (size: number) => {
 .transcript-title { display: block; margin-bottom: 12rpx; font-weight: 800; color: var(--theme-text, #111827); }
 .transcript-text { box-sizing: border-box; width: 100%; min-height: 260rpx; padding: 18rpx; border-radius: 18rpx; background: #fff; color: #111827; font-size: 25rpx; line-height: 1.6; }
 .result-file { padding: 18rpx; border-radius: 20rpx; background: var(--theme-muted, #f8fafc); }
+.progress-track { height: 18rpx; border-radius: 999rpx; background: #e5e7eb; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 999rpx; background: linear-gradient(135deg, #7c3aed, #2563eb); transition: width .2s ease; }
+.progress-text { display: block; margin-top: 14rpx; color: var(--theme-text-secondary, #64748b); font-size: 24rpx; }
+.error-text { color: #dc2626; }
 .download-btn { margin-top: 18rpx; }
 .scene-list { display: flex; flex-direction: column; gap: 14rpx; }
 .scene-item { padding: 18rpx; border-radius: 18rpx; background: var(--theme-muted, #f8fafc); color: var(--theme-text-secondary, #64748b); font-size: 24rpx; line-height: 1.5; }

@@ -102,3 +102,74 @@ def test_media_transcribe_returns_text_payload_or_clear_error(tmp_path):
         assert "text" in result["data"]
     else:
         assert "声音转文字" in result["msg"] or "Whisper" in result["msg"]
+
+
+def test_media_async_task_endpoints_create_poll_and_download(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    monkeypatch.setattr(main, "MEDIA_TASK_DIR", tmp_path / "media_tasks")
+    main.MEDIA_TASKS.clear()
+    client = TestClient(main.app)
+    audio_bytes = _make_sine(tmp_path / "task.wav", 440, 0.5)
+
+    create = client.post(
+        "/api/media/tasks",
+        data={"operation": "trim", "options": '{"target_format":"mp3","start":0,"end":0.3}'},
+        files=[("files", ("task.wav", audio_bytes, "audio/wav"))],
+    )
+    assert create.status_code == 200, create.text
+    task_id = create.json()["data"]["task_id"]
+
+    status = {}
+    for _ in range(40):
+        status_res = client.get(f"/api/media/tasks/{task_id}")
+        assert status_res.status_code == 200, status_res.text
+        status = status_res.json()["data"]
+        if status["status"] in {"completed", "failed"}:
+            break
+        import time
+        time.sleep(0.2)
+
+    assert status["status"] == "completed", status
+    assert status["download_url"].endswith(f"/api/media/tasks/{task_id}/download")
+    downloaded = client.get(status["download_url"])
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-type"].startswith("audio/")
+    assert len(downloaded.content) > 100
+
+
+def test_media_url_task_endpoint_rejects_non_http():
+    from fastapi.testclient import TestClient
+    import main
+
+    client = TestClient(main.app)
+    response = client.post("/api/media/url-tasks", json={"url": "ftp://example.com/a.mp4", "target_format": "mp3"})
+    assert response.status_code == 400
+
+
+def test_media_task_init_upload_start_flow(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    monkeypatch.setattr(main, "MEDIA_TASK_DIR", tmp_path / "media_tasks_init")
+    main.MEDIA_TASKS.clear()
+    client = TestClient(main.app)
+    audio_bytes = _make_sine(tmp_path / "init.wav", 440, 0.5)
+
+    init = client.post("/api/media/tasks/init", json={"operation": "trim", "options": {"target_format": "mp3", "start": 0, "end": 0.3}})
+    assert init.status_code == 200, init.text
+    task_id = init.json()["data"]["task_id"]
+    uploaded = client.post(f"/api/media/tasks/{task_id}/files", files={"file": ("init.wav", audio_bytes, "audio/wav")})
+    assert uploaded.status_code == 200, uploaded.text
+    started = client.post(f"/api/media/tasks/{task_id}/start")
+    assert started.status_code == 200, started.text
+
+    status = {}
+    for _ in range(40):
+        status = client.get(f"/api/media/tasks/{task_id}").json()["data"]
+        if status["status"] in {"completed", "failed"}:
+            break
+        import time
+        time.sleep(0.2)
+    assert status["status"] == "completed", status

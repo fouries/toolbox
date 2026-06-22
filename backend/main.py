@@ -1,9 +1,16 @@
+import json
 import logging
+import shutil
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from urllib.parse import unquote, urlparse
@@ -121,11 +128,122 @@ class MediaUrlExtractRequest(BaseModel):
     url: str
     target_format: str = "mp3"
 
+class MediaTaskInitRequest(BaseModel):
+    operation: str
+    options: dict = {}
+
+
+MEDIA_TASK_DIR = Path(__file__).resolve().parent / "data" / "media_tasks"
+MEDIA_TASK_TTL = timedelta(hours=6)
+MEDIA_TASK_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="media-converter")
+MEDIA_TASKS: dict[str, dict[str, Any]] = {}
+
+
+def _media_task_now() -> datetime:
+    return datetime.utcnow()
+
+
+def _cleanup_media_tasks() -> None:
+    MEDIA_TASK_DIR.mkdir(parents=True, exist_ok=True)
+    cutoff = _media_task_now() - MEDIA_TASK_TTL
+    stale_ids = [task_id for task_id, task in MEDIA_TASKS.items() if task.get("updated_at", task.get("created_at", cutoff)) < cutoff]
+    for task_id in stale_ids:
+        task_dir = MEDIA_TASK_DIR / task_id
+        if task_dir.exists():
+            shutil.rmtree(task_dir, ignore_errors=True)
+        MEDIA_TASKS.pop(task_id, None)
+    for task_dir in MEDIA_TASK_DIR.iterdir():
+        if not task_dir.is_dir():
+            continue
+        try:
+            if datetime.fromtimestamp(task_dir.stat().st_mtime) < cutoff:
+                shutil.rmtree(task_dir, ignore_errors=True)
+        except OSError:
+            pass
+
+
+def _serialize_media_task(task_id: str, task: dict[str, Any]) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "task_id": task_id,
+        "status": task.get("status", "pending"),
+        "progress": int(task.get("progress", 0)),
+        "message": task.get("message", ""),
+        "operation": task.get("operation", ""),
+    }
+    if task.get("error"):
+        data["error"] = task["error"]
+    if task.get("text") is not None:
+        data["text"] = task.get("text", "")
+        data["language"] = task.get("language")
+        data["duration"] = task.get("duration")
+    if task.get("filename"):
+        data["filename"] = task["filename"]
+        data["media_type"] = task.get("media_type", "application/octet-stream")
+        data["download_url"] = f"/api/media/tasks/{task_id}/download"
+    return data
+
+
+def _run_media_conversion_task(task_id: str) -> None:
+    task = MEDIA_TASKS.get(task_id)
+    if not task:
+        return
+    task["status"] = "running"
+    task["progress"] = 20
+    task["message"] = "正在处理音视频，请稍候..."
+    task["updated_at"] = _media_task_now()
+    try:
+        service = get_media_converter_service()
+        if task.get("url"):
+            import asyncio as _asyncio
+            result = _asyncio.run(service.extract_audio_from_url(str(task["url"]), str(task.get("target_format") or "mp3")))
+        else:
+            files = []
+            for item in task.get("files", []):
+                files.append({"filename": item["filename"], "content": Path(item["path"]).read_bytes()})
+            task["progress"] = 45
+            task["message"] = "文件已上传，正在转换..."
+            task["updated_at"] = _media_task_now()
+            result = service.process(str(task.get("operation") or ""), files, task.get("options") or {})
+        if result.get("code") == 400:
+            raise ValueError(str(result.get("msg") or "音视频处理失败"))
+        data = result.get("data")
+        if data is not None:
+            task.update({
+                "status": "completed",
+                "progress": 100,
+                "message": "识别完成",
+                "text": str(data.get("text") or ""),
+                "language": data.get("language"),
+                "duration": data.get("duration"),
+                "updated_at": _media_task_now(),
+            })
+            return
+        output_path = Path(task["task_dir"]) / str(result["filename"])
+        output_path.write_bytes(result["content"])
+        task.update({
+            "status": "completed",
+            "progress": 100,
+            "message": "处理完成，请下载结果文件",
+            "filename": result["filename"],
+            "media_type": result["media_type"],
+            "output_path": str(output_path),
+            "updated_at": _media_task_now(),
+        })
+    except Exception as exc:
+        task.update({
+            "status": "failed",
+            "progress": 100,
+            "message": "处理失败",
+            "error": str(exc),
+            "updated_at": _media_task_now(),
+        })
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
     # 启动时：初始化数据库、迁移旧 JSON 点击统计、连接缓存
     init_db()
+    _cleanup_media_tasks()
     get_tool_stats_service().migrate_legacy_json()
     await cache.init()
     yield
@@ -532,6 +650,171 @@ async def media_convert_base64(payload: MediaConvertBase64Request):
         "media_type": result["media_type"],
         "base64": base64.b64encode(result["content"]).decode("ascii"),
     })
+
+
+@app.post("/api/media/tasks", summary="创建音视频转换任务", tags=["本地工具"])
+async def media_create_task(
+    operation: str = Form(...),
+    options: str = Form("{}"),
+    files: list[UploadFile] = File(default=[]),
+):
+    """上传原始文件并后台处理，避免大文件 Base64 往返。"""
+    _cleanup_media_tasks()
+    operation = str(operation or "").strip().lower()
+    try:
+        parsed_options = json.loads(options or "{}")
+        if not isinstance(parsed_options, dict):
+            parsed_options = {}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="options 不是有效 JSON")
+    task_id = uuid.uuid4().hex
+    task_dir = MEDIA_TASK_DIR / task_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    saved_files = []
+    for idx, upload in enumerate(files or []):
+        safe_name = Path(upload.filename or f"media-{idx}").name or f"media-{idx}"
+        input_path = task_dir / f"input_{idx}_{safe_name}"
+        size = 0
+        with input_path.open("wb") as fh:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > 50 * 1024 * 1024:
+                    shutil.rmtree(task_dir, ignore_errors=True)
+                    raise HTTPException(status_code=400, detail=f"{safe_name} 超过 50MB 限制")
+                fh.write(chunk)
+        saved_files.append({"filename": safe_name, "path": str(input_path), "size": size})
+    task = {
+        "operation": operation,
+        "options": parsed_options,
+        "files": saved_files,
+        "task_dir": str(task_dir),
+        "status": "pending",
+        "progress": 5,
+        "message": "任务已创建，等待处理...",
+        "created_at": _media_task_now(),
+        "updated_at": _media_task_now(),
+    }
+    MEDIA_TASKS[task_id] = task
+    MEDIA_TASK_EXECUTOR.submit(_run_media_conversion_task, task_id)
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.post("/api/media/url-tasks", summary="创建视频链接提取音频任务", tags=["本地工具"])
+async def media_create_url_task(payload: MediaUrlExtractRequest):
+    """后台下载直链视频/音频并提取音频。"""
+    _cleanup_media_tasks()
+    parsed = urlparse(str(payload.url or "").strip())
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="仅支持 http/https 视频直链")
+    task_id = uuid.uuid4().hex
+    task_dir = MEDIA_TASK_DIR / task_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    task = {
+        "operation": "url_extract",
+        "url": str(payload.url).strip(),
+        "target_format": payload.target_format,
+        "task_dir": str(task_dir),
+        "status": "pending",
+        "progress": 5,
+        "message": "链接任务已创建，等待下载...",
+        "created_at": _media_task_now(),
+        "updated_at": _media_task_now(),
+    }
+    MEDIA_TASKS[task_id] = task
+    MEDIA_TASK_EXECUTOR.submit(_run_media_conversion_task, task_id)
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.get("/api/media/tasks/{task_id}", summary="查询音视频转换任务", tags=["本地工具"])
+async def media_get_task(task_id: str):
+    task = MEDIA_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在或已过期")
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.post("/api/media/tasks/init", summary="初始化音视频转换任务", tags=["本地工具"])
+async def media_init_task(payload: MediaTaskInitRequest):
+    """初始化任务，供小程序多文件逐个上传后再启动。"""
+    _cleanup_media_tasks()
+    task_id = uuid.uuid4().hex
+    task_dir = MEDIA_TASK_DIR / task_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    task = {
+        "operation": str(payload.operation or "").strip().lower(),
+        "options": payload.options or {},
+        "files": [],
+        "task_dir": str(task_dir),
+        "status": "pending",
+        "progress": 5,
+        "message": "任务已创建，请上传文件...",
+        "created_at": _media_task_now(),
+        "updated_at": _media_task_now(),
+    }
+    MEDIA_TASKS[task_id] = task
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.post("/api/media/tasks/{task_id}/files", summary="上传音视频任务文件", tags=["本地工具"])
+async def media_upload_task_file(task_id: str, file: UploadFile = File(...)):
+    task = MEDIA_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在或已过期")
+    if task.get("status") not in {"pending", "failed"}:
+        raise HTTPException(status_code=400, detail="任务已启动，不能继续上传文件")
+    task_dir = Path(str(task["task_dir"]))
+    task_dir.mkdir(parents=True, exist_ok=True)
+    files_list = task.setdefault("files", [])
+    safe_name = Path(file.filename or f"media-{len(files_list)}").name or f"media-{len(files_list)}"
+    input_path = task_dir / f"input_{len(files_list)}_{safe_name}"
+    size = 0
+    with input_path.open("wb") as fh:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > 50 * 1024 * 1024:
+                input_path.unlink(missing_ok=True)
+                raise HTTPException(status_code=400, detail=f"{safe_name} 超过 50MB 限制")
+            fh.write(chunk)
+    files_list.append({"filename": safe_name, "path": str(input_path), "size": size})
+    task.update({"progress": min(30, 5 + len(files_list) * 5), "message": f"已上传 {len(files_list)} 个文件", "updated_at": _media_task_now()})
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.post("/api/media/tasks/{task_id}/start", summary="启动音视频转换任务", tags=["本地工具"])
+async def media_start_task(task_id: str):
+    task = MEDIA_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在或已过期")
+    if task.get("status") == "running":
+        return success(_serialize_media_task(task_id, task))
+    task.update({"status": "pending", "progress": max(10, int(task.get("progress", 5))), "message": "任务已提交，等待处理...", "updated_at": _media_task_now()})
+    MEDIA_TASK_EXECUTOR.submit(_run_media_conversion_task, task_id)
+    return success(_serialize_media_task(task_id, task))
+
+
+@app.get("/api/media/tasks/{task_id}/download", summary="下载音视频转换结果", tags=["本地工具"])
+async def media_download_task(task_id: str):
+    task = MEDIA_TASKS.get(task_id)
+    if not task or task.get("status") != "completed" or not task.get("output_path"):
+        raise HTTPException(status_code=404, detail="结果文件不存在或任务尚未完成")
+    output_path = Path(str(task["output_path"]))
+    if not output_path.exists():
+        raise HTTPException(status_code=404, detail="结果文件已过期")
+    return FileResponse(
+        output_path,
+        media_type=str(task.get("media_type") or "application/octet-stream"),
+        filename=str(task.get("filename") or output_path.name),
+        headers={
+            "Cache-Control": "private, max-age=21600",
+            "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
+        },
+    )
 
 
 @app.post("/api/media/extract-url-audio", summary="视频链接提取音频（Base64）", tags=["本地工具"])
