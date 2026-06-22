@@ -2,7 +2,7 @@
   <view :class="['container', themeClass]">
     <view class="page-shell document-shell">
       <view class="page-header hero-card">
-        <text class="title">📄 文档转换</text>
+        <text class="title">📄 文档转换/处理</text>
         <text class="subtitle">支持 TXT、HTML、Word、PDF 常见文档互转，也支持图片转 PDF / Word，转换后直接下载，不长期保存</text>
       </view>
 
