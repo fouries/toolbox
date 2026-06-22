@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from db.models import ToolClickStat, User, UserToolFavorite
+from db.models import ToolClickStat, User, UserFeedback, UserReminderSubscription, UserToolFavorite
 
 logger = logging.getLogger(__name__)
 
@@ -136,3 +136,79 @@ class UserFavoritesRepository:
             .where(UserToolFavorite.tool_id == tool_id)
         )
         self.session.flush()
+
+
+class UserEngagementRepository:
+    def __init__(self, session: Session):
+        self.session = session
+        self.users = UserFavoritesRepository(session)
+
+    def add_feedback(self, user_key: str, category: str, content: str, contact: str = "", page: str = "") -> UserFeedback:
+        user = self.users.get_or_create_user(user_key)
+        feedback = UserFeedback(
+            user_id=user.id,
+            category=category,
+            content=content,
+            contact=contact,
+            page=page,
+            status="submitted",
+        )
+        self.session.add(feedback)
+        self.session.flush()
+        return feedback
+
+    def list_feedback(self, user_key: str) -> list[UserFeedback]:
+        user = self.users.get_or_create_user(user_key)
+        return list(
+            self.session.execute(
+                select(UserFeedback)
+                .where(UserFeedback.user_id == user.id)
+                .order_by(UserFeedback.id.desc())
+            ).scalars().all()
+        )
+
+    def upsert_reminder(self, user_key: str, reminder_type: str, title: str, reminder_time: str, enabled: bool = True) -> UserReminderSubscription:
+        user = self.users.get_or_create_user(user_key)
+        reminder = self.session.execute(
+            select(UserReminderSubscription)
+            .where(UserReminderSubscription.user_id == user.id)
+            .where(UserReminderSubscription.reminder_type == reminder_type)
+        ).scalar_one_or_none()
+        if reminder is None:
+            reminder = UserReminderSubscription(
+                user_id=user.id,
+                reminder_type=reminder_type,
+                title=title,
+                reminder_time=reminder_time,
+                enabled=enabled,
+            )
+            self.session.add(reminder)
+        else:
+            reminder.title = title
+            reminder.reminder_time = reminder_time
+            reminder.enabled = enabled
+        self.session.flush()
+        return reminder
+
+    def list_reminders(self, user_key: str) -> list[UserReminderSubscription]:
+        user = self.users.get_or_create_user(user_key)
+        return list(
+            self.session.execute(
+                select(UserReminderSubscription)
+                .where(UserReminderSubscription.user_id == user.id)
+                .order_by(UserReminderSubscription.id.desc())
+            ).scalars().all()
+        )
+
+    def disable_reminder(self, user_key: str, reminder_type: str) -> UserReminderSubscription | None:
+        user = self.users.get_or_create_user(user_key)
+        reminder = self.session.execute(
+            select(UserReminderSubscription)
+            .where(UserReminderSubscription.user_id == user.id)
+            .where(UserReminderSubscription.reminder_type == reminder_type)
+        ).scalar_one_or_none()
+        if reminder is None:
+            return None
+        reminder.enabled = False
+        self.session.flush()
+        return reminder

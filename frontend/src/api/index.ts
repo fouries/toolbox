@@ -202,6 +202,26 @@ export interface FavoriteToolResult {
   favorited: boolean
 }
 
+export interface FeedbackResult {
+  id: number
+  category: string
+  content: string
+  contact?: string
+  page?: string
+  status: string
+  created_at?: string
+}
+
+export interface ReminderSubscription {
+  id: number
+  reminder_type: string
+  title: string
+  reminder_time: string
+  enabled: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 function buildQueryString(params: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return ''
 
@@ -381,6 +401,47 @@ export const removeUserFavorite = (userKey: string, toolId: string) => {
   })
 }
 
+export const submitFeedback = (payload: {
+  user_key: string
+  category: string
+  content: string
+  contact?: string
+  page?: string
+}) => {
+  return request<FeedbackResult>('/api/feedback', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export const getFeedbackList = (userKey: string) => {
+  return request<FeedbackResult[]>(`/api/feedback?user_key=${encodeURIComponent(userKey)}`)
+}
+
+export const getReminderSubscriptions = (userKey: string) => {
+  return request<ReminderSubscription[]>(`/api/reminders?user_key=${encodeURIComponent(userKey)}`)
+}
+
+export const saveReminderSubscription = (payload: {
+  user_key: string
+  reminder_type: string
+  title: string
+  reminder_time: string
+  enabled: boolean
+}) => {
+  return request<ReminderSubscription>('/api/reminders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export const disableReminderSubscription = (userKey: string, reminderType: string) => {
+  return request<ReminderSubscription>('/api/reminders', {
+    method: 'DELETE',
+    data: { user_key: userKey, reminder_type: reminderType, title: '', reminder_time: '08:00', enabled: false }
+  })
+}
+
 export default {
   getOilPrice,
   getCrudeOilPrice,
@@ -405,5 +466,10 @@ export default {
   ensureAnonymousUser,
   getUserFavorites,
   addUserFavorite,
-  removeUserFavorite
+  removeUserFavorite,
+  submitFeedback,
+  getFeedbackList,
+  getReminderSubscriptions,
+  saveReminderSubscription,
+  disableReminderSubscription
 }

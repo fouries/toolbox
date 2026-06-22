@@ -5,7 +5,7 @@
         <view class="profile-avatar">🧰</view>
         <view class="profile-info">
           <text class="profile-title">小巧的工具箱</text>
-          <text class="profile-desc">设置、反馈和关于信息</text>
+          <text class="profile-desc">设置、反馈、订阅提醒和关于信息</text>
         </view>
       </view>
 
@@ -31,12 +31,13 @@
               <text class="menu-arrow">></text>
             </view>
           </view>
-          <view class="menu-item" @click="showFeedback">
+          <view class="menu-item" @click="focusFeedback">
             <view class="menu-left">
               <text class="menu-icon">💬</text>
               <text class="menu-name">反馈建议</text>
             </view>
             <view class="menu-right">
+              <text class="menu-hint">在线提交</text>
               <text class="menu-arrow">></text>
             </view>
           </view>
@@ -53,6 +54,77 @@
         </view>
       </view>
 
+      <view id="feedback-form" class="settings-card engagement-card feedback-form">
+        <view class="card-header">
+          <view>
+            <text class="card-title">反馈建议</text>
+            <text class="card-desc">遇到问题、内容错误或想要新功能，都可以直接告诉我。</text>
+          </view>
+          <text class="card-icon">💬</text>
+        </view>
+
+        <view class="form-row">
+          <text class="form-label">反馈类型</text>
+          <picker :range="feedbackCategoryLabels" :value="feedbackCategoryIndex" @change="changeFeedbackCategory">
+            <view class="picker-value">{{ feedbackCategoryLabels[feedbackCategoryIndex] }} ></view>
+          </picker>
+        </view>
+        <view class="form-row form-row-block">
+          <text class="form-label">反馈内容</text>
+          <textarea
+            v-model="feedbackForm.content"
+            class="feedback-textarea"
+            maxlength="1000"
+            placeholder="请描述你遇到的问题或建议，至少 5 个字"
+            :show-confirm-bar="false"
+          />
+        </view>
+        <view class="form-row form-row-block">
+          <text class="form-label">联系方式（选填）</text>
+          <input v-model="feedbackForm.contact" class="text-input" maxlength="128" placeholder="微信/邮箱，便于需要时联系你" />
+        </view>
+        <button class="primary-button" :disabled="submittingFeedback" @click="submitFeedbackForm">
+          {{ submittingFeedback ? '提交中...' : '提交反馈' }}
+        </button>
+
+        <view v-if="feedbackList.length" class="feedback-history">
+          <text class="section-title">我的反馈记录</text>
+          <view v-for="item in feedbackList" :key="item.id" class="history-item">
+            <view class="history-top">
+              <text class="history-tag">{{ feedbackCategoryMap[item.category] || item.category }}</text>
+              <text class="history-status">{{ item.status === 'submitted' ? '已提交' : item.status }}</text>
+            </view>
+            <text class="history-content">{{ item.content }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="settings-card engagement-card reminder-card">
+        <view class="card-header">
+          <view>
+            <text class="card-title">订阅提醒</text>
+            <text class="card-desc">先保存提醒偏好，后续可按这些配置推送每日简报、天气等消息。</text>
+          </view>
+          <text class="card-icon">🔔</text>
+        </view>
+
+        <view v-for="option in reminderOptions" :key="option.type" class="reminder-item">
+          <view class="reminder-main">
+            <text class="reminder-icon">{{ option.icon }}</text>
+            <view class="reminder-text">
+              <text class="reminder-title">{{ option.title }}</text>
+              <text class="reminder-desc">{{ option.desc }}</text>
+            </view>
+          </view>
+          <view class="reminder-actions">
+            <picker mode="time" :value="getReminderTime(option.type)" @change="changeReminderTime(option, $event)">
+              <view class="time-pill">{{ getReminderTime(option.type) }}</view>
+            </picker>
+            <switch :checked="isReminderEnabled(option.type)" color="#2563eb" @change="toggleReminder(option, $event)" />
+          </view>
+        </view>
+      </view>
+
       <!-- #ifdef H5 -->
       <view class="beian-card" @click="navigateToBeian">
         <text>粤ICP备2026056747号</text>
@@ -63,9 +135,181 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import {
+  disableReminderSubscription,
+  getFeedbackList,
+  getReminderSubscriptions,
+  saveReminderSubscription,
+  submitFeedback,
+  type FeedbackResult,
+  type ReminderSubscription
+} from '@/api'
 import { useTheme } from '@/utils/theme'
 
+const TOOLBOX_USER_KEY = 'toolbox_user_key'
+
 const { themes, currentTheme, themeClass, setTheme, showThemePicker } = useTheme()
+void themes
+void setTheme
+
+const feedbackCategoryMap: Record<string, string> = {
+  bug: '问题反馈',
+  idea: '功能建议',
+  content: '内容纠错',
+  other: '其他'
+}
+const feedbackCategories = Object.keys(feedbackCategoryMap)
+const feedbackCategoryLabels = feedbackCategories.map(key => feedbackCategoryMap[key])
+const feedbackCategoryIndex = ref(1)
+const submittingFeedback = ref(false)
+const feedbackList = ref<FeedbackResult[]>([])
+const reminderSubscriptions = ref<ReminderSubscription[]>([])
+
+const feedbackForm = reactive({
+  category: 'idea',
+  content: '',
+  contact: ''
+})
+
+const reminderOptions = [
+  { type: 'daily_brief', title: '每日简报', desc: '每天固定时间看重点资讯', icon: '📰', defaultTime: '08:30' },
+  { type: 'weather', title: '天气预报', desc: '出门前查看天气和温度', icon: '🌤️', defaultTime: '07:30' },
+  { type: 'hot_search', title: '热搜榜提醒', desc: '关注百度/抖音热点变化', icon: '🔥', defaultTime: '12:00' },
+  { type: 'gold_price', title: '黄金行情提醒', desc: '关注黄金价格走势', icon: '🥇', defaultTime: '09:30' }
+]
+
+const reminderMap = computed(() => {
+  const map: Record<string, ReminderSubscription> = {}
+  reminderSubscriptions.value.forEach(item => {
+    map[item.reminder_type] = item
+  })
+  return map
+})
+
+const ensureUserKey = () => {
+  try {
+    const existing = uni.getStorageSync(TOOLBOX_USER_KEY)
+    if (typeof existing === 'string' && existing.length >= 8) return existing
+    const created = `anon_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+    uni.setStorageSync(TOOLBOX_USER_KEY, created)
+    return created
+  } catch {
+    return `anon_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+  }
+}
+
+const currentPagePath = () => {
+  try {
+    const pages = getCurrentPages()
+    const current = pages[pages.length - 1] as { route?: string } | undefined
+    return current?.route ? `/${current.route}` : '/pages/settings/index'
+  } catch {
+    return '/pages/settings/index'
+  }
+}
+
+const loadEngagementData = async () => {
+  const userKey = ensureUserKey()
+  try {
+    const [feedbackRes, reminderRes] = await Promise.all([
+      getFeedbackList(userKey),
+      getReminderSubscriptions(userKey)
+    ])
+    if (feedbackRes.code === 200 && Array.isArray(feedbackRes.data)) feedbackList.value = feedbackRes.data
+    if (reminderRes.code === 200 && Array.isArray(reminderRes.data)) reminderSubscriptions.value = reminderRes.data
+  } catch (err) {
+    console.warn('load engagement data failed', err)
+  }
+}
+
+const changeFeedbackCategory = (event: any) => {
+  const index = Number(event?.detail?.value || 0)
+  feedbackCategoryIndex.value = index
+  feedbackForm.category = feedbackCategories[index] || 'idea'
+}
+
+const submitFeedbackForm = async () => {
+  const content = feedbackForm.content.trim()
+  if (content.length < 5) {
+    uni.showToast({ title: '至少输入5个字', icon: 'none' })
+    return
+  }
+  submittingFeedback.value = true
+  try {
+    const result = await submitFeedback({
+      user_key: ensureUserKey(),
+      category: feedbackForm.category,
+      content,
+      contact: feedbackForm.contact.trim(),
+      page: currentPagePath()
+    })
+    if (result.code !== 200) throw new Error(result.msg || '提交失败')
+    feedbackForm.content = ''
+    await loadEngagementData()
+    uni.showToast({ title: '反馈已提交', icon: 'success' })
+  } catch (err) {
+    console.warn('submit feedback failed', err)
+    uni.showToast({ title: '提交失败，请稍后再试', icon: 'none' })
+  } finally {
+    submittingFeedback.value = false
+  }
+}
+
+const getReminderTime = (type: string) => {
+  return reminderMap.value[type]?.reminder_time || reminderOptions.find(item => item.type === type)?.defaultTime || '08:00'
+}
+
+const isReminderEnabled = (type: string) => Boolean(reminderMap.value[type]?.enabled)
+
+const saveReminder = async (option: typeof reminderOptions[number], enabled: boolean, time = getReminderTime(option.type)) => {
+  const result = await saveReminderSubscription({
+    user_key: ensureUserKey(),
+    reminder_type: option.type,
+    title: option.title,
+    reminder_time: time,
+    enabled
+  })
+  if (result.code !== 200 || !result.data) throw new Error(result.msg || '保存失败')
+  const next = reminderSubscriptions.value.filter(item => item.reminder_type !== option.type)
+  reminderSubscriptions.value = [result.data, ...next]
+}
+
+const toggleReminder = async (option: typeof reminderOptions[number], event: any) => {
+  const enabled = Boolean(event?.detail?.value)
+  try {
+    if (enabled) {
+      await saveReminder(option, true)
+      uni.showToast({ title: '已开启提醒', icon: 'success' })
+    } else {
+      const result = await disableReminderSubscription(ensureUserKey(), option.type)
+      if (result.code === 200 && result.data) {
+        const next = reminderSubscriptions.value.filter(item => item.reminder_type !== option.type)
+        reminderSubscriptions.value = [result.data, ...next]
+      }
+      uni.showToast({ title: '已关闭提醒', icon: 'success' })
+    }
+  } catch (err) {
+    console.warn('toggle reminder failed', err)
+    uni.showToast({ title: '操作失败，请稍后再试', icon: 'none' })
+    await loadEngagementData()
+  }
+}
+
+const changeReminderTime = async (option: typeof reminderOptions[number], event: any) => {
+  const time = String(event?.detail?.value || getReminderTime(option.type))
+  try {
+    await saveReminder(option, true, time)
+    uni.showToast({ title: '提醒时间已保存', icon: 'success' })
+  } catch (err) {
+    console.warn('change reminder time failed', err)
+    uni.showToast({ title: '保存失败，请稍后再试', icon: 'none' })
+  }
+}
+
+const focusFeedback = () => {
+  uni.showToast({ title: '请在下方提交反馈', icon: 'none' })
+}
 
 const clearRecentTools = () => {
   uni.showModal({
@@ -78,15 +322,6 @@ const clearRecentTools = () => {
       } catch {}
       uni.showToast({ title: '已清空', icon: 'success' })
     }
-  })
-}
-
-const showFeedback = () => {
-  uni.showModal({
-    title: '反馈建议',
-    content: '如果使用中遇到问题，可以通过站点备案主体联系方式或项目页面反馈。',
-    showCancel: false,
-    confirmText: '知道了'
   })
 }
 
@@ -105,6 +340,10 @@ const navigateToBeian = () => {
   if (opened) opened.opener = null
   // #endif
 }
+
+onMounted(() => {
+  void loadEngagementData()
+})
 </script>
 
 <style scoped>
@@ -122,15 +361,20 @@ const navigateToBeian = () => {
   gap: 24rpx;
 }
 
+.profile-card,
+.settings-card {
+  border-radius: 32rpx;
+  border: 2rpx solid var(--theme-border, #eef2f7);
+  background: var(--theme-surface, #ffffff);
+  box-shadow: var(--theme-shadow-card, 0 18rpx 60rpx rgba(20, 35, 90, 0.08));
+}
+
 .profile-card {
   display: flex;
   align-items: center;
   gap: 20rpx;
   padding: 30rpx;
-  border-radius: 32rpx;
-  border: 2rpx solid var(--theme-border, #eef2f7);
   background: linear-gradient(135deg, var(--theme-surface, #ffffff), var(--theme-primary-soft, #eef5ff));
-  box-shadow: var(--theme-shadow-card, 0 18rpx 60rpx rgba(20, 35, 90, 0.08));
 }
 
 .profile-avatar {
@@ -147,7 +391,9 @@ const navigateToBeian = () => {
   box-shadow: inset 0 0 0 2rpx rgba(255,255,255,0.36), 0 10rpx 24rpx rgba(22,119,255,0.18);
 }
 
-.profile-info {
+.profile-info,
+.card-header > view,
+.reminder-text {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
@@ -160,17 +406,16 @@ const navigateToBeian = () => {
   font-weight: 900;
 }
 
-.profile-desc {
+.profile-desc,
+.card-desc,
+.reminder-desc {
   color: var(--theme-text-muted, #7a869a);
   font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .settings-card {
   overflow: hidden;
-  border-radius: 32rpx;
-  border: 2rpx solid var(--theme-border, #eef2f7);
-  background: var(--theme-surface, #ffffff);
-  box-shadow: var(--theme-shadow-card, 0 18rpx 60rpx rgba(20, 35, 90, 0.08));
 }
 
 .menu-list {
@@ -190,10 +435,22 @@ const navigateToBeian = () => {
   background: var(--theme-bg-hover, #f5f7fb);
 }
 
-.menu-left {
+.menu-left,
+.menu-right,
+.reminder-main,
+.reminder-actions,
+.history-top {
   display: flex;
   align-items: center;
+}
+
+.menu-left {
   gap: 18rpx;
+}
+
+.menu-right,
+.reminder-actions {
+  gap: 12rpx;
 }
 
 .menu-icon {
@@ -206,12 +463,6 @@ const navigateToBeian = () => {
   font-weight: 500;
 }
 
-.menu-right {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
 .current-theme,
 .menu-hint {
   font-size: 26rpx;
@@ -221,6 +472,151 @@ const navigateToBeian = () => {
 .menu-arrow {
   font-size: 28rpx;
   color: var(--theme-text-muted, #9aa6b8);
+}
+
+.engagement-card {
+  padding: 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.card-title {
+  color: var(--theme-text, #17233d);
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.card-icon {
+  font-size: 42rpx;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.form-row-block {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.form-label,
+.section-title {
+  color: var(--theme-text, #243044);
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.picker-value,
+.time-pill {
+  padding: 12rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--theme-primary-soft, #eef5ff);
+  color: var(--theme-primary, #2563eb);
+  font-size: 25rpx;
+}
+
+.feedback-textarea,
+.text-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 22rpx;
+  border: 2rpx solid var(--theme-border, #e5eaf3);
+  background: var(--theme-bg, #f8fafc);
+  color: var(--theme-text, #1f2937);
+  font-size: 26rpx;
+}
+
+.feedback-textarea {
+  min-height: 180rpx;
+  padding: 18rpx;
+}
+
+.text-input {
+  height: 76rpx;
+  padding: 0 18rpx;
+}
+
+.primary-button {
+  width: 100%;
+  border-radius: 999rpx;
+  background: var(--theme-primary, #2563eb);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.primary-button[disabled] {
+  opacity: 0.65;
+}
+
+.feedback-history {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  padding-top: 8rpx;
+}
+
+.history-item {
+  padding: 18rpx;
+  border-radius: 22rpx;
+  background: var(--theme-bg, #f8fafc);
+}
+
+.history-top {
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.history-tag,
+.history-status {
+  font-size: 23rpx;
+  color: var(--theme-primary, #2563eb);
+}
+
+.history-content {
+  color: var(--theme-text, #243044);
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--theme-border, #eef2f7);
+}
+
+.reminder-item:first-of-type {
+  border-top: 0;
+}
+
+.reminder-main {
+  gap: 16rpx;
+  min-width: 0;
+  flex: 1;
+}
+
+.reminder-icon {
+  font-size: 36rpx;
+}
+
+.reminder-title {
+  color: var(--theme-text, #17233d);
+  font-size: 28rpx;
+  font-weight: 800;
 }
 
 .beian-card {
