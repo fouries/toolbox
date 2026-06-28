@@ -732,7 +732,7 @@ onLoad((options: any) => {
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  background: rgba(15, 23, 42, 0.28);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 .hot-video-pause-overlay-h5 {
@@ -776,7 +776,7 @@ onLoad((options: any) => {
   position: absolute;
   width: 24rpx;
   height: 46rpx;
-  background: rgba(255, 255, 255, 0.76);
+  background: #ffffff;
 }
 
 .hot-video-pause-triangle-left {

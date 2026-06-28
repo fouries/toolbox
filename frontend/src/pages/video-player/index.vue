@@ -226,7 +226,7 @@ onLoad((options: any) => {
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.26);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .player-pause-overlay-h5 {
@@ -271,7 +271,7 @@ onLoad((options: any) => {
   position: absolute;
   width: 32rpx;
   height: 62rpx;
-  background: rgba(255, 255, 255, 0.74);
+  background: #ffffff;
 }
 
 .player-pause-triangle-left {
