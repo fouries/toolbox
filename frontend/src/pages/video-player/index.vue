@@ -215,8 +215,7 @@ onLoad((options: any) => {
   left: 50%;
   top: 50%;
   z-index: 4;
-  margin-left: -78rpx;
-  margin-top: -78rpx;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
