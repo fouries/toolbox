@@ -74,10 +74,7 @@
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
               <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
-                <cover-view class="hot-video-pause-triangle-wrap">
-                  <cover-view class="hot-video-pause-triangle-left"></cover-view>
-                  <cover-view class="hot-video-pause-triangle-right"></cover-view>
-                </cover-view>
+                <cover-image class="hot-video-pause-triangle-img" src="/static/icons/play-triangle.png"></cover-image>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
@@ -760,37 +757,8 @@ onLoad((options: any) => {
 
 .hot-video-pause-triangle-img {
   width: 46rpx;
-  height: 60rpx;
-  margin-left: 10rpx;
-}
-
-.hot-video-pause-triangle-wrap {
-  position: relative;
-  width: 46rpx;
-  height: 60rpx;
-  margin-left: 10rpx;
-}
-
-.hot-video-pause-triangle-left,
-.hot-video-pause-triangle-right {
-  position: absolute;
-  width: 24rpx;
   height: 46rpx;
-  background: #ffffff;
-}
-
-.hot-video-pause-triangle-left {
-  top: 0;
-  left: 0;
-  transform: rotate(-30deg);
-  transform-origin: top left;
-}
-
-.hot-video-pause-triangle-right {
-  bottom: 0;
-  left: 0;
-  transform: rotate(30deg);
-  transform-origin: bottom left;
+  margin-left: 10rpx;
 }
 
 .video-meta {

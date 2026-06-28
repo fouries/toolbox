@@ -25,10 +25,7 @@
         @error="onVideoError"
       ></video>
       <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-        <cover-view class="player-pause-triangle-wrap">
-          <cover-view class="player-pause-triangle-left"></cover-view>
-          <cover-view class="player-pause-triangle-right"></cover-view>
-        </cover-view>
+        <cover-image class="player-pause-triangle-img" src="/static/icons/play-triangle.png"></cover-image>
       </cover-view>
     </view>
     <!-- #endif -->
@@ -255,37 +252,8 @@ onLoad((options: any) => {
 
 .player-pause-triangle-img {
   width: 62rpx;
-  height: 80rpx;
-  margin-left: 14rpx;
-}
-
-.player-pause-triangle-wrap {
-  position: relative;
-  width: 62rpx;
-  height: 80rpx;
-  margin-left: 14rpx;
-}
-
-.player-pause-triangle-left,
-.player-pause-triangle-right {
-  position: absolute;
-  width: 32rpx;
   height: 62rpx;
-  background: #ffffff;
-}
-
-.player-pause-triangle-left {
-  top: 0;
-  left: 0;
-  transform: rotate(-30deg);
-  transform-origin: top left;
-}
-
-.player-pause-triangle-right {
-  bottom: 0;
-  left: 0;
-  transform: rotate(30deg);
-  transform-origin: bottom left;
+  margin-left: 14rpx;
 }
 
 .player-top,
