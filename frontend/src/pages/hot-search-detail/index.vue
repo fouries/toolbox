@@ -74,7 +74,7 @@
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
               <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
-                <cover-view class="hot-video-test-rect"></cover-view>
+                <cover-image class="hot-video-pause-triangle-img" src="/static/icons/play-triangle.png"></cover-image>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
@@ -755,12 +755,6 @@ onLoad((options: any) => {
   width: 46rpx;
   height: 46rpx;
   margin-left: 10rpx;
-}
-
-.hot-video-test-rect {
-  width: 100rpx;
-  height: 100rpx;
-  background: blue;
 }
 
 .video-meta {
