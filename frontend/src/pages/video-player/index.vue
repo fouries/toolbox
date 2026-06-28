@@ -25,7 +25,7 @@
         @error="onVideoError"
       ></video>
       <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-        <cover-view class="player-pause-triangle"></cover-view>
+        <cover-image class="player-pause-triangle-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDYiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0NiA2MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjc2KSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cG9seWdvbiBwb2ludHM9IjAgMCA0NiAzMCAwIDYwIi8+Cjwvc3ZnPgo="></cover-image>
       </cover-view>
     </view>
     <!-- #endif -->
@@ -248,6 +248,12 @@ onLoad((options: any) => {
   border-top: 40rpx solid transparent;
   border-bottom: 40rpx solid transparent;
   border-left: 62rpx solid rgba(255, 255, 255, 0.74);
+}
+
+.player-pause-triangle-img {
+  width: 62rpx;
+  height: 80rpx;
+  margin-left: 14rpx;
 }
 
 .player-top,
