@@ -721,15 +721,11 @@ onLoad((options: any) => {
   left: 50%;
   top: 228rpx;
   z-index: 3;
-  width: 118rpx;
-  height: 118rpx;
   margin-left: -59rpx;
   margin-top: -59rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999rpx;
-  background: rgba(15, 23, 42, 0.6);
 }
 
 .hot-video-pause-overlay-h5 {

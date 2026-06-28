@@ -215,15 +215,11 @@ onLoad((options: any) => {
   left: 50%;
   top: 50%;
   z-index: 4;
-  width: 156rpx;
-  height: 156rpx;
   margin-left: -78rpx;
   margin-top: -78rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999rpx;
-  background: rgba(0, 0, 0, 0.5);
 }
 
 .player-pause-overlay-h5 {
