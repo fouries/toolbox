@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://quan1234.com/sitemap.xml
