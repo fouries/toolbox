@@ -25,7 +25,10 @@
         @error="onVideoError"
       ></video>
       <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-        <cover-image class="player-pause-triangle-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAA8CAYAAAAZp4inAAABRUlEQVR4nNXSS47DIBRE0YvV+8raszIyaJXUnTg2xo/3qRmMDlfQe39ScBtA7/1Z7QHb30Ml/PZ+UaX+B1zLjv8Kh9z1D+FaRvwQHPLVH4ZrWfCX4ZCj/hRci8TfgkNc/dtwzRtvBgff+qZwzQO/BA7r6y+Da6sesByuWePd4GBb3xWuWeBD4HC/fhhcm8WHw2Gufgq4dgWfCg7j9dPBtTN8Wjgc108N1/bwJeDwWb8MXBO+HBx+8SXhrbVHOXhr7QHwEw0ZncBaieLvaEhefA+spS1+hIaExc/AWqrio2hIUvwKWAsvPoOGwOKzYC2k+F00OBe3AGtuxS3R4FDcGqwtg68Ca0u+ymo0GBf3AGtmxT3RYFDcG6zdKh6FhsnikWDtcvEMaLhQPAtYGyqeDQ0nxTOCta/FM6Nhp3h2sPaveBU0wAt0v7QxTVzqnwAAAABJRU5ErkJggg=="></cover-image>
+        <cover-view class="player-pause-triangle-wrap">
+          <cover-view class="player-pause-triangle-left"></cover-view>
+          <cover-view class="player-pause-triangle-right"></cover-view>
+        </cover-view>
       </cover-view>
     </view>
     <!-- #endif -->
@@ -254,6 +257,35 @@ onLoad((options: any) => {
   width: 62rpx;
   height: 80rpx;
   margin-left: 14rpx;
+}
+
+.player-pause-triangle-wrap {
+  position: relative;
+  width: 62rpx;
+  height: 80rpx;
+  margin-left: 14rpx;
+}
+
+.player-pause-triangle-left,
+.player-pause-triangle-right {
+  position: absolute;
+  width: 32rpx;
+  height: 62rpx;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.player-pause-triangle-left {
+  top: 0;
+  left: 0;
+  transform: rotate(-30deg);
+  transform-origin: top left;
+}
+
+.player-pause-triangle-right {
+  bottom: 0;
+  left: 0;
+  transform: rotate(30deg);
+  transform-origin: bottom left;
 }
 
 .player-top,

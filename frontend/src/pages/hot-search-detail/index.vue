@@ -74,7 +74,10 @@
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
               <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
-                <cover-image class="hot-video-pause-triangle-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAA8CAYAAAAZp4inAAABRUlEQVR4nNXSS47DIBRE0YvV+8raszIyaJXUnTg2xo/3qRmMDlfQe39ScBtA7/1Z7QHb30Ml/PZ+UaX+B1zLjv8Kh9z1D+FaRvwQHPLVH4ZrWfCX4ZCj/hRci8TfgkNc/dtwzRtvBgff+qZwzQO/BA7r6y+Da6sesByuWePd4GBb3xWuWeBD4HC/fhhcm8WHw2Gufgq4dgWfCg7j9dPBtTN8Wjgc108N1/bwJeDwWb8MXBO+HBx+8SXhrbVHOXhr7QHwEw0ZncBaieLvaEhefA+spS1+hIaExc/AWqrio2hIUvwKWAsvPoOGwOKzYC2k+F00OBe3AGtuxS3R4FDcGqwtg68Ca0u+ymo0GBf3AGtmxT3RYFDcG6zdKh6FhsnikWDtcvEMaLhQPAtYGyqeDQ0nxTOCta/FM6Nhp3h2sPaveBU0wAt0v7QxTVzqnwAAAABJRU5ErkJggg=="></cover-image>
+                <cover-view class="hot-video-pause-triangle-wrap">
+                  <cover-view class="hot-video-pause-triangle-left"></cover-view>
+                  <cover-view class="hot-video-pause-triangle-right"></cover-view>
+                </cover-view>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
@@ -759,6 +762,35 @@ onLoad((options: any) => {
   width: 46rpx;
   height: 60rpx;
   margin-left: 10rpx;
+}
+
+.hot-video-pause-triangle-wrap {
+  position: relative;
+  width: 46rpx;
+  height: 60rpx;
+  margin-left: 10rpx;
+}
+
+.hot-video-pause-triangle-left,
+.hot-video-pause-triangle-right {
+  position: absolute;
+  width: 24rpx;
+  height: 46rpx;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.hot-video-pause-triangle-left {
+  top: 0;
+  left: 0;
+  transform: rotate(-30deg);
+  transform-origin: top left;
+}
+
+.hot-video-pause-triangle-right {
+  bottom: 0;
+  left: 0;
+  transform: rotate(30deg);
+  transform-origin: bottom left;
 }
 
 .video-meta {
