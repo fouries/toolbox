@@ -219,6 +219,7 @@ onLoad((options: any) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent !important;
 }
 
 .player-pause-overlay-h5 {
