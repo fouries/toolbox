@@ -74,7 +74,7 @@
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
               <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
-                <cover-image class="hot-video-pause-triangle-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDYiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA0NiA2MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjc2KSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cG9seWdvbiBwb2ludHM9IjAgMCA0NiAzMCAwIDYwIi8+Cjwvc3ZnPgo="></cover-image>
+                <cover-image class="hot-video-pause-triangle-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAA8CAYAAAAZp4inAAABRUlEQVR4nNXSS47DIBRE0YvV+8raszIyaJXUnTg2xo/3qRmMDlfQe39ScBtA7/1Z7QHb30Ml/PZ+UaX+B1zLjv8Kh9z1D+FaRvwQHPLVH4ZrWfCX4ZCj/hRci8TfgkNc/dtwzRtvBgff+qZwzQO/BA7r6y+Da6sesByuWePd4GBb3xWuWeBD4HC/fhhcm8WHw2Gufgq4dgWfCg7j9dPBtTN8Wjgc108N1/bwJeDwWb8MXBO+HBx+8SXhrbVHOXhr7QHwEw0ZncBaieLvaEhefA+spS1+hIaExc/AWqrio2hIUvwKWAsvPoOGwOKzYC2k+F00OBe3AGtuxS3R4FDcGqwtg68Ca0u+ymo0GBf3AGtmxT3RYFDcG6zdKh6FhsnikWDtcvEMaLhQPAtYGyqeDQ0nxTOCta/FM6Nhp3h2sPaveBU0wAt0v7QxTVzqnwAAAABJRU5ErkJggg=="></cover-image>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
