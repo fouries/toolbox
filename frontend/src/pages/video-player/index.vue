@@ -25,7 +25,7 @@
         @error="onVideoError"
       ></video>
       <cover-view class="player-pause-overlay" v-if="!isPlaying" @tap="togglePlayback">
-        <cover-image class="player-pause-triangle-img" src="/static/icons/play-triangle.png"></cover-image>
+        <cover-image class="player-pause-triangle-img" src="@/static/icons/play-triangle.png"></cover-image>
       </cover-view>
     </view>
     <!-- #endif -->

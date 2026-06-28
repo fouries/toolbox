@@ -74,7 +74,7 @@
                 @fullscreenchange="onVideoFullscreenChange(index, $event)"
               ></video>
               <cover-view class="hot-video-pause-overlay" v-if="hotVideoPlaying[index] !== true" @tap="toggleHotVideoPlayback(index)">
-                <cover-image class="hot-video-pause-triangle-img" src="/static/icons/play-triangle.png"></cover-image>
+                <cover-image class="hot-video-pause-triangle-img" src="@/static/icons/play-triangle.png"></cover-image>
               </cover-view>
               <!-- #endif -->
               <!-- #ifndef MP-WEIXIN -->
