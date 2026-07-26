@@ -132,7 +132,8 @@ class TianApiService:
         if num == 0:
             return ""
         if per_kg:
-            num = num / 1000
+            # 白银从元/千克换算为元/克，保留一位小数
+            return f"{num / 1000:.1f}"
         # 去掉多余的小数末尾 0，保留最多 3 位小数
         text = f"{num:.3f}".rstrip("0").rstrip(".")
         return text or "0"
