@@ -22,6 +22,8 @@ class TianApiService:
 
     GOLD_KIND_NAMES = {
         "au9999": "Au99.99 黄金",
+        "ag9999": "Ag99.99 白银",
+        "pt9995": "Pt99.95 铂金",
         "au9995": "Au99.95 黄金",
         "agTplusD": "白银 T+D",
         "auTplusD": "黄金 T+D",
@@ -51,9 +53,9 @@ class TianApiService:
     def _fallback_gold() -> List[Dict[str, str]]:
         now = datetime.now().strftime("%Y-%m-%d")
         return [
-            {"name": "国内黄金", "price": "--", "unit": "元/克", "updown": "--", "time": now},
-            {"name": "国际现货黄金", "price": "--", "unit": "美元/盎司", "updown": "--", "time": now},
-            {"name": "足金零售参考", "price": "--", "unit": "元/克", "updown": "--", "time": now},
+            {"name": "Au99.99 黄金", "type": "au9999", "price": "--", "unit": "元/克", "updown": "--", "time": now},
+            {"name": "Ag99.99 白银", "type": "ag9999", "price": "--", "unit": "元/克", "updown": "--", "time": now},
+            {"name": "Pt99.95 铂金", "type": "pt9995", "price": "--", "unit": "元/克", "updown": "--", "time": now},
         ]
 
     @staticmethod
@@ -110,18 +112,50 @@ class TianApiService:
             rate_text = f"{rate_text}%"
         return f"{value} ({rate_text})"
 
+    GOLD_KIND_UNITS = {
+        "ag9999": "元/克",
+        "agTplusD": "元/克",
+    }
+
+    # 白银上游 (天行) 返回单位为元/千克，需换算为元/克统一展示。
+    GOLD_PER_KG_CODES = {"ag9999", "agTplusD"}
+
+    @staticmethod
+    def _gram_price(value: Any, per_kg: bool) -> str:
+        """把价格数值格式化为字符串；per_kg=True 时从元/千克换算为元/克。"""
+        if value in (None, "", "--"):
+            return ""
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+        if num == 0:
+            return ""
+        if per_kg:
+            num = num / 1000
+        # 去掉多余的小数末尾 0，保留最多 3 位小数
+        text = f"{num:.3f}".rstrip("0").rstrip(".")
+        return text or "0"
+
     @staticmethod
     def _normalize_gold_item(item: Dict[str, Any]) -> Dict[str, str]:
         code = str(item.get("code") or "").strip()
+        per_kg = code in TianApiService.GOLD_PER_KG_CODES
+        raw_price = item.get("latestprice") or item.get("price") or "--"
+        price = TianApiService._gram_price(raw_price, per_kg) if per_kg else str(raw_price)
+        # 涨跌绝对值同步换算，百分比 (raf) 保持不变
+        raf_value = item.get("rafvalue")
+        if per_kg and raf_value not in (None, "", "--"):
+            raf_value = TianApiService._gram_price(raf_value, True)
         return {
             "name": TianApiService.GOLD_KIND_NAMES.get(code, code or "黄金"),
             "type": code,
-            "price": str(item.get("latestprice") or item.get("price") or "--"),
-            "unit": "元/克",
-            "updown": TianApiService._format_change(item.get("rafvalue"), item.get("raf")),
+            "price": price or "--",
+            "unit": TianApiService.GOLD_KIND_UNITS.get(code, "元/克"),
+            "updown": TianApiService._format_change(raf_value, item.get("raf")),
             "time": str(item.get("updatetime") or item.get("time") or ""),
-            "buypri": str(item.get("buyprice") or ""),
-            "sellpri": str(item.get("sellprice") or ""),
+            "buypri": TianApiService._gram_price(item.get("buyprice"), per_kg),
+            "sellpri": TianApiService._gram_price(item.get("sellprice"), per_kg),
         }
 
     @staticmethod
@@ -346,6 +380,7 @@ class TianApiService:
             "internet": "/internet/index",
             "esports": "/esports/index",
             "auto": "/auto/index",
+            "car": "/auto/index",
         }
         category = category if category in endpoint_map else "internet"
         cache_key = make_cache_key("news", category=category)
@@ -1022,12 +1057,15 @@ class TianApiService:
         stop_terms = {"一个", "这些", "相关", "新闻", "热搜", "了吗", "怎么", "什么", "为何"}
         terms = [term for term in terms if len(term) == 2 and term not in stop_terms]
         matched_terms = {term for term in terms if term in compact_haystack}
-        if len(matched_terms) >= 3 and len(matched_terms) >= max(3, len(set(terms)) // 3):
+        # 放宽条件：只要有3个匹配就通过，不再要求必须占1/3以上（应对长关键词标题不可能放全的情况）
+        if len(matched_terms) >= 3:
             return True
         keyword_words = re.findall(r"[\u4e00-\u9fff]{2,}", compact_keyword)
         if keyword_words:
             matched_chars = sum(len(word) for word in keyword_words if word and word in compact_haystack)
-            if matched_chars >= max(4, min(len(compact_keyword), 12) // 2):
+            # 放宽条件：只要累计长度达到原关键词的1/4就通过，原来是1/2太严格
+            required = max(4, len(compact_keyword) // 4)
+            if matched_chars >= required:
                 return True
         score = 0
         for term in ("今年", "端午", "60年", "六十年"):
@@ -1485,12 +1523,12 @@ class TianApiService:
     @staticmethod
     async def get_gold_price() -> Dict[str, Any]:
         """黄金行情查询。"""
-        cache_key = make_cache_key("gold", kinds="au9999,au9995,agTplusD")
+        cache_key = make_cache_key("gold", kinds="au9999,ag9999,pt9995")
         result = await TianApiService._request(
             "/gold/index",
             cache_key=cache_key,
             cache_ttl=settings.CACHE_TTL_DEFAULT,
-            kinds="au9999,au9995,agTplusD",
+            kinds="au9999,ag9999,pt9995",
             fallback=TianApiService._fallback_gold()
         )
         if result.get("code") == 200 and not result.get("fallback") and isinstance(result.get("newslist"), list):
